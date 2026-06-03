@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and project files to restore dependencies
-COPY ["SenicBilling.sln", "./"]
+COPY ["SenicBilling.slnx", "./"]
 COPY ["src/SenicBilling.API/SenicBilling.API.csproj", "src/SenicBilling.API/"]
 COPY ["src/SenicBilling.Application/SenicBilling.Application.csproj", "src/SenicBilling.Application/"]
 COPY ["src/SenicBilling.Domain/SenicBilling.Domain.csproj", "src/SenicBilling.Domain/"]
