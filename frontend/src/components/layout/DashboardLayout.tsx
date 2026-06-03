@@ -3,6 +3,9 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import DashboardPage from '../dashboard/DashboardPage';
 import InvoiceForm from '../forms/InvoiceForm';
+import CustomersPage from '../customers/CustomersPage';
+import ProductsPage from '../products/ProductsPage';
+import SettingsPage from '../settings/SettingsPage';
 
 const pageTitles: Record<string, string> = {
   dashboard: 'แดชบอร์ด',
@@ -23,19 +26,19 @@ export default function DashboardLayout() {
       case 'dashboard':
         return <DashboardPage />;
       case 'taxinvoice':
-        return <InvoiceForm documentType="taxinvoice" title="สร้างใบกำกับภาษีใหม่" />;
+        return <InvoiceForm key="taxinvoice" documentType="taxinvoice" title="สร้างใบกำกับภาษีใหม่" />;
       case 'receipt':
-        return <InvoiceForm documentType="receipt" title="สร้างใบเสร็จรับเงินใหม่" />;
+        return <InvoiceForm key="receipt" documentType="receipt" title="สร้างใบเสร็จรับเงินใหม่" />;
       case 'cashbill':
-        return <InvoiceForm documentType="cashbill" title="สร้างบิลเงินสดใหม่" />;
+        return <InvoiceForm key="cashbill" documentType="cashbill" title="สร้างบิลเงินสดใหม่" />;
       case 'delivery':
-        return <InvoiceForm documentType="delivery" title="สร้างใบส่งของใหม่" />;
+        return <InvoiceForm key="delivery" documentType="delivery" title="สร้างใบส่งของใหม่" />;
       case 'customers':
-        return <PlaceholderPage icon="👥" title="จัดการลูกค้า" desc="ค้นหา เพิ่ม แก้ไขข้อมูลลูกค้า" />;
+        return <CustomersPage key="customers" />;
       case 'products':
-        return <PlaceholderPage icon="📦" title="จัดการสินค้า" desc="ค้นหา เพิ่ม แก้ไขข้อมูลสินค้าและบริการ" />;
+        return <ProductsPage key="products" />;
       case 'settings':
-        return <PlaceholderPage icon="⚙️" title="ตั้งค่าระบบ" desc="ธีม, ข้อมูลบริษัท, ผู้ใช้งาน" />;
+        return <SettingsPage key="settings" />;
       default:
         return <DashboardPage />;
     }
@@ -50,24 +53,11 @@ export default function DashboardLayout() {
           className="flex-1 overflow-y-auto p-6"
           style={{ background: 'var(--color-bg)' }}
         >
-          <div className="max-w-7xl mx-auto animate-fade-in-up">
+          <div className="w-full mx-auto animate-fade-in-up">
             {renderPage()}
           </div>
         </main>
       </div>
-    </div>
-  );
-}
-
-function PlaceholderPage({ icon, title, desc }: { icon: string; title: string; desc: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="text-6xl mb-6">{icon}</div>
-      <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>{title}</h2>
-      <p style={{ color: 'var(--color-text-muted)' }}>{desc}</p>
-      <p className="mt-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-        ✨ ระบบนี้พร้อมเชื่อมต่อกับ Backend API
-      </p>
     </div>
   );
 }

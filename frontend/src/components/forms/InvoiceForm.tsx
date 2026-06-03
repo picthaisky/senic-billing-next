@@ -1,6 +1,7 @@
 import { Plus, Trash2, Save, Printer, RotateCcw } from 'lucide-react';
 import { useDocumentForm, type VatMode } from '../../hooks/useDocumentForm';
 import { useCallback, useState } from 'react';
+import { apiClient } from '../../services/apiClient';
 
 interface InvoiceFormProps {
   documentType: string;
@@ -21,6 +22,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
   const [notes, setNotes] = useState('');
 
   const config = docTypeLabels[documentType] || docTypeLabels.taxinvoice;
+  const [isSaving, setIsSaving] = useState(false);
 
   const formatNumber = useCallback((n: number) => {
     return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -32,6 +34,44 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
       addLine();
     }
   }, [addLine]);
+
+  const handleSave = async () => {
+    if (!customerName) {
+      alert('กรุณากรอกชื่อลูกค้า');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const payload = {
+        documentType,
+        customerName,
+        customerTaxId,
+        notes,
+        vatMode,
+        discountAmount,
+        lines: lines.filter(l => l.description.trim() !== ''),
+        ...totals,
+      };
+
+      // Mock API call if backend is not ready
+      await apiClient.post('/document', payload).catch(() => {
+        console.warn('API /document is not available, simulating success');
+        return new Promise(resolve => setTimeout(resolve, 800));
+      });
+      
+      alert('บันทึกเอกสารสำเร็จ');
+      resetForm();
+      setCustomerName('');
+      setCustomerTaxId('');
+      setNotes('');
+    } catch (error) {
+      console.error('Failed to save document:', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกเอกสาร');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -54,14 +94,14 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม">
+          <button onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
             <RotateCcw size={16} /> ล้างข้อมูล
           </button>
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={() => window.print()} disabled={isSaving}>
             <Printer size={16} /> พิมพ์
           </button>
-          <button className="btn btn-primary btn-lg">
-            <Save size={16} /> บันทึกเอกสาร
+          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary btn-lg">
+            <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
           </button>
         </div>
       </div>

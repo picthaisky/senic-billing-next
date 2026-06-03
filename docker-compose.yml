@@ -33,7 +33,7 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY}-frontend:latest
     container_name: senic-frontend
     ports:
-      - "80:80"
+      - "8810:80"
     depends_on:
       - backend
     restart: unless-stopped

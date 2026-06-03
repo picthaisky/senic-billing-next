@@ -20,7 +20,7 @@ export function useDocumentForm(vatRate: number = 7) {
 
   function createEmptyLine(): DocumentLineItem {
     return {
-      id: crypto.randomUUID(),
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10),
       description: '',
       quantity: 1,
       unit: 'ชิ้น',
