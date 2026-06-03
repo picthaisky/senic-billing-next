@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Paperclip, X, UploadCloud, File as FileIcon, Loader2 } from 'lucide-react';
+import { Paperclip, UploadCloud, File as FileIcon, Loader2 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 
 interface Attachment {

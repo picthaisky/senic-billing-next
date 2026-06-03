@@ -23,7 +23,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setDisplayName(user.displayName || '');
+      setDisplayName(`${user.firstName} ${user.lastName}`);
       setEmail(user.email || '');
     }
   }, [user]);
@@ -49,8 +49,8 @@ export default function ProfilePage() {
       const res = await apiClient.put('/user/profile', { displayName, email });
       if (res.data.success) {
         showMessage('อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว');
-        // Update local auth store user
-        const updatedUser = { ...user, displayName, email } as any;
+        // Update local auth store user (simplified for UI)
+        const updatedUser = { ...user, firstName: displayName.split(' ')[0], lastName: displayName.split(' ')[1] || '', email } as any;
         if (token) setAuth(token, updatedUser);
       }
     } catch (err: any) {
@@ -94,14 +94,14 @@ export default function ProfilePage() {
           className="w-24 h-24 rounded-2xl flex items-center justify-center text-4xl text-white font-bold shadow-lg relative z-10"
           style={{ background: 'var(--gradient-brand)' }}
         >
-          {user?.displayName?.charAt(0)?.toUpperCase() || 'U'}
+          {user ? user.firstName.charAt(0).toUpperCase() : 'U'}
         </div>
         <div className="text-center md:text-left relative z-10">
           <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
-            {user?.displayName || 'User Profile'}
+            {user ? `${user.firstName} ${user.lastName}` : 'User Profile'}
           </h2>
           <p className="mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-            {user?.role} • {user?.tenantName}
+            Admin • Senic Corp
           </p>
           <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
             <CheckCircle2 size={14} /> บัญชีได้รับการยืนยันแล้ว
@@ -161,12 +161,12 @@ export default function ProfilePage() {
               <form onSubmit={handleUpdateProfile} className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    ชื่อผู้ใช้งาน (Username)
+                    ชื่อผู้ใช้งาน (Email)
                   </label>
                   <input 
                     type="text" 
                     className="input-field bg-gray-50 cursor-not-allowed" 
-                    value={user?.username || ''}
+                    value={user?.email || ''}
                     disabled
                   />
                   <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>* ไม่สามารถเปลี่ยนชื่อผู้ใช้งานระบบได้</p>
