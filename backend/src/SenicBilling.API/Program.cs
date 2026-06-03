@@ -84,6 +84,12 @@ var app = builder.Build();
 // ──────────────────────────────────────────────
 // Middleware Pipeline
 // ──────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<SenicBillingDbContext>();
+    dbContext.Database.Migrate();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

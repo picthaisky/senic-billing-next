@@ -209,5 +209,33 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
             // Unique username per tenant
             entity.HasIndex(e => new { e.TenantId, e.Username }).IsUnique();
         });
+
+        // ──────────────────────────────────────────────
+        // Data Seeding (Default Admin & Tenant)
+        // ──────────────────────────────────────────────
+        var defaultTenantId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        
+        modelBuilder.Entity<Tenant>().HasData(new Tenant
+        {
+            Id = defaultTenantId,
+            CompanyName = "Senic Corporation",
+            TaxId = "0105560000000",
+            IsActive = true,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        modelBuilder.Entity<AppUser>().HasData(new AppUser
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+            TenantId = defaultTenantId,
+            Username = "admin",
+            DisplayName = "System Admin",
+            Email = "admin@senic.local",
+            // SHA256 base64 for "admin123" -> JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=
+            PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=",
+            Role = "Admin",
+            IsActive = true,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
     }
 }
