@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -7,6 +7,7 @@ import {
   TrendingUp, FileText, Clock, ArrowUpRight, ArrowDownRight,
   Receipt, Banknote, Truck, FileCheck
 } from 'lucide-react';
+// import { apiClient } from '../../services/apiClient';
 
 // Mock data for demonstration
 const revenueData = [
@@ -36,6 +37,35 @@ const recentDocs = [
 const CHART_COLORS = ['#ea580c', '#c2410c', '#fb923c', '#fdba74', '#ffedd5'];
 
 export default function DashboardPage() {
+  const [loading, setLoading] = useState(true);
+  const [dashboardData] = useState<any>({
+    revenueData,
+    productData,
+    recentDocs,
+    kpiStats: {
+      totalRevenue: 1050000,
+      documentsIssued: 156,
+      pendingDrafts: 8,
+    }
+  });
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true);
+        // Replace with actual backend API call when ready
+        // const response = await apiClient.get('/dashboard/summary');
+        // setDashboardData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0 }).format(value);
   };
@@ -43,7 +73,7 @@ export default function DashboardPage() {
   const kpis = useMemo(() => [
     {
       label: 'รายได้รวม',
-      value: formatCurrency(1050000),
+      value: formatCurrency(dashboardData.kpiStats.totalRevenue),
       change: '+18.5%',
       positive: true,
       icon: TrendingUp,
@@ -51,7 +81,7 @@ export default function DashboardPage() {
     },
     {
       label: 'เอกสารที่ออก',
-      value: '156',
+      value: dashboardData.kpiStats.documentsIssued.toString(),
       change: '+12',
       positive: true,
       icon: FileText,
@@ -59,7 +89,7 @@ export default function DashboardPage() {
     },
     {
       label: 'รอดำเนินการ',
-      value: '8',
+      value: dashboardData.kpiStats.pendingDrafts.toString(),
       change: '-3',
       positive: true,
       icon: Clock,
@@ -73,7 +103,7 @@ export default function DashboardPage() {
       icon: TrendingUp,
       desc: 'เทียบเดือนก่อน',
     },
-  ], []);
+  ], [dashboardData]);
 
   return (
     <div className="space-y-6">
@@ -114,9 +144,9 @@ export default function DashboardPage() {
             </div>
             <span className="badge badge-neutral">6 เดือน</span>
           </div>
-          <div style={{ height: 280 }}>
+          <div style={{ height: 280 }} className={loading ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueData} barGap={2}>
+              <BarChart data={dashboardData.revenueData} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false}
@@ -151,11 +181,11 @@ export default function DashboardPage() {
             </div>
             <span className="badge badge-neutral">จัดตามมูลค่า</span>
           </div>
-          <div style={{ height: 280 }}>
+          <div style={{ height: 280 }} className={loading ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={productData}
+                  data={dashboardData.productData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -164,7 +194,7 @@ export default function DashboardPage() {
                   dataKey="value"
                   stroke="none"
                 >
-                  {productData.map((_, index) => (
+                  {dashboardData.productData.map((_: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
@@ -206,7 +236,7 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {recentDocs.map((doc) => (
+            {dashboardData.recentDocs.map((doc: any) => (
               <tr key={doc.id}>
                 <td>
                   <div className="flex items-center gap-2">
