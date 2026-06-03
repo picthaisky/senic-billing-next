@@ -31,7 +31,7 @@ class SignalRClient {
       useSystemStore.getState().updateHealthStatus(data.status, data.components);
     });
 
-    this.connection.on('UserPresenceChanged', (userId: string, isOnline: boolean) => {
+    this.connection.on('UserPresenceChanged', (_userId: string, isOnline: boolean) => {
       // Basic presence count logic
       const state = useSystemStore.getState();
       const newCount = isOnline ? state.onlineUsersCount + 1 : Math.max(0, state.onlineUsersCount - 1);

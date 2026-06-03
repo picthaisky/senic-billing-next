@@ -1,4 +1,3 @@
-import React from 'react';
 import { bahtText } from '../../utils/bahtText';
 
 export interface DocumentData {
