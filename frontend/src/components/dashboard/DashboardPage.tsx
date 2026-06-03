@@ -5,9 +5,10 @@ import {
 } from 'recharts';
 import {
   TrendingUp, FileText, Clock, ArrowUpRight, ArrowDownRight,
-  Receipt, Banknote, Truck, FileCheck
+  Receipt, Banknote, Truck, FileCheck, Download, Loader2, Printer
 } from 'lucide-react';
-// import { apiClient } from '../../services/apiClient';
+import { exportToExcel } from '../../utils/exportUtils';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 // Mock data for demonstration
 const revenueData = [
@@ -34,7 +35,7 @@ const recentDocs = [
   { id: 4, number: 'DLV-202606-0018', type: 'ใบส่งของ', customer: 'บจก. ดีเอฟจี', amount: 67800, date: 'เมื่อวาน', icon: Truck },
 ];
 
-const CHART_COLORS = ['#ea580c', '#c2410c', '#fb923c', '#fdba74', '#ffedd5'];
+const CHART_COLORS = ['#ea580c', '#f97316', '#fbbf24', '#fcd34d', '#fef3c7'];
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,15 @@ export default function DashboardPage() {
 
     fetchDashboard();
   }, []);
+
+  const handleRefresh = async () => {
+    // Simulate refresh delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoading(true);
+    setTimeout(() => setLoading(false), 500);
+  };
+
+  const { pullDistance, isRefreshing } = usePullToRefresh({ onRefresh: handleRefresh });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0 }).format(value);
@@ -105,13 +115,39 @@ export default function DashboardPage() {
     },
   ], [dashboardData]);
 
+  const handleExport = () => {
+    const mapping = {
+      number: 'เลขที่เอกสาร',
+      type: 'ประเภท',
+      customer: 'ลูกค้า',
+      amount: 'จำนวนเงิน',
+      date: 'เวลา'
+    };
+    exportToExcel(dashboardData.recentDocs, 'Recent_Documents', mapping);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative" style={{ transform: `translateY(${pullDistance}px)` }}>
+      
+      {/* Pull to Refresh Indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div className="absolute left-0 right-0 -top-12 flex justify-center items-center h-12">
+          <div className="bg-white shadow-md rounded-full p-2 flex items-center justify-center">
+            <Loader2 size={20} className={`text-orange-500 ${isRefreshing ? 'animate-spin' : ''}`} style={{ transform: `rotate(${pullDistance * 2}deg)` }} />
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
-          <div key={kpi.label} className={`kpi-card animate-fade-in-up delay-${i + 1}`} style={{ opacity: 0 }}>
-            <div className="flex items-start justify-between mb-3">
+          <div key={kpi.label} className={`kpi-card relative overflow-hidden animate-fade-in-up delay-${i + 1}`} style={{ opacity: 0 }}>
+            {/* Watermark Icon */}
+            <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none transform rotate-12">
+              <kpi.icon size={80} />
+            </div>
+            
+            <div className="flex items-start justify-between mb-3 relative z-10">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}
@@ -123,8 +159,8 @@ export default function DashboardPage() {
                 {kpi.change}
               </span>
             </div>
-            <p className="text-2xl font-bold mb-0.5" style={{ color: 'var(--color-text)' }}>{kpi.value}</p>
-            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{kpi.label} — {kpi.desc}</p>
+            <p className="text-2xl font-bold mb-0.5 relative z-10" style={{ color: 'var(--color-text)' }}>{kpi.value}</p>
+            <p className="text-xs relative z-10" style={{ color: 'var(--color-text-muted)' }}>{kpi.label} — {kpi.desc}</p>
           </div>
         ))}
       </div>
@@ -147,6 +183,16 @@ export default function DashboardPage() {
           <div style={{ height: 280 }} className={loading ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dashboardData.revenueData} barGap={2}>
+                <defs>
+                  <linearGradient id="colorGoods" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.9}/>
+                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0.4}/>
+                  </linearGradient>
+                  <linearGradient id="colorVat" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-accent-light)" stopOpacity={0.9}/>
+                    <stop offset="95%" stopColor="var(--color-accent-light)" stopOpacity={0.4}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false}
@@ -161,8 +207,8 @@ export default function DashboardPage() {
                   }}
                   formatter={(value: any) => formatCurrency(Number(value))}
                 />
-                <Bar dataKey="goods" name="มูลค่าสินค้า" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="vat" name="ภาษีขาย 7%" fill="var(--color-primary-light)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="goods" name="มูลค่าสินค้า" fill="url(#colorGoods)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="vat" name="ภาษีขาย 7%" fill="url(#colorVat)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -220,12 +266,15 @@ export default function DashboardPage() {
 
       {/* Recent Activity */}
       <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <h3 className="font-bold text-base" style={{ color: 'var(--color-text)' }}>
             เอกสารล่าสุด
           </h3>
+          <button className="btn btn-secondary text-xs py-1 px-3" onClick={handleExport}>
+            <Download size={14} /> ส่งออก Excel
+          </button>
         </div>
-        <table className="data-table">
+        <table className="data-table table-responsive">
           <thead>
             <tr>
               <th>เลขที่เอกสาร</th>
@@ -233,21 +282,33 @@ export default function DashboardPage() {
               <th>ลูกค้า</th>
               <th className="text-right">จำนวนเงิน</th>
               <th className="text-right">เวลา</th>
+              <th className="text-center w-24">จัดการ</th>
             </tr>
           </thead>
           <tbody>
             {dashboardData.recentDocs.map((doc: any) => (
-              <tr key={doc.id}>
-                <td>
+              <tr key={doc.id} className="haptic-tap">
+                <td data-label="เลขที่เอกสาร">
                   <div className="flex items-center gap-2">
                     <doc.icon size={16} style={{ color: 'var(--color-primary)' }} />
                     <span className="font-semibold text-sm">{doc.number}</span>
                   </div>
                 </td>
-                <td><span className="badge badge-info">{doc.type}</span></td>
-                <td style={{ color: 'var(--color-text-secondary)' }}>{doc.customer}</td>
-                <td className="text-right font-semibold">{formatCurrency(doc.amount)}</td>
-                <td className="text-right" style={{ color: 'var(--color-text-muted)' }}>{doc.date}</td>
+                <td data-label="ประเภท"><span className="badge badge-info">{doc.type}</span></td>
+                <td data-label="ลูกค้า" style={{ color: 'var(--color-text-secondary)' }}>{doc.customer}</td>
+                <td data-label="จำนวนเงิน" className="text-right font-semibold">{formatCurrency(doc.amount)}</td>
+                <td data-label="เวลา" className="text-right" style={{ color: 'var(--color-text-muted)' }}>{doc.date}</td>
+                <td data-label="จัดการ">
+                  <div className="flex items-center justify-center">
+                    <button 
+                      onClick={() => window.open(`/print/${doc.id}`, '_blank')}
+                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors haptic-tap text-gray-500 hover:text-primary" 
+                      title="พิมพ์ / ออก PDF"
+                    >
+                      <Printer size={16} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

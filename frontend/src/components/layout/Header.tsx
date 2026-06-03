@@ -1,14 +1,20 @@
 import { Search, Bell, Sun, Moon, User, LogOut } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useState } from 'react';
+import { useAuthStore } from '../../store/useAuthStore';
+import SystemStatusBadge from './SystemStatusBadge';
 
 interface HeaderProps {
   pageTitle: string;
+  onNavigate?: (page: string) => void;
 }
 
-export default function Header({ pageTitle }: HeaderProps) {
+export default function Header({ pageTitle, onNavigate }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const [showProfile, setShowProfile] = useState(false);
+  
+  // Use auth store to get user info
+  const user = useAuthStore(state => state.user);
 
   return (
     <header
@@ -44,6 +50,8 @@ export default function Header({ pageTitle }: HeaderProps) {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
+        <SystemStatusBadge />
+
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
@@ -91,10 +99,10 @@ export default function Header({ pageTitle }: HeaderProps) {
             </div>
             <div className="hidden lg:block text-left">
               <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>
-                Admin
+                {user ? `${user.firstName} ${user.lastName}` : 'Admin'}
               </p>
               <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                Senic Corp
+                {user?.email || 'Senic Corp'}
               </p>
             </div>
           </button>
@@ -107,13 +115,22 @@ export default function Header({ pageTitle }: HeaderProps) {
                 borderColor: 'var(--color-border)',
               }}
             >
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors"
+              <button 
+                onClick={() => {
+                  if (onNavigate) onNavigate('profile');
+                  setShowProfile(false);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors"
                 style={{ color: 'var(--color-text-secondary)' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                 <User size={14} /> โปรไฟล์
               </button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors"
+              <button 
+                onClick={() => {
+                  useAuthStore.getState().logout();
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors"
                 style={{ color: 'var(--color-text-secondary)' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>

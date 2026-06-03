@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./mobile-first.css";
+@import "./print.css";
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap');
 
@@ -169,11 +171,11 @@ body {
   background: var(--color-surface-solid);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px -4px rgba(0,0,0,0.04), 0 2px 4px -2px rgba(0,0,0,0.02);
   transition: all var(--transition-base);
 }
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 12px 24px -4px rgba(0,0,0,0.06), 0 4px 8px -2px rgba(0,0,0,0.03);
 }
 
 /* Brand Gradient Background */
@@ -256,16 +258,17 @@ body {
   width: 100%;
   padding: 0.75rem 1rem;
   background: var(--color-surface-solid);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   color: var(--color-text);
   font-size: 0.9375rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   transition: all var(--transition-fast);
   outline: none;
 }
 .input-field:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1), 0 1px 2px rgba(0,0,0,0.03);
 }
 .input-field::placeholder {
   color: var(--color-text-muted);
@@ -403,9 +406,9 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
+  background: rgba(0, 0, 0, 0.015);
 }
 .data-table th:first-child { border-radius: var(--radius-lg) 0 0 0; }
 .data-table th:last-child  { border-radius: 0 var(--radius-lg) 0 0; }

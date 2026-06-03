@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { signalRClient } from '../../services/signalrClient';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import DashboardPage from '../dashboard/DashboardPage';
@@ -6,6 +7,7 @@ import InvoiceForm from '../forms/InvoiceForm';
 import CustomersPage from '../customers/CustomersPage';
 import ProductsPage from '../products/ProductsPage';
 import SettingsPage from '../settings/SettingsPage';
+import ProfilePage from '../profile/ProfilePage';
 
 const pageTitles: Record<string, string> = {
   dashboard: 'แดชบอร์ด',
@@ -16,10 +18,18 @@ const pageTitles: Record<string, string> = {
   customers: 'จัดการลูกค้า',
   products: 'จัดการสินค้า',
   settings: 'ตั้งค่าระบบ',
+  profile: 'โปรไฟล์ของฉัน',
 };
 
 export default function DashboardLayout() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+
+  useEffect(() => {
+    signalRClient.connect();
+    return () => {
+      signalRClient.disconnect();
+    };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -39,6 +49,8 @@ export default function DashboardLayout() {
         return <ProductsPage key="products" />;
       case 'settings':
         return <SettingsPage key="settings" />;
+      case 'profile':
+        return <ProfilePage key="profile" />;
       default:
         return <DashboardPage />;
     }
@@ -48,7 +60,10 @@ export default function DashboardLayout() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header pageTitle={pageTitles[currentPage] || 'Senic Billing Next'} />
+        <Header 
+          pageTitle={pageTitles[currentPage] || 'Senic Billing Next'} 
+          onNavigate={setCurrentPage} 
+        />
         <main
           className="flex-1 overflow-y-auto p-6"
           style={{ background: 'var(--color-bg)' }}

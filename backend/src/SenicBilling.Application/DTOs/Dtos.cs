@@ -21,6 +21,16 @@ public record UserInfo(Guid Id, string Username, string DisplayName, string Role
 public record RegisterRequest(string Username, string Password, string DisplayName, string? Email, string Role = "User");
 
 // ──────────────────────────────────────────────
+// User Profile DTOs
+// ──────────────────────────────────────────────
+
+public record UserProfileDto(Guid Id, string Username, string DisplayName, string? Email, string Role);
+
+public record UpdateProfileRequest(string DisplayName, string? Email);
+
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+// ──────────────────────────────────────────────
 // Document DTOs
 // ──────────────────────────────────────────────
 
