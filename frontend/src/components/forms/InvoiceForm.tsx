@@ -3,6 +3,9 @@ import { useDocumentForm, type VatMode } from '../../hooks/useDocumentForm';
 import { useCallback, useState } from 'react';
 import { apiClient } from '../../services/apiClient';
 
+import AttachmentUpload from './AttachmentUpload';
+import PaymentModal from '../payments/PaymentModal';
+
 interface InvoiceFormProps {
   documentType: string;
   title: string;
@@ -20,9 +23,12 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerTaxId, setCustomerTaxId] = useState('');
   const [notes, setNotes] = useState('');
+  const [documentId] = useState(() => crypto.randomUUID());
+  const [attachments, setAttachments] = useState<any[]>([]);
 
   const config = docTypeLabels[documentType] || docTypeLabels.taxinvoice;
   const [isSaving, setIsSaving] = useState(false);
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const formatNumber = useCallback((n: number) => {
     return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -97,8 +103,11 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           <button onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
             <RotateCcw size={16} /> ล้างข้อมูล
           </button>
-          <button className="btn btn-secondary" onClick={() => window.print()} disabled={isSaving}>
+          <button className="btn btn-secondary" onClick={() => window.open('/print/draft', '_blank')} disabled={isSaving}>
             <Printer size={16} /> พิมพ์
+          </button>
+          <button onClick={() => setPaymentModalOpen(true)} className="btn btn-secondary !bg-indigo-50 !text-indigo-600 hover:!bg-indigo-100 border-indigo-200">
+            ชำระเงินออนไลน์
           </button>
           <button onClick={handleSave} disabled={isSaving} className="btn btn-primary btn-lg">
             <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
@@ -182,13 +191,13 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
             <tbody>
               {lines.map((line, idx) => (
                 <tr key={line.id} className="animate-fade-in">
-                  <td className="text-center font-mono text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                  <td className="text-center font-mono text-sm align-middle" style={{ color: 'var(--color-text-muted)' }}>
                     {idx + 1}
                   </td>
                   <td>
                     <input
                       type="text"
-                      className="input-field !py-1.5 !text-sm"
+                      className="input-field !py-2 !px-2.5 !text-sm"
                       placeholder="ชื่อสินค้า / รายละเอียด"
                       value={line.description}
                       onChange={(e) => updateLine(line.id, { description: e.target.value })}
@@ -198,7 +207,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="number"
-                      className="input-field !py-1.5 !text-sm text-right"
+                      className="input-field !py-2 !px-2.5 !text-sm text-right"
                       min={0}
                       step={1}
                       value={line.quantity || ''}
@@ -208,7 +217,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="text"
-                      className="input-field !py-1.5 !text-sm"
+                      className="input-field !py-2 !px-2.5 !text-sm"
                       value={line.unit}
                       onChange={(e) => updateLine(line.id, { unit: e.target.value })}
                     />
@@ -216,7 +225,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="number"
-                      className="input-field !py-1.5 !text-sm text-right"
+                      className="input-field !py-2 !px-2.5 !text-sm text-right"
                       min={0}
                       step={0.01}
                       value={line.unitPrice || ''}
@@ -226,20 +235,20 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="number"
-                      className="input-field !py-1.5 !text-sm text-right"
+                      className="input-field !py-2 !px-2.5 !text-sm text-right"
                       min={0}
                       step={0.01}
                       value={line.discountAmount || ''}
                       onChange={(e) => updateLine(line.id, { discountAmount: parseFloat(e.target.value) || 0 })}
                     />
                   </td>
-                  <td className="text-right font-semibold text-sm tabular-nums">
+                  <td className="text-right font-semibold text-sm tabular-nums align-middle pr-2">
                     {formatNumber(line.lineTotal)}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center align-middle">
                     <button
                       onClick={() => removeLine(line.id)}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
+                      className="p-2 rounded-lg transition-colors hover:bg-red-50"
                       style={{ color: lines.length === 1 ? 'var(--color-text-muted)' : '#dc2626' }}
                       disabled={lines.length === 1}
                     >
@@ -260,19 +269,16 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
             ตั้งค่าภาษี
           </h3>
-          <div className="flex gap-2 mb-4">
+          <div className="flex p-1 rounded-lg mb-5" style={{ background: 'rgba(0,0,0,0.04)' }}>
             {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setVatMode(mode)}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 border ${vatMode === mode
-                  ? ''
-                  : 'border-transparent'
-                  }`}
+                className={`flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition-all duration-200`}
                 style={{
-                  background: vatMode === mode ? 'var(--color-primary-50)' : 'var(--color-bg-secondary)',
-                  color: vatMode === mode ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                  borderColor: vatMode === mode ? 'var(--color-primary)' : 'transparent',
+                  background: vatMode === mode ? '#ffffff' : 'transparent',
+                  color: vatMode === mode ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                  boxShadow: vatMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 }}
               >
                 {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
@@ -340,6 +346,24 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           </div>
         </div>
       </div>
+
+      <AttachmentUpload 
+        documentId={documentId} 
+        attachments={attachments} 
+        onAttachmentAdded={(att) => setAttachments(prev => [...prev, att])} 
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        documentId={documentId}
+        documentNumber={`${config.prefix}-202606-AUTO`}
+        amount={totals.grandTotal}
+        onSuccess={() => {
+          alert('ชำระเงินสำเร็จแล้ว!');
+        }}
+      />
     </div>
   );
 }

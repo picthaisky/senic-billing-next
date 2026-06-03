@@ -1,0 +1,82 @@
+@layer utilities {
+  /* Haptic Feedback Class */
+  .haptic-tap {
+    @apply active:scale-95 transition-transform;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   MOBILE FIRST & SAFE AREA
+   ═══════════════════════════════════════════════ */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE TABLE (CARD MODE ON MOBILE)
+   ═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Convert Table to Card List on Mobile */
+  .table-responsive {
+    display: block;
+    width: 100%;
+  }
+
+  .table-responsive thead {
+    display: none;
+  }
+
+  .table-responsive tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .table-responsive tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface-solid);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table-responsive td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--color-border);
+  }
+  
+  .table-responsive tr:hover td {
+    background: transparent;
+  }
+
+  .table-responsive td:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  /* Before pseudo-element for column label */
+  .table-responsive td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    padding-right: 1rem;
+  }
+}

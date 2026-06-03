@@ -40,8 +40,40 @@ services:
     networks:
       - senic-network
 
+  minio:
+    image: minio/minio:latest
+    container_name: senic-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - senic-minio-data:/data
+    restart: unless-stopped
+    networks:
+      - senic-network
+
+  minio-create-bucket:
+    image: minio/mc
+    container_name: senic-minio-setup
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-password123};
+      /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-senic-billing};
+      /usr/bin/mc policy set download myminio/${MINIO_BUCKET_NAME:-senic-billing};
+      exit 0;
+      "
+    networks:
+      - senic-network
+
 volumes:
   senic-pgdata:
+  senic-minio-data:
 
 networks:
   senic-network:

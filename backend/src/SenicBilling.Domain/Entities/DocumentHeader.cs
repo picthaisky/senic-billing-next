@@ -80,5 +80,8 @@ public class DocumentHeader
     public Tenant Tenant { get; set; } = null!;
     public Customer? Customer { get; set; }
     public DocumentHeader? ReferenceDocument { get; set; }
-    public ICollection<DocumentLine> Lines { get; set; } = [];
+    public List<DocumentLine> Lines { get; set; } = new();
+
+    // Feature 1: Attachments
+    public List<Attachment> Attachments { get; set; } = new();
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, MapPin, Phone, Building2, X, Save } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, MapPin, Phone, Building2, X, Save, Download } from 'lucide-react';
+import { exportToExcel } from '../../utils/exportUtils';
 // import { apiClient } from '../../services/apiClient';
 
 interface Customer {
@@ -93,6 +94,17 @@ export default function CustomersPage() {
     c.taxId.includes(search)
   );
 
+  const handleExport = () => {
+    const mapping = {
+      name: 'ชื่อลูกค้า/บริษัท',
+      branch: 'สาขา',
+      taxId: 'เลขประจำตัวผู้เสียภาษี',
+      address: 'ที่อยู่',
+      phone: 'เบอร์โทรศัพท์'
+    };
+    exportToExcel(filteredCustomers, 'Customers', mapping);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -107,14 +119,19 @@ export default function CustomersPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <button className="btn btn-primary w-full sm:w-auto" onClick={() => handleOpenModal()}>
-          <Plus size={16} /> เพิ่มลูกค้าใหม่
-        </button>
+        <div className="flex w-full sm:w-auto gap-2">
+          <button className="btn btn-secondary flex-1 sm:flex-none" onClick={handleExport}>
+            <Download size={16} /> ส่งออก Excel
+          </button>
+          <button className="btn btn-primary flex-1 sm:flex-none" onClick={() => handleOpenModal()}>
+            <Plus size={16} /> เพิ่มลูกค้าใหม่
+          </button>
+        </div>
       </div>
 
       {/* Data Table */}
       <div className="card overflow-hidden">
-        <table className="data-table">
+        <table className="data-table table-responsive">
           <thead>
             <tr>
               <th>ชื่อลูกค้า / บริษัท</th>
@@ -139,16 +156,16 @@ export default function CustomersPage() {
               </tr>
             ) : (
               filteredCustomers.map(customer => (
-                <tr key={customer.id} className="animate-fade-in">
-                  <td>
+                <tr key={customer.id} className="animate-fade-in haptic-tap">
+                  <td data-label="ชื่อลูกค้า / บริษัท">
                     <div className="font-semibold text-sm flex items-center gap-2">
                       <Building2 size={14} style={{ color: 'var(--color-primary)' }} />
                       {customer.name}
                     </div>
                   </td>
-                  <td><span className="badge badge-neutral">{customer.branch}</span></td>
-                  <td className="font-mono text-sm">{customer.taxId}</td>
-                  <td>
+                  <td data-label="สาขา"><span className="badge badge-neutral">{customer.branch}</span></td>
+                  <td data-label="เลขประจำตัวผู้เสียภาษี" className="font-mono text-sm">{customer.taxId}</td>
+                  <td data-label="ข้อมูลติดต่อ">
                     <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                       <span className="flex items-center gap-1"><Phone size={12} /> {customer.phone}</span>
                       <span className="flex items-center gap-1 truncate max-w-[200px]" title={customer.address}>
@@ -156,12 +173,12 @@ export default function CustomersPage() {
                       </span>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="จัดการ">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => handleOpenModal(customer)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="แก้ไข">
+                      <button onClick={() => handleOpenModal(customer)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors haptic-tap" title="แก้ไข">
                         <Edit2 size={14} style={{ color: 'var(--color-text-secondary)' }} />
                       </button>
-                      <button onClick={() => handleDelete(customer.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors group" title="ลบ">
+                      <button onClick={() => handleDelete(customer.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors group haptic-tap" title="ลบ">
                         <Trash2 size={14} className="text-red-400 group-hover:text-red-600" />
                       </button>
                     </div>

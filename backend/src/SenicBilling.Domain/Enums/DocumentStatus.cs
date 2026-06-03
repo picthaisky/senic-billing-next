@@ -14,5 +14,8 @@ public enum DocumentStatus
     Issued = 2,
 
     /// <summary>ยกเลิก - voided with Credit Note reference</summary>
-    Cancelled = 3
+    Cancelled = 3,
+
+    /// <summary>ชำระเงินแล้ว - fully paid online or offline</summary>
+    Paid = 4
 }

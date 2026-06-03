@@ -6,6 +6,11 @@ using SenicBilling.Infrastructure.Services;
 using SenicBilling.Domain.Interfaces;
 using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
+using SenicBilling.Application.Interfaces;
+using SenicBilling.Infrastructure.HealthChecks;
+using SenicBilling.API.Hubs;
+using SenicBilling.API.Services;
+using Minio;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +53,37 @@ builder.Services.AddAuthorization();
 // ──────────────────────────────────────────────
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IDocumentNumberGeneratorService, DocumentNumberGeneratorService>();
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
+builder.Services.AddScoped<IPaymentService, OmisePaymentService>();
+
+// MinIO Storage
+var minioEndpoint = builder.Configuration["Minio:Endpoint"] ?? "localhost:9000";
+var minioAccessKey = builder.Configuration["Minio:AccessKey"] ?? "admin";
+var minioSecretKey = builder.Configuration["Minio:SecretKey"] ?? "password123";
+
+builder.Services.AddMinio(configureClient => configureClient
+    .WithEndpoint(minioEndpoint)
+    .WithCredentials(minioAccessKey, minioSecretKey)
+    .Build());
+
+builder.Services.AddScoped<SenicBilling.Application.Interfaces.IStorageService, SenicBilling.Infrastructure.Storage.MinioStorageService>();
+
+// ──────────────────────────────────────────────
+// Health Checks & Monitoring
+// ──────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+        "Host=localhost;Port=5432;Database=senic_billing;Username=postgres;Password=postgres",
+        name: "Database")
+    .AddCheck<MinioHealthCheck>("MinIO");
+
+builder.Services.AddHostedService<SystemMonitorService>();
+
+// ──────────────────────────────────────────────
+// SignalR
+// ──────────────────────────────────────────────
+builder.Services.AddSignalR();
 
 // ──────────────────────────────────────────────
 // CORS (for React frontend)
@@ -100,5 +136,6 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<SenicBillingHub>("/hubs/billing");
 
 app.Run();

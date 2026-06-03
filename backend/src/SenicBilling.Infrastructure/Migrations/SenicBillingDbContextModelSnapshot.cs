@@ -86,6 +86,52 @@ namespace SenicBilling.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UploadedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.ToTable("Attachments");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -343,6 +389,55 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.ToTable("DocumentNumberSequences");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.PaymentTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GatewayReference")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("QrCodeUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("PaymentTransactions");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -400,6 +495,43 @@ namespace SenicBilling.Infrastructure.Migrations
                         .HasFilter("\"Sku\" IS NOT NULL");
 
                     b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.PushSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Endpoint")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PushSubscriptions");
                 });
 
             modelBuilder.Entity("SenicBilling.Domain.Entities.Tenant", b =>
@@ -476,6 +608,17 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.Attachment", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.DocumentHeader", "Document")
+                        .WithMany("Attachments")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Customer", b =>
                 {
                     b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
@@ -541,6 +684,25 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.PaymentTransaction", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.DocumentHeader", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Product", b =>
                 {
                     b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
@@ -552,6 +714,17 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.PushSubscription", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Customer", b =>
                 {
                     b.Navigation("Documents");
@@ -559,6 +732,8 @@ namespace SenicBilling.Infrastructure.Migrations
 
             modelBuilder.Entity("SenicBilling.Domain.Entities.DocumentHeader", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Lines");
                 });
 

@@ -12,10 +12,13 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<DocumentHeader> DocumentHeaders => Set<DocumentHeader>();
     public DbSet<DocumentLine> DocumentLines => Set<DocumentLine>();
     public DbSet<DocumentNumberSequence> DocumentNumberSequences => Set<DocumentNumberSequence>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -168,6 +171,24 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
         });
 
         // ──────────────────────────────────────────────
+        // Attachment Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<Attachment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.OriginalFileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.ObjectKey).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.UploadedBy).HasMaxLength(100);
+
+            entity.HasOne(e => e.Document)
+                .WithMany(d => d.Attachments)
+                .HasForeignKey(e => e.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ──────────────────────────────────────────────
         // DocumentNumberSequence Configuration
         // ──────────────────────────────────────────────
         modelBuilder.Entity<DocumentNumberSequence>(entity =>
@@ -208,6 +229,44 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
 
             // Unique username per tenant
             entity.HasIndex(e => new { e.TenantId, e.Username }).IsUnique();
+        });
+
+        // ──────────────────────────────────────────────
+        // PushSubscription Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<PushSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.P256dh).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Auth).IsRequired().HasMaxLength(200);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Avoid duplicate endpoints
+            entity.HasIndex(e => e.Endpoint).IsUnique();
+        });
+
+        // ──────────────────────────────────────────────
+        // PaymentTransaction Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasColumnType("decimal(18,4)");
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Document)
+                .WithMany()
+                .HasForeignKey(e => e.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ──────────────────────────────────────────────

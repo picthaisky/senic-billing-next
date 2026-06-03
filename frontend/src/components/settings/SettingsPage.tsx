@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Building2, Mail, Phone, MapPin, Save } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Save, Bell, BellOff, Send } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 export default function SettingsPage() {
   const user = useAuthStore(state => state.user);
   const [isSaving, setIsSaving] = useState(false);
+  const pushNotifications = usePushNotifications();
   
   const [tenantInfo, setTenantInfo] = useState({
     companyName: 'Senic Corporation',
@@ -100,6 +102,61 @@ export default function SettingsPage() {
           </div>
           <div className="ml-auto">
             <span className="badge badge-success">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card p-6">
+        <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+          <Bell size={20} style={{ color: 'var(--color-primary)' }} />
+          การแจ้งเตือน (Push Notifications)
+        </h3>
+        <p className="text-sm mb-4" style={{ color: 'var(--color-text-muted)' }}>
+          รับการแจ้งเตือนเมื่อมีเอกสารใหม่ หรือการอัปเดตสถานะที่สำคัญ ผ่านเบราว์เซอร์และมือถือ
+        </p>
+
+        <div className="p-4 border dark:border-zinc-800 rounded-xl bg-gray-50 dark:bg-zinc-900 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div>
+            <div className="font-semibold mb-1 flex items-center gap-2">
+              สถานะ: 
+              {pushNotifications.isSubscribed ? (
+                <span className="badge badge-success flex items-center gap-1"><Bell size={12} /> เปิดใช้งานแล้ว</span>
+              ) : (
+                <span className="badge flex items-center gap-1 text-gray-500 bg-gray-200"><BellOff size={12} /> ปิดอยู่</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              {pushNotifications.isSupported 
+                ? 'เบราว์เซอร์นี้รองรับการแจ้งเตือนแบบ Offline' 
+                : 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน'}
+            </p>
+          </div>
+          
+          <div className="flex gap-2 w-full md:w-auto">
+            {pushNotifications.isSubscribed ? (
+              <>
+                <button 
+                  onClick={() => pushNotifications.sendTestNotification()} 
+                  className="btn btn-secondary flex-1 md:flex-none"
+                >
+                  <Send size={16} /> ทดสอบแจ้งเตือน
+                </button>
+                <button 
+                  onClick={() => pushNotifications.unsubscribe()} 
+                  className="btn flex-1 md:flex-none text-red-600 hover:bg-red-50"
+                >
+                  <BellOff size={16} /> ปิดแจ้งเตือน
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={() => pushNotifications.subscribe()} 
+                disabled={!pushNotifications.isSupported}
+                className="btn btn-primary flex-1 md:flex-none"
+              >
+                <Bell size={16} /> เปิดการแจ้งเตือน
+              </button>
+            )}
           </div>
         </div>
       </div>
