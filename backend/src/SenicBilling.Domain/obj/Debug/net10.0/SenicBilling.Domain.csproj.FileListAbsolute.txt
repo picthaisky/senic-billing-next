@@ -1,0 +1,12 @@
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\bin\Debug\net10.0\SenicBilling.Domain.deps.json
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\bin\Debug\net10.0\SenicBilling.Domain.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\bin\Debug\net10.0\SenicBilling.Domain.pdb
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.AssemblyInfoInputs.cache
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.AssemblyInfo.cs
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.csproj.CoreCompileInputs.cache
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.sourcelink.json
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\refint\SenicBilling.Domain.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\SenicBilling.Domain.pdb
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.Domain\obj\Debug\net10.0\ref\SenicBilling.Domain.dll

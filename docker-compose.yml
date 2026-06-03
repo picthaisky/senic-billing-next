@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: senic-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-senic_billing}
+    volumes:
+      - senic-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - senic-network
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY}-backend:latest
+    container_name: senic-backend
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=database;Port=5432;Database=${DB_NAME:-senic_billing};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres}"
+      JwtSettings__SecretKey: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER:-SenicBillingNext}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-SenicBillingNextClient}
+      JwtSettings__ExpiryMinutes: ${JWT_EXPIRY:-480}
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - senic-network
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY}-frontend:latest
+    container_name: senic-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - senic-network
+
+volumes:
+  senic-pgdata:
+
+networks:
+  senic-network:
+    driver: bridge
