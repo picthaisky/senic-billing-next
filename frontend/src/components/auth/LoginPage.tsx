@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { apiClient } from '../../services/apiClient';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ export default function LoginPage() {
 
     try {
       const response = await apiClient.post('/auth/login', {
-        email,
+        username,
         password,
       });
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
       setAuth(token, user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      setError(err.response?.data?.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
     } finally {
       setLoading(false);
     }
@@ -59,15 +59,15 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-              อีเมล
+              ชื่อผู้ใช้งาน
             </label>
             <input
-              type="email"
+              type="text"
               required
               className="input-field"
-              placeholder="name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
           </div>
 

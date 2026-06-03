@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SenicBilling.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SenicBilling.Infrastructure.Data;
 namespace SenicBilling.Infrastructure.Migrations
 {
     [DbContext(typeof(SenicBillingDbContext))]
-    partial class SenicBillingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260603120400_AddSeedData")]
+    partial class AddSeedData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
