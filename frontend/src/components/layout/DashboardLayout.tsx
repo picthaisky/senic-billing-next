@@ -65,10 +65,10 @@ export default function DashboardLayout() {
           onNavigate={setCurrentPage} 
         />
         <main
-          className="flex-1 overflow-y-auto p-6"
+          className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
           style={{ background: 'var(--color-bg)' }}
         >
-          <div className="w-full mx-auto animate-fade-in-up">
+          <div className="w-full max-w-[1440px] mx-auto animate-fade-in-up">
             {renderPage()}
           </div>
         </main>
