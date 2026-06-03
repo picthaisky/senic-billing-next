@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SenicBilling.API/SenicBilling.API.csproj" />
+    <Project Path="src/SenicBilling.Application/SenicBilling.Application.csproj" />
+    <Project Path="src/SenicBilling.Domain/SenicBilling.Domain.csproj" />
+    <Project Path="src/SenicBilling.Infrastructure/SenicBilling.Infrastructure.csproj" />
+  </Folder>
+</Solution>

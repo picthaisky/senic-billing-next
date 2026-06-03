@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senic Billing Next: วิเคราะห์และออกแบบระบบใหม่</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base typography */
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #FAFAF9; /* Warm neutral background */
+            color: #292524; /* Stone 800 */
+            overflow-x: hidden;
+        }
+
+        /* Chart Container Styling - MANDATORY REQUIREMENT */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%; /* Adapts to grid */
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px; /* Base height */
+            max-height: 400px;
+        }
+        
+        @media (min-width: 1024px) {
+            .chart-container {
+                max-width: 600px;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F5F5F4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D6D3D1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #A8A29E; 
+        }
+
+        /* Transition utilities */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Active Tab Styling */
+        .tab-btn.active {
+            background-color: #9A3412; /* Orange 800 - subtle accent */
+            color: #FFFFFF;
+            border-color: #9A3412;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#FFEDD5',
+                            DEFAULT: '#EA580C',
+                            dark: '#9A3412',
+                        },
+                        surface: {
+                            DEFAULT: '#FFFFFF',
+                            muted: '#F5F5F4',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="antialiased text-stone-800 selection:bg-brand-light selection:text-brand-dark">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full bg-white/90 backdrop-blur-md border-b border-stone-200 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">📄</span>
+                    <span class="font-bold text-xl text-stone-800 tracking-tight">SenicBilling<span class="text-brand">Next</span></span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#context" class="text-stone-600 hover:text-brand-dark transition-colors font-medium">บริบทการพัฒนา</a>
+                    <a href="#modules" class="text-stone-600 hover:text-brand-dark transition-colors font-medium">การออกแบบเอกสาร</a>
+                    <a href="#dashboard" class="text-stone-600 hover:text-brand-dark transition-colors font-medium">แดชบอร์ดข้อมูล</a>
+                    <a href="#architecture" class="text-stone-600 hover:text-brand-dark transition-colors font-medium">สถาปัตยกรรมระบบ</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="context" class="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+            <h1 class="text-4xl md:text-5xl font-bold text-stone-900 mb-6 leading-tight">
+                ยกระดับโปรแกรมจัดการบิล<br>
+                <span class="text-brand-dark">สู่มาตรฐานซอฟต์แวร์ยุคใหม่</span>
+            </h1>
+            <p class="text-lg text-stone-600 mb-8">
+                ส่วนนี้แสดงการวิเคราะห์โครงสร้างเดิมของ <b>Nanosoft Free Bill</b> และนำเสนอแนวทางการออกแบบใหม่ (Redesign) ภายใต้ชื่อ <b>Senic Billing Next</b> ด้วยสถาปัตยกรรม Web Application (SPA) ที่เน้น User Experience (UX) การเข้าถึงข้อมูลแบบ Real-time และความปลอดภัยขั้นสูงตามหลัก Best Practice
+            </p>
+        </div>
+
+        <!-- Comparison Cards -->
+        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div class="bg-surface p-8 rounded-2xl border border-stone-200 shadow-sm">
+                <div class="text-3xl mb-4">🖥️</div>
+                <h3 class="text-xl font-bold mb-4 text-stone-800">ระบบเดิม (Legacy Desktop)</h3>
+                <ul class="space-y-3 text-stone-600">
+                    <li class="flex items-start"><span class="mr-2 text-red-500">✕</span> ติดตั้งยาก ต้องลงโปรแกรมที่เครื่อง</li>
+                    <li class="flex items-start"><span class="mr-2 text-red-500">✕</span> ข้อมูลผูกติดกับเครื่อง (เสี่ยงข้อมูลหาย)</li>
+                    <li class="flex items-start"><span class="mr-2 text-red-500">✕</span> อัพเดทเวอร์ชั่นลำบาก</li>
+                    <li class="flex items-start"><span class="mr-2 text-red-500">✕</span> UX/UI ล้าสมัย ใช้งานยากบนมือถือ</li>
+                </ul>
+            </div>
+            <div class="bg-brand-light/30 p-8 rounded-2xl border border-brand-light shadow-sm">
+                <div class="text-3xl mb-4">☁️</div>
+                <h3 class="text-xl font-bold mb-4 text-brand-dark">ระบบใหม่ (Senic Billing Next)</h3>
+                <ul class="space-y-3 text-stone-700">
+                    <li class="flex items-start"><span class="mr-2 text-green-600">✓</span> ใช้งานผ่าน Web Browser ได้ทุกอุปกรณ์</li>
+                    <li class="flex items-start"><span class="mr-2 text-green-600">✓</span> ข้อมูลปลอดภัยบน Cloud Database (Auto Backup)</li>
+                    <li class="flex items-start"><span class="mr-2 text-green-600">✓</span> อัพเดทระบบอัตโนมัติ ไม่ต้องโหลดแพทช์</li>
+                    <li class="flex items-start"><span class="mr-2 text-green-600">✓</span> UI/UX ทันสมัย ค้นหาข้อมูลแบบ Real-time</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Modules Section -->
+    <section id="modules" class="py-20 bg-surface-muted border-y border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-12 text-center">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">การออกแบบระบบเอกสารหลัก (Core Modules)</h2>
+                <p class="text-stone-600 max-w-2xl mx-auto">
+                    โปรแกรมประกอบด้วย 4 เอกสารสำคัญ คลิกที่แท็บด้านล่างเพื่อดูการออกแบบ Flow การทำงานและ UI แบบใหม่ที่ช่วยลดขั้นตอนและเพิ่มความแม่นยำในการออกเอกสาร
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-8">
+                <!-- Tabs Menu -->
+                <div class="lg:col-span-4 flex flex-col space-y-2" id="document-tabs">
+                    <button onclick="changeModule('receipt', this)" class="tab-btn active w-full text-left px-6 py-4 rounded-xl border border-stone-300 font-semibold text-stone-700 hover:bg-stone-100 transition-all">
+                        <span class="text-xl mr-3">💰</span> ใบเสร็จรับเงิน (Receipt)
+                    </button>
+                    <button onclick="changeModule('cashbill', this)" class="tab-btn w-full text-left px-6 py-4 rounded-xl border border-stone-300 font-semibold text-stone-700 hover:bg-stone-100 transition-all">
+                        <span class="text-xl mr-3">💵</span> บิลเงินสด (Cash Bill)
+                    </button>
+                    <button onclick="changeModule('delivery', this)" class="tab-btn w-full text-left px-6 py-4 rounded-xl border border-stone-300 font-semibold text-stone-700 hover:bg-stone-100 transition-all">
+                        <span class="text-xl mr-3">📦</span> ใบส่งของ (Delivery Note)
+                    </button>
+                    <button onclick="changeModule('taxinvoice', this)" class="tab-btn w-full text-left px-6 py-4 rounded-xl border border-stone-300 font-semibold text-stone-700 hover:bg-stone-100 transition-all">
+                        <span class="text-xl mr-3">🏢</span> ใบกำกับภาษี (Tax Invoice)
+                    </button>
+                </div>
+
+                <!-- Tab Content Panel -->
+                <div class="lg:col-span-8 bg-surface rounded-2xl shadow-sm border border-stone-200 p-8 min-h-[400px] flex flex-col justify-center fade-in" id="module-content">
+                    <!-- Content injected via JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard & Data Analysis Section -->
+    <section id="dashboard" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="mb-12">
+            <h2 class="text-3xl font-bold text-stone-900 mb-4">ระบบแดชบอร์ดและการวิเคราะห์ข้อมูล (Analytics)</h2>
+            <p class="text-stone-600 max-w-3xl">
+                ข้อได้เปรียบหลักของระบบฐานข้อมูลแบบรวมศูนย์ (Cloud Database) คือความสามารถในการแสดงผลข้อมูลแบบเรียลไทม์ กราฟด้านล่างเป็นการจำลองการแปลงข้อมูลจากการออกบิล มาเป็นข้อมูลเชิงลึก (Insights) เพื่อช่วยในการตัดสินใจทางธุรกิจ
+            </p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-10">
+            <!-- Chart 1: Revenue -->
+            <div class="bg-surface p-6 rounded-2xl shadow-sm border border-stone-200">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-stone-800">แนวโน้มรายได้ และ ภาษีขาย</h3>
+                    <span class="px-3 py-1 bg-stone-100 text-stone-600 text-sm rounded-full">6 เดือนล่าสุด</span>
+                </div>
+                <p class="text-sm text-stone-500 mb-4">แสดงมูลค่ารวมที่ออกใบเสร็จและใบกำกับภาษี เพื่อประเมินสภาพคล่องและเตรียมภาษีนำส่ง</p>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Products -->
+            <div class="bg-surface p-6 rounded-2xl shadow-sm border border-stone-200">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-stone-800">สัดส่วนสินค้าที่ขายดี (Top Items)</h3>
+                    <select class="px-3 py-1 bg-stone-100 border-none text-stone-600 text-sm rounded-lg focus:ring-0 cursor-pointer" onchange="updateProductChart(this.value)">
+                        <option value="revenue">จัดตามมูลค่า (บาท)</option>
+                        <option value="quantity">จัดตามจำนวน (ชิ้น)</option>
+                    </select>
+                </div>
+                <p class="text-sm text-stone-500 mb-4">วิเคราะห์รายการสินค้าจากใบส่งของและบิลเงินสด เพื่อจัดการสต๊อกสินค้า</p>
+                <div class="chart-container">
+                    <canvas id="productChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="py-20 bg-stone-900 text-stone-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-16 text-center">
+                <h2 class="text-3xl font-bold mb-4 text-white">สถาปัตยกรรมระบบตามหลัก Best Practice</h2>
+                <p class="text-stone-400 max-w-2xl mx-auto">
+                    การปรับปรุงระบบจาก Desktop App สู่ Modern Web App จำเป็นต้องวางโครงสร้างใหม่ เพื่อรองรับการขยายตัว (Scalability) และความปลอดภัย (Security)
+                </p>
+            </div>
+
+            <!-- CSS Grid Diagram (No SVG) -->
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+                
+                <!-- Client Tier -->
+                <div class="w-full md:w-1/3 bg-stone-800 border border-stone-700 p-6 rounded-xl text-center">
+                    <div class="text-4xl mb-3">📱</div>
+                    <h4 class="font-bold text-xl mb-2 text-white">Client Interface</h4>
+                    <p class="text-sm text-stone-400 mb-3">Single Page App (HTML/Tailwind/JS)</p>
+                    <div class="bg-stone-700/50 p-2 rounded text-xs text-stone-300">Responsive Layout<br>Form Validation<br>PDF Generator (Client-side)</div>
+                </div>
+
+                <!-- Arrow/Connection -->
+                <div class="hidden md:flex flex-col items-center text-stone-500">
+                    <span class="text-xs mb-1">HTTPS / REST API</span>
+                    <div class="w-16 h-1 bg-stone-600"></div>
+                </div>
+                <div class="md:hidden flex items-center justify-center text-stone-500 py-2">
+                    <div class="h-8 w-1 bg-stone-600"></div>
+                </div>
+
+                <!-- Server Tier -->
+                <div class="w-full md:w-1/3 bg-stone-800 border border-brand-dark p-6 rounded-xl text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-brand-dark"></div>
+                    <div class="text-4xl mb-3">⚙️</div>
+                    <h4 class="font-bold text-xl mb-2 text-white">API Gateway & Logic</h4>
+                    <p class="text-sm text-stone-400 mb-3">Node.js / Python (Microservices)</p>
+                    <div class="bg-stone-700/50 p-2 rounded text-xs text-stone-300 mb-2">Authentication (JWT)<br>Business Logic (คำนวณ VAT)</div>
+                    <div class="bg-stone-700/50 p-2 rounded text-xs text-stone-300">Running Number Generator</div>
+                </div>
+
+                <!-- Arrow/Connection -->
+                <div class="hidden md:flex flex-col items-center text-stone-500">
+                    <span class="text-xs mb-1">Secure Query</span>
+                    <div class="w-16 h-1 bg-stone-600"></div>
+                </div>
+                <div class="md:hidden flex items-center justify-center text-stone-500 py-2">
+                    <div class="h-8 w-1 bg-stone-600"></div>
+                </div>
+
+                <!-- Database Tier -->
+                <div class="w-full md:w-1/3 bg-stone-800 border border-stone-700 p-6 rounded-xl text-center">
+                    <div class="text-4xl mb-3">🗄️</div>
+                    <h4 class="font-bold text-xl mb-2 text-white">Cloud Database</h4>
+                    <p class="text-sm text-stone-400 mb-3">PostgreSQL / MySQL</p>
+                    <div class="bg-stone-700/50 p-2 rounded text-xs text-stone-300">Relational Data (ลูกค้า, สินค้า, บิล)<br>Daily Auto-Backup<br>Data Encryption</div>
+                </div>
+
+            </div>
+            
+            <div class="mt-12 text-center text-stone-400 text-sm">
+                <p>การออกแบบนี้ช่วยแก้ปัญหา "เครื่องพัง ข้อมูลหาย" และสามารถให้พนักงานหลายคนเข้าใช้งานพร้อมกันจากคนละสถานที่ได้ทันที</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-stone-200 py-8 text-center text-stone-500 text-sm">
+        <p>Conceptual Redesign Analysis &bull; Developed for Educational/Demonstration Purposes.</p>
+        <p class="mt-2">UI/UX and System Architecture designed focusing on ease of use and modern web standards.</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data Storage for Interactive Modules ---
+        const moduleData = {
+            receipt: {
+                icon: "💰",
+                title: "ใบเสร็จรับเงิน (Receipt)",
+                subtitle: "สำหรับการรับชำระเงินที่ไม่มีภาษีมูลค่าเพิ่ม",
+                features: [
+                    "<b>Smart Search:</b> ค้นหาชื่อลูกค้าจากฐานข้อมูลเดิมเพียงพิมพ์อักษรตัวแรก",
+                    "<b>Auto-calculate:</b> ระบบรวมยอดสุทธิ ส่วนลด และคำนวณเงินทอนอัตโนมัติ",
+                    "<b>Digital Delivery:</b> แชร์ใบเสร็จเป็น PDF ผ่านลิงก์หรืออีเมลได้ทันที"
+                ],
+                bestPractice: "UI ควรเน้นการป้อนตัวเลขที่รวดเร็ว (Numpad friendly) และมีระบบป้องกันการแก้ไขบิลที่พิมพ์ไปแล้ว (ต้องทำเรื่องยกเลิกเพื่อ Audit Trail)"
+            },
+            cashbill: {
+                icon: "💵",
+                title: "บิลเงินสด (Cash Bill)",
+                subtitle: "เอกสารรับเงินสำหรับร้านค้าทั่วไป/บุคคลธรรมดา",
+                features: [
+                    "<b>Quick Add:</b> สามารถพิมพ์รายการสินค้าอิสระได้โดยไม่ต้องดึงจากสต๊อก",
+                    "<b>Mobile Friendly:</b> ออกแบบหน้าจอให้พนักงานขายใช้งานผ่านแท็บเล็ตหน้าร้านได้",
+                    "<b>Stamp/Signature:</b> รองรับการแนบลายเซ็นดิจิทัลหรือตราประทับร้านค้าล่วงหน้า"
+                ],
+                bestPractice: "บิลเงินสดมักเกิดหน้างาน ควรลดขั้นตอน(Clicks)ให้เหลือน้อยที่สุด หน้าจอควรสะอาดตา มีปุ่มบันทึกและพิมพ์ (Save & Print) ขนาดใหญ่"
+            },
+            delivery: {
+                icon: "📦",
+                title: "ใบส่งของ (Delivery Note)",
+                subtitle: "เอกสารยืนยันการส่งมอบสินค้า",
+                features: [
+                    "<b>Inventory Link:</b> เมื่อบันทึกใบส่งของ ระบบจะตัดสต๊อกสินค้าหลังบ้านอัตโนมัติทันที",
+                    "<b>Status Tracking:</b> มีแท็กสถานะ (รอส่ง, กำลังส่ง, ส่งแล้ว)",
+                    "<b>Merge Document:</b> สามารถดึงใบส่งของหลายใบ มารวมเพื่อเปิดใบแจ้งหนี้ใบเดียวได้"
+                ],
+                bestPractice: "การออกแบบฐานข้อมูลแบบ Relational จะช่วยให้สามารถเชื่อมโยง ใบส่งของ -> ใบแจ้งหนี้ -> ใบเสร็จ ได้โดยไม่ต้องคีย์ข้อมูลซ้ำซ้อน"
+            },
+            taxinvoice: {
+                icon: "🏢",
+                title: "ใบกำกับภาษี (Tax Invoice)",
+                subtitle: "เอกสารสำคัญทางกฎหมายสำหรับธุรกิจในระบบ VAT",
+                features: [
+                    "<b>Validation:</b> ระบบตรวจสอบความถูกต้องของ เลขประจำตัวผู้เสียภาษี 13 หลัก",
+                    "<b>VAT Logic:</b> รองรับทั้งรูปแบบ ราคารวมภาษี (Vat Include) และ ราคาแยกภาษี (Vat Exclude)",
+                    "<b>e-Tax Ready:</b> โครงสร้างข้อมูลออกแบบเพื่อพร้อมเชื่อมต่อระบบ e-Tax Invoice ของกรมสรรพากรในอนาคต"
+                ],
+                bestPractice: "ต้องมีความเข้มงวดของข้อมูลสูงที่สุด (Data Integrity) การแก้ไขหรือยกเลิกต้องมีการบังคับให้ออก 'ใบลดหนี้ (Credit Note)' แทนการลบข้อมูลทิ้ง"
+            }
+        };
+
+        // --- Core Interaction Handling: Tab Switching ---
+        function changeModule(moduleId, btnElement) {
+            // Update Active Button
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.replace('bg-brand-dark', 'bg-transparent');
+                btn.classList.replace('text-white', 'text-stone-700');
+            });
+            btnElement.classList.add('active');
+
+            // Get Data
+            const data = moduleData[moduleId];
+            const contentPanel = document.getElementById('module-content');
+
+            // Remove animation class to re-trigger
+            contentPanel.classList.remove('fade-in');
+            
+            // Build HTML
+            let listHTML = '';
+            data.features.forEach(feat => {
+                listHTML += `<li class="flex items-start mb-3"><span class="text-brand-dark mr-3 mt-1">✦</span> <span class="text-stone-700 text-lg">${feat}</span></li>`;
+            });
+
+            const html = `
+                <div class="mb-6 flex items-center">
+                    <div class="text-5xl mr-4 bg-brand-light p-3 rounded-2xl">${data.icon}</div>
+                    <div>
+                        <h3 class="text-3xl font-bold text-stone-900">${data.title}</h3>
+                        <p class="text-stone-500 text-lg">${data.subtitle}</p>
+                    </div>
+                </div>
+                
+                <h4 class="font-semibold text-stone-800 mb-4 text-xl">ฟีเจอร์เด่นที่เพิ่มเข้ามา (UX/UI Enhancements)</h4>
+                <ul class="mb-8">
+                    ${listHTML}
+                </ul>
+
+                <div class="bg-stone-50 p-5 rounded-xl border-l-4 border-brand-dark">
+                    <p class="text-sm font-bold text-stone-800 mb-1">💡 Best Practice Insight</p>
+                    <p class="text-stone-600">${data.bestPractice}</p>
+                </div>
+            `;
+
+            contentPanel.innerHTML = html;
+            
+            // Trigger reflow for animation
+            void contentPanel.offsetWidth;
+            contentPanel.classList.add('fade-in');
+        }
+
+        // --- Data & Chart Initialization ---
+        
+        // Chart objects for global reference
+        let revenueChartInst = null;
+        let productChartInst = null;
+
+        const chartColors = {
+            primary: '#EA580C', // Orange 600
+            secondary: '#FDBA74', // Orange 300
+            neutral: '#D6D3D1', // Stone 300
+            bg: '#FFF7ED' // Orange 50
+        };
+
+        function initCharts() {
+            // Chart 1: Revenue Line Chart
+            const revCtx = document.getElementById('revenueChart').getContext('2d');
+            revenueChartInst = new Chart(revCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.'],
+                    datasets: [
+                        {
+                            label: 'มูลค่าสินค้า/บริการ (บาท)',
+                            data: [120000, 150000, 140000, 180000, 210000, 250000],
+                            backgroundColor: chartColors.primary,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'ภาษีขาย 7% (บาท)',
+                            data: [8400, 10500, 9800, 12600, 14700, 17500],
+                            backgroundColor: chartColors.secondary,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // MANDATORY for custom containers
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { family: 'Sarabun' } }
+                        },
+                        tooltip: {
+                            titleFont: { family: 'Sarabun' },
+                            bodyFont: { family: 'Sarabun' },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, border: { display: false } }
+                    }
+                }
+            });
+
+            // Chart 2: Products Doughnut Chart (Initial data: Revenue)
+            const prodCtx = document.getElementById('productChart').getContext('2d');
+            productChartInst = new Chart(prodCtx, {
+                type: 'doughnut',
+                data: getProductData('revenue'),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // MANDATORY for custom containers
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { 
+                                font: { family: 'Sarabun' },
+                                boxWidth: 15
+                            }
+                        },
+                        tooltip: {
+                            titleFont: { family: 'Sarabun' },
+                            bodyFont: { family: 'Sarabun' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Data generator for the Product chart based on selector
+        function getProductData(type) {
+            const labels = ['กระดาษ A4 (รีม)', 'หมึกพิมพ์ Toner', 'แฟ้มเอกสาร', 'เครื่องเขียน', 'บริการซ่อม'];
+            // Truncate logic (16 chars) as per instructions, though these are short enough.
+            const wrappedLabels = labels.map(l => l.length > 16 ? l.substring(0, 14) + '..' : l);
+
+            if (type === 'revenue') {
+                return {
+                    labels: wrappedLabels,
+                    datasets: [{
+                        data: [45000, 85000, 12000, 15000, 30000],
+                        backgroundColor: ['#EA580C', '#C2410C', '#FB923C', '#FDBA74', '#FFEDD5'],
+                        borderWidth: 0
+                    }]
+                };
+            } else {
+                return {
+                    labels: wrappedLabels,
+                    datasets: [{
+                        data: [450, 30, 200, 500, 15],
+                        backgroundColor: ['#0F766E', '#0D9488', '#14B8A6', '#2DD4BF', '#CCFBF1'], // Teal palette for quantity
+                        borderWidth: 0
+                    }]
+                };
+            }
+        }
+
+        // Core Interaction: Dynamic Chart Update
+        window.updateProductChart = function(type) {
+            if(productChartInst) {
+                productChartInst.data = getProductData(type);
+                productChartInst.update();
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Init first module content
+            changeModule('receipt', document.querySelector('.tab-btn'));
+            // Init charts
+            initCharts();
+            
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('nav a').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+
+    </script>
+</body>
+</html>

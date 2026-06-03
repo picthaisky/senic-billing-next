@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "SenicBilling.Domain/1.0.0": {
+        "runtime": {
+          "SenicBilling.Domain.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SenicBilling.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
