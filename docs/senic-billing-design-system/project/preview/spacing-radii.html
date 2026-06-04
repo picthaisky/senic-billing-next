@@ -1,0 +1,27 @@
+<!-- @dsCard group="Spacing" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 22px; }
+  .row { display: flex; gap: 14px; }
+  .item { flex: 1; text-align: center; }
+  .box { height: 64px; background: var(--color-surface-solid); border: 1.5px solid var(--color-primary); }
+  .nm { font-size: 11px; font-weight: 600; color: var(--color-text); margin-top: 8px; }
+  .v { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="border-radius:8px"></div><div class="nm">sm</div><div class="v">8px</div></div>
+    <div class="item"><div class="box" style="border-radius:12px"></div><div class="nm">md</div><div class="v">12px</div></div>
+    <div class="item"><div class="box" style="border-radius:16px"></div><div class="nm">lg</div><div class="v">16px</div></div>
+    <div class="item"><div class="box" style="border-radius:20px"></div><div class="nm">xl · cards</div><div class="v">20px</div></div>
+    <div class="item"><div class="box" style="border-radius:24px"></div><div class="nm">2xl</div><div class="v">24px</div></div>
+    <div class="item"><div class="box" style="border-radius:9999px"></div><div class="nm">full · pills</div><div class="v">9999px</div></div>
+  </div>
+</body>
+</html>

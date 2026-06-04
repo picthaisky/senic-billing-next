@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 22px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .ttl { font-size: 12px; font-weight: 700; color: var(--color-text); }
+  .sub { font-size: 11px; color: var(--color-text-muted); margin-top: 3px; }
+  .tag { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-muted); margin-top: 12px; display: block; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="card" style="padding:16px">
+      <div class="ttl">.card</div>
+      <div class="sub">solid · 1px border · xl radius</div>
+      <span class="tag">surface-solid</span>
+    </div>
+    <div class="glass-card" style="padding:16px">
+      <div class="ttl">.glass-card</div>
+      <div class="sub">translucent · blur(12px)</div>
+      <span class="tag">backdrop-filter</span>
+    </div>
+    <div class="kpi-card" style="padding:16px">
+      <div class="ttl">.kpi-card</div>
+      <div class="sub">gradient tint · blur(8px)</div>
+      <span class="tag">gradient-card</span>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!-- @dsCard group="Spacing" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 26px 22px 30px; }
+  .row { display: flex; gap: 20px; align-items: center; justify-content: space-between; }
+  .item { text-align: center; }
+  .box { width: 96px; height: 56px; background: var(--color-surface-solid); border-radius: var(--radius-lg); }
+  .nm { font-size: 11px; font-weight: 600; color: var(--color-text); margin-top: 14px; }
+  .v { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-muted); }
+  .glow { width: 96px; height: 56px; border-radius: var(--radius-lg); background: var(--gradient-brand); box-shadow: 0 2px 8px rgba(234,88,12,0.35); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-sm)"></div><div class="nm">shadow-sm</div><div class="v">subtle</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-md)"></div><div class="nm">shadow-md</div><div class="v">card hover</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-lg)"></div><div class="nm">shadow-lg</div><div class="v">popover</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-xl)"></div><div class="nm">shadow-xl</div><div class="v">modal</div></div>
+    <div class="item"><div class="glow"></div><div class="nm">brand glow</div><div class="v">primary btn</div></div>
+  </div>
+</body>
+</html>

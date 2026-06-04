@@ -1,0 +1,32 @@
+<!-- @dsCard group="Colors" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 20px 22px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .chip { height: 50px; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+  .nm { font-size: 10.5px; font-weight: 600; color: var(--color-text); margin-top: 6px; }
+  .hx { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-muted); margin-top: 1px; }
+  .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-text-muted); margin: 0 0 10px; }
+</style>
+</head>
+<body>
+  <p class="lbl">Warm Horizon · neutrals &amp; text</p>
+  <div class="grid">
+    <div><div class="chip" style="background:#faf9f7"></div><div class="nm">bg</div><div class="hx">#faf9f7</div></div>
+    <div><div class="chip" style="background:#f5f4f0"></div><div class="nm">bg-secondary</div><div class="hx">#f5f4f0</div></div>
+    <div><div class="chip" style="background:#ffffff"></div><div class="nm">surface-solid</div><div class="hx">#ffffff</div></div>
+    <div><div class="chip" style="background:#fef3e2"></div><div class="nm">surface-hover</div><div class="hx">#fef3e2</div></div>
+    <div><div class="chip" style="background:#e7e5e4"></div><div class="nm">border</div><div class="hx">#e7e5e4</div></div>
+    <div><div class="chip" style="background:#1c1917"></div><div class="nm">text</div><div class="hx">#1c1917</div></div>
+    <div><div class="chip" style="background:#57534e"></div><div class="nm">text-secondary</div><div class="hx">#57534e</div></div>
+    <div><div class="chip" style="background:#a8a29e"></div><div class="nm">text-muted</div><div class="hx">#a8a29e</div></div>
+    <div><div class="chip" style="background:#d6d3d1"></div><div class="nm">border-hover</div><div class="hx">#d6d3d1</div></div>
+    <div><div class="chip" style="background:var(--gradient-brand)"></div><div class="nm">gradient-brand</div><div class="hx">135°</div></div>
+  </div>
+</body>
+</html>

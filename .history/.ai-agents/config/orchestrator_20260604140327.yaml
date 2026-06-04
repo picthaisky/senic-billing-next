@@ -1,0 +1,77 @@
+version: 1
+orchestrator: senic-maestro
+
+intake_required_fields:
+  - goal
+  - affected_modules
+  - risk_level
+  - required_agents
+  - validation_plan
+  - knowledge_sources
+
+routing_rules:
+  - when: request_mentions_requirements_or_business_flow
+    delegate: [senic-athena]
+  - when: request_changes_api_database_or_architecture
+    delegate: [senic-atlas, senic-sage]
+  - when: request_changes_vat_money_documents_or_payment
+    delegate: [senic-ledger, senic-argus]
+  - when: request_changes_react_ui_theme_mobile_or_forms
+    delegate: [senic-nova, senic-milo]
+  - when: request_touches_auth_tenant_isolation_webhook_uploads_or_secrets
+    delegate: [senic-aegis]
+  - when: request_touches_docker_ci_cd_env_health_or_release
+    delegate: [senic-hermes]
+  - when: task_finishes_or_repeats_a_known_issue
+    delegate: [senic-mnemosyne]
+
+quality_gates:
+  requirement_gate:
+    owner: senic-athena
+    required_for: [new_feature, workflow_change, ambiguous_request]
+    pass_condition: Acceptance criteria are observable and testable.
+  architecture_gate:
+    owner: senic-atlas
+    required_for: [api_change, schema_change, integration_change, cross_layer_change]
+    pass_condition: Boundaries, contracts, and data ownership are explicit.
+  billing_gate:
+    owner: senic-ledger
+    required_for: [money_change, vat_change, payment_change, document_lifecycle_change]
+    pass_condition: Financial invariants and edge cases are documented.
+  security_gate:
+    owner: senic-aegis
+    required_for: [auth_change, tenant_data_change, webhook_change, upload_change, secret_change]
+    pass_condition: Tenant isolation, auth, and secret handling risks are addressed.
+  design_gate:
+    owner: senic-milo
+    required_for: [visible_ui_change, mobile_change, theme_change]
+    pass_condition: Thai-first UX and design tokens are preserved.
+  qa_gate:
+    owner: senic-argus
+    required_for: [all_code_changes]
+    pass_condition: Validation evidence or explicit test gap is recorded.
+  release_gate:
+    owner: senic-hermes
+    required_for: [deployment_change, env_change, docker_change, ci_cd_change]
+    pass_condition: Rollback and environment impacts are understood.
+  learning_gate:
+    owner: senic-mnemosyne
+    required_for: [validated_feature, bug_fix, incident, repeated_pattern]
+    pass_condition: Reusable knowledge is captured or explicitly skipped.
+
+validation_commands:
+  backend_build: "cd backend; dotnet build SenicBilling.slnx"
+  frontend_build: "cd frontend; npm run build"
+  frontend_lint: "cd frontend; npm run lint"
+  whitespace_check: "git diff --check"
+
+coordination_loop:
+  - intake
+  - route
+  - discover
+  - plan
+  - implement_small_slice
+  - validate
+  - specialist_review_if_risky
+  - iterate
+  - capture_learning
