@@ -33,24 +33,38 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
-      <div className="w-full max-w-md card p-8 animate-fade-in-up">
-        <div className="flex flex-col items-center mb-8">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'var(--color-bg)' }}
+    >
+      <div
+        className="card w-full max-w-[400px] animate-fade-in-up"
+        style={{ padding: '36px 32px' }}
+      >
+        {/* Brand */}
+        <div className="text-center" style={{ marginBottom: 28 }}>
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-3xl mb-4"
-            style={{ background: 'var(--gradient-brand)' }}
+            className="flex items-center justify-center text-white font-bold mx-auto"
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              fontSize: 30,
+              marginBottom: 16,
+              background: 'var(--gradient-brand)',
+            }}
           >
             S
           </div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <h1 className="font-bold" style={{ margin: 0, fontSize: 24, color: 'var(--color-text)' }}>
             Senic<span style={{ color: 'var(--color-primary)' }}>Billing</span>
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--color-text-muted)' }}>
             เข้าสู่ระบบเพื่อจัดการเอกสารของคุณ
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100">
               {error}
@@ -58,7 +72,10 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+            <label
+              className="block font-medium"
+              style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 6 }}
+            >
               ชื่อผู้ใช้งาน
             </label>
             <input
@@ -72,7 +89,10 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+            <label
+              className="block font-medium"
+              style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 6 }}
+            >
               รหัสผ่าน
             </label>
             <input
@@ -88,7 +108,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-primary w-full py-2.5 text-base mt-2"
+            className="btn btn-primary btn-lg w-full"
+            style={{ marginTop: 4 }}
           >
             {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
           </button>

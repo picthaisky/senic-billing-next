@@ -79,7 +79,7 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
         
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h3 className="font-bold text-lg text-indigo-600 dark:text-indigo-400">ชำระเงินออนไลน์ (PromptPay)</h3>
+          <h3 className="font-bold text-lg text-indigo-600">ชำระเงินออนไลน์ (PromptPay)</h3>
           {!isPaid && (
             <button 
               onClick={onClose} 
@@ -96,13 +96,13 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
         {/* Body */}
         <div className="p-6 text-center space-y-6">
           <div>
-            <p className="text-gray-500 text-sm mb-1">หมายเลขเอกสาร</p>
+            <p className="text-[var(--color-text-muted)] text-sm mb-1">หมายเลขเอกสาร</p>
             <p className="font-semibold text-lg">{documentNumber}</p>
           </div>
           
           <div>
-            <p className="text-gray-500 text-sm mb-1">ยอดชำระสุทธิ</p>
-            <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+            <p className="text-[var(--color-text-muted)] text-sm mb-1">ยอดชำระสุทธิ</p>
+            <p className="text-3xl font-bold text-indigo-600">
               ฿{amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </p>
           </div>
@@ -112,10 +112,10 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
               <div className="flex flex-col items-center gap-4 text-green-500 animate-fade-in-up">
                 <CheckCircle size={80} className="text-green-500" />
                 <h4 className="text-xl font-bold">ชำระเงินเสร็จสมบูรณ์!</h4>
-                <p className="text-sm text-gray-500">ระบบกำลังอัปเดตสถานะบิล...</p>
+                <p className="text-sm text-[var(--color-text-muted)]">ระบบกำลังอัปเดตสถานะบิล...</p>
               </div>
             ) : loading ? (
-              <div className="flex flex-col items-center gap-4 text-gray-400">
+              <div className="flex flex-col items-center gap-4 text-[var(--color-text-muted)]">
                 <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
                 <p>กำลังสร้าง QR Code...</p>
               </div>
@@ -128,7 +128,7 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
             ) : qrCodeUrl ? (
               <div className="flex flex-col items-center gap-2 animate-fade-in">
                 <img src={qrCodeUrl} alt="PromptPay QR Code" className="w-48 h-48 rounded-lg shadow-sm bg-white p-2" />
-                <div className="flex items-center gap-2 mt-4 text-sm text-gray-500">
+                <div className="flex items-center gap-2 mt-4 text-sm text-[var(--color-text-muted)]">
                   {isConnected ? (
                     <span className="flex items-center gap-1 text-green-500"><CheckCircle size={14} /> ระบบกำลังรอการชำระเงิน</span>
                   ) : (

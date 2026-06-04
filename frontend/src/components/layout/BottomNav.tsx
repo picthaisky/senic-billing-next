@@ -144,7 +144,7 @@ export default function BottomNav({ currentPage, onNavigate }: BottomNavProps) {
                     onClick={() => { onNavigate(id); setShowMore(false); }}
                     className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl transition-colors text-left"
                     style={{
-                      background: isActive ? 'rgba(234, 88, 12, 0.08)' : 'transparent',
+                      background: isActive ? 'var(--color-surface-active)' : 'transparent',
                       color: isActive ? 'var(--color-primary)' : 'var(--color-text)',
                     }}
                   >
@@ -172,7 +172,7 @@ export default function BottomNav({ currentPage, onNavigate }: BottomNavProps) {
               {/* Logout */}
               <button
                 onClick={() => { useAuthStore.getState().logout(); setShowMore(false); }}
-                className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl transition-colors text-red-400 hover:bg-red-500/10"
+                className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl transition-colors text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
               >
                 <LogOut size={22} />
                 <span className="font-medium">ออกจากระบบ</span>

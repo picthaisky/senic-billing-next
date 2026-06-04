@@ -94,7 +94,7 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
       )}
 
       {/* Upload Box */}
-      <div className="border-2 border-dashed rounded-xl p-6 text-center transition-colors hover:bg-gray-50 relative" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="border-2 border-dashed rounded-xl p-6 text-center transition-colors hover:bg-[var(--color-surface-hover)] relative" style={{ borderColor: 'var(--color-border)' }}>
         <input 
           type="file" 
           onChange={handleFileChange}
@@ -103,9 +103,9 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
         />
         <div className="flex flex-col items-center justify-center pointer-events-none">
           {uploading ? (
-            <Loader2 size={32} className="animate-spin text-orange-500 mb-2" />
+            <Loader2 size={32} className="animate-spin text-[var(--color-primary)] mb-2" />
           ) : (
-            <UploadCloud size={32} className="text-gray-400 mb-2" />
+            <UploadCloud size={32} className="text-[var(--color-text-muted)] mb-2" />
           )}
           <p className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
             {uploading ? 'กำลังอัปโหลด...' : 'คลิกหรือลากไฟล์มาวางที่นี่'}
@@ -120,9 +120,9 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
       {attachments.length > 0 && (
         <div className="mt-4 space-y-2">
           {attachments.map(att => (
-            <div key={att.id} className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50" style={{ borderColor: 'var(--color-border)' }}>
+            <div key={att.id} className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
                   <FileIcon size={20} />
                 </div>
                 <div>
