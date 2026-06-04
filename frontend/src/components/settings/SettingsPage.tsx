@@ -32,8 +32,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="card p-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="card p-6 lg:col-span-2">
         <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
           <Building2 size={20} style={{ color: 'var(--color-primary)' }} />
           ข้อมูลองค์กร (Tenant Settings)
@@ -105,6 +106,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      </div>
+      {/* ── End top row grid ── */}
 
       <div className="card p-6">
         <h3 className="font-bold text-lg mb-2 flex items-center gap-2">

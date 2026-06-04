@@ -80,7 +80,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
   };
 
   return (
-    <div className="space-y-5 max-w-[1200px] mx-auto">
+    <div className="space-y-5">
 
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -101,7 +101,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           </div>
         </div>
 
-        {/* Action Buttons — wrap on small screens */}
+        {/* Secondary actions — primary Save lives in the summary rail */}
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
             <RotateCcw size={15} /> ล้างข้อมูล
@@ -120,11 +120,14 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           >
             <CreditCard size={15} /> ชำระเงินออนไลน์
           </button>
-          <button onClick={handleSave} disabled={isSaving} className="btn btn-primary">
-            <Save size={15} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
-          </button>
         </div>
       </div>
+
+      {/* ── Two-column working layout: editor (left) + sticky summary rail (right) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+
+        {/* ════ LEFT: Editor ════ */}
+        <div className="xl:col-span-2 space-y-5">
 
       {/* ── Customer Info Card ── */}
       <div className="card p-5">
@@ -273,101 +276,130 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
         </div>
       </div>
 
-      {/* ── Summary Panel ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+      {/* ── Attachments (part of the editor column) ── */}
+      <AttachmentUpload
+        documentId={documentId}
+        attachments={attachments}
+        onAttachmentAdded={(att) => setAttachments(prev => [...prev, att])}
+      />
 
-        {/* VAT Mode & Discount (narrower — 2/5) */}
-        <div className="lg:col-span-2 card p-5">
-          <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
-            ตั้งค่าภาษี
-          </h3>
-          <div className="flex p-1 rounded-lg mb-4" style={{ background: 'var(--color-bg-secondary)' }}>
-            {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
+        </div>
+        {/* ════ END LEFT ════ */}
+
+        {/* ════ RIGHT: sticky summary rail ════ */}
+        <div className="xl:col-span-1">
+          <div className="space-y-5 xl:sticky xl:top-20">
+
+            {/* Tax Mode & Discount */}
+            <div className="card p-5">
+              <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
+                ตั้งค่าภาษี
+              </h3>
+              <div className="flex p-1 rounded-lg mb-4" style={{ background: 'var(--color-bg-secondary)' }}>
+                {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setVatMode(mode)}
+                    className="flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all duration-200"
+                    style={{
+                      background: vatMode === mode ? 'var(--color-surface-solid)' : 'transparent',
+                      color: vatMode === mode ? 'var(--color-text)' : 'var(--color-text-muted)',
+                      boxShadow: vatMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    }}
+                  >
+                    {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
+                  ส่วนลดรวม (บาท)
+                </label>
+                <input
+                  type="number"
+                  className="input-field"
+                  min={0}
+                  step={0.01}
+                  value={discountAmount || ''}
+                  onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {/* Totals Summary */}
+            <div className="glass-card p-5">
+              <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
+                สรุปยอดรวม
+              </h3>
+              <div className="space-y-2.5">
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--color-text-secondary)' }}>ยอดรวมก่อนส่วนลด</span>
+                  <span className="font-semibold tabular-nums">{formatNumber(totals.subtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: 'var(--color-text-secondary)' }}>ส่วนลดรวม</span>
+                    <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                    ยอดรวม{vatMode === 'inclusive' ? '' : 'ก่อน'}ภาษี
+                  </span>
+                  <span className="font-semibold tabular-nums">{formatNumber(totals.totalBeforeVat)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                    ภาษีมูลค่าเพิ่ม 7%
+                    <span className="text-xs ml-1 opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
+                  </span>
+                  <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
+                </div>
+
+                {/* Grand Total */}
+                <div
+                  className="flex justify-between items-center pt-3 mt-3 border-t"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
+                  <span className="font-bold text-base" style={{ color: 'var(--color-text)' }}>
+                    ยอดรวมสุทธิ
+                  </span>
+                  <span
+                    className="text-2xl font-extrabold tabular-nums"
+                    style={{ color: 'var(--color-primary)' }}
+                  >
+                    ฿{formatNumber(totals.grandTotal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Primary Save action — anchored under the total */}
               <button
-                key={mode}
-                onClick={() => setVatMode(mode)}
-                className="flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all duration-200"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="btn btn-primary btn-lg w-full mt-5"
+              >
+                <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
+              </button>
+              <button
+                onClick={() => setPaymentModalOpen(true)}
+                disabled={isSaving}
+                className="btn btn-secondary w-full mt-2"
                 style={{
-                  background: vatMode === mode ? 'var(--color-surface-solid)' : 'transparent',
-                  color: vatMode === mode ? 'var(--color-text)' : 'var(--color-text-muted)',
-                  boxShadow: vatMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  background: 'rgba(99, 102, 241, 0.08)',
+                  color: '#4f46e5',
+                  borderColor: 'rgba(99, 102, 241, 0.25)',
                 }}
               >
-                {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
+                <CreditCard size={15} /> ชำระเงินออนไลน์
               </button>
-            ))}
-          </div>
-          <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
-              ส่วนลดรวม (บาท)
-            </label>
-            <input
-              type="number"
-              className="input-field"
-              min={0}
-              step={0.01}
-              value={discountAmount || ''}
-              onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-              placeholder="0.00"
-            />
-          </div>
-        </div>
-
-        {/* Totals (wider — 3/5) */}
-        <div className="lg:col-span-3 glass-card p-5">
-          <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
-            สรุปยอดรวม
-          </h3>
-          <div className="space-y-2.5">
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--color-text-secondary)' }}>ยอดรวมก่อนส่วนลด</span>
-              <span className="font-semibold tabular-nums">{formatNumber(totals.subtotal)}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span style={{ color: 'var(--color-text-secondary)' }}>ส่วนลดรวม</span>
-                <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(discountAmount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                ยอดรวม{vatMode === 'inclusive' ? '' : 'ก่อน'}ภาษี
-              </span>
-              <span className="font-semibold tabular-nums">{formatNumber(totals.totalBeforeVat)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: 'var(--color-text-secondary)' }}>
-                ภาษีมูลค่าเพิ่ม 7%
-                <span className="text-xs ml-1 opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
-              </span>
-              <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
             </div>
 
-            {/* Grand Total */}
-            <div
-              className="flex justify-between items-center pt-3 mt-3 border-t"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              <span className="font-bold text-base" style={{ color: 'var(--color-text)' }}>
-                ยอดรวมสุทธิ
-              </span>
-              <span
-                className="text-2xl font-extrabold tabular-nums"
-                style={{ color: 'var(--color-primary)' }}
-              >
-                ฿{formatNumber(totals.grandTotal)}
-              </span>
-            </div>
           </div>
         </div>
+        {/* ════ END RIGHT ════ */}
       </div>
-
-      {/* ── Attachments ── */}
-      <AttachmentUpload 
-        documentId={documentId} 
-        attachments={attachments} 
-        onAttachmentAdded={(att) => setAttachments(prev => [...prev, att])} 
-      />
 
       {/* Payment Modal */}
       <PaymentModal
