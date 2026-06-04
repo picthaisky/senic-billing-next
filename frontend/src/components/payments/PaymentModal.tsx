@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle, Clock } from 'lucide-react';
 import { useAppSystem } from '../../hooks/useAppSystem';
 import { signalRClient } from '../../services/signalrClient';
 import { apiClient } from '../../services/apiClient';
+import axios from 'axios';
 
 interface PaymentModalProps {
   documentId: string;
@@ -13,6 +15,15 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
+type PaymentReceivedEvent = {
+  documentId?: string;
+};
+
+type SignalRConnectionLike = {
+  on: (eventName: string, handler: (data: PaymentReceivedEvent) => void) => void;
+  off: (eventName: string, handler: (data: PaymentReceivedEvent) => void) => void;
+};
+
 export default function PaymentModal({ documentId, documentNumber, amount, isOpen, onClose, onSuccess }: PaymentModalProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,12 +32,30 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
   
   const { isConnected } = useAppSystem();
 
+  const createCharge = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiClient.post(`/payments/${documentId}/promptpay`);
+      setQrCodeUrl(res.data.qrCodeUrl);
+    } catch (err: unknown) {
+      console.error(err);
+      if (axios.isAxiosError(err)) {
+        setError((err.response?.data as string | undefined) || 'ไม่สามารถสร้างรายการชำระเงินได้');
+      } else {
+        setError('ไม่สามารถสร้างรายการชำระเงินได้');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [documentId]);
+
   // Create Charge when modal opens
   useEffect(() => {
     if (isOpen && documentId && !qrCodeUrl && !isPaid) {
       createCharge();
     }
-  }, [isOpen, documentId]);
+  }, [isOpen, documentId, qrCodeUrl, isPaid, createCharge]);
 
   // Listen to SignalR Event for Payment Success
   useEffect(() => {
@@ -34,7 +63,7 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
 
     // Use a custom event or callback from signalrClient 
     // In our implementation, we'll register a direct listener to the HubConnection
-    const handlePaymentReceived = (data: any) => {
+    const handlePaymentReceived = (data: PaymentReceivedEvent) => {
       if (data.documentId === documentId) {
         setIsPaid(true);
         setTimeout(() => {
@@ -45,7 +74,7 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
     };
 
     // We can expose the connection from signalrClient to add/remove handlers directly
-    const conn = (signalRClient as any).connection;
+    const conn = (signalRClient as unknown as { connection?: SignalRConnectionLike }).connection;
     if (conn) {
       conn.on('PaymentReceived', handlePaymentReceived);
     }
@@ -57,38 +86,21 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
     };
   }, [isOpen, documentId, onSuccess, onClose]);
 
-  const createCharge = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiClient.post(`/payments/${documentId}/promptpay`);
-      setQrCodeUrl(res.data.qrCodeUrl);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data || 'ไม่สามารถสร้างรายการชำระเงินได้');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in relative border" style={{ backgroundColor: 'var(--color-surface-solid)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="layout-payment-modal rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in relative border my-auto">
         
         {/* Header */}
-        <div className="p-4 border-b flex justify-between items-center" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h3 className="font-bold text-lg" style={{ color: 'var(--color-primary)' }}>ชำระเงินออนไลน์ (PromptPay)</h3>
+        <div className="layout-payment-modal-header layout-payment-modal-header-shell border-b flex justify-between items-center">
+          <h3 className="font-bold text-lg text-[var(--color-primary)]">ชำระเงินออนไลน์ (PromptPay)</h3>
           {!isPaid && (
             <button 
               onClick={onClose} 
-              className="p-1 rounded-full transition-colors" 
-              style={{ color: 'var(--color-text-secondary)' }}
+              className="layout-payment-modal-close p-1 rounded-full transition-colors text-[var(--color-text-secondary)]" 
               aria-label="ปิดหน้าต่างชำระเงิน"
               title="ปิด"
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <X size={20} />
             </button>
@@ -96,20 +108,20 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
         </div>
 
         {/* Body */}
-        <div className="p-6 text-center space-y-6">
+        <div className="form-modal-content form-stack-xl text-center">
           <div>
-            <p className="text-[var(--color-text-muted)] text-sm mb-1">หมายเลขเอกสาร</p>
+            <p className="layout-payment-modal-field-label text-[var(--color-text-muted)] text-sm">หมายเลขเอกสาร</p>
             <p className="font-semibold text-lg">{documentNumber}</p>
           </div>
           
           <div>
-            <p className="text-[var(--color-text-muted)] text-sm mb-1">ยอดชำระสุทธิ</p>
-            <p className="text-3xl font-bold" style={{ color: 'var(--color-primary)' }}>
+            <p className="layout-payment-modal-field-label text-[var(--color-text-muted)] text-sm">ยอดชำระสุทธิ</p>
+            <p className="text-3xl font-bold text-[var(--color-primary)]">
               ฿{amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </p>
           </div>
 
-          <div className="flex justify-center items-center min-h-[250px] rounded-xl p-4 border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+          <div className="layout-payment-modal-body-surface flex justify-center items-center min-h-[250px] rounded-xl p-4 border">
             {isPaid ? (
               <div className="flex flex-col items-center gap-4 text-green-500 animate-fade-in-up">
                 <CheckCircle size={80} className="text-green-500" />
@@ -118,22 +130,19 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
               </div>
             ) : loading ? (
               <div className="flex flex-col items-center gap-4 text-[var(--color-text-muted)]">
-                <div
-                  className="w-10 h-10 border-4 rounded-full animate-spin"
-                  style={{ borderColor: 'rgba(234, 88, 12, 0.22)', borderTopColor: 'var(--color-primary)' }}
-                ></div>
+                <div className="layout-payment-modal-spinner w-10 h-10 border-4 rounded-full animate-spin"></div>
                 <p>กำลังสร้าง QR Code...</p>
               </div>
             ) : error ? (
               <div className="text-red-500">
-                <X size={40} className="mx-auto mb-2" />
+                <X size={40} className="layout-payment-modal-error-icon" />
                 <p>{error}</p>
-                <button onClick={createCharge} className="mt-4 text-sm underline">ลองใหม่อีกครั้ง</button>
+                <button onClick={createCharge} className="layout-payment-modal-retry text-sm underline">ลองใหม่อีกครั้ง</button>
               </div>
             ) : qrCodeUrl ? (
               <div className="flex flex-col items-center gap-2 animate-fade-in">
                 <img src={qrCodeUrl} alt="PromptPay QR Code" className="w-48 h-48 rounded-lg shadow-sm bg-white p-2" />
-                <div className="flex items-center gap-2 mt-4 text-sm text-[var(--color-text-muted)]">
+                <div className="layout-payment-modal-hint flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
                   {isConnected ? (
                     <span className="flex items-center gap-1 text-green-500"><CheckCircle size={14} /> ระบบกำลังรอการชำระเงิน</span>
                   ) : (
@@ -145,13 +154,14 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
           </div>
 
           {!isPaid && (
-            <div className="flex justify-center pt-2">
+            <div className="layout-payment-modal-brand-wrap flex justify-center">
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/PromptPay_logo.png/600px-PromptPay_logo.png" alt="PromptPay" className="h-8 object-contain opacity-70 grayscale hover:grayscale-0 transition-all" />
             </div>
           )}
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
