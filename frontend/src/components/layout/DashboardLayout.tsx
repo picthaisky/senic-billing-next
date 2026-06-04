@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { signalRClient } from '../../services/signalrClient';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import BottomNav from './BottomNav';
+import FloatingActionButton from './FloatingActionButton';
 import DashboardPage from '../dashboard/DashboardPage';
 import InvoiceForm from '../forms/InvoiceForm';
 import CustomersPage from '../customers/CustomersPage';
@@ -57,22 +59,30 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
+      {/* Desktop sidebar — hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+      </div>
+
+      {/* Main content — offset by sidebar on desktop */}
+      <div className="md:ml-[260px] transition-all duration-300">
         <Header 
           pageTitle={pageTitles[currentPage] || 'Senic Billing Next'} 
           onNavigate={setCurrentPage} 
         />
-        <main
-          className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
-          style={{ background: 'var(--color-bg)' }}
-        >
+        <main className="px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-6 lg:px-8">
           <div className="w-full max-w-[1440px] mx-auto animate-fade-in-up">
             {renderPage()}
           </div>
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav currentPage={currentPage} onNavigate={setCurrentPage} />
+
+      {/* Floating Action Button (mobile only) */}
+      <FloatingActionButton currentPage={currentPage} onNavigate={setCurrentPage} />
     </div>
   );
 }
