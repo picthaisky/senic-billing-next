@@ -166,7 +166,7 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
-                    className="input-field bg-gray-50 cursor-not-allowed"
+                    className="input-field bg-[var(--color-bg-secondary)] cursor-not-allowed"
                     value={user?.email || ''}
                     disabled
                   />

@@ -121,7 +121,7 @@ export default function CustomersPage() {
       {/* Search & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="relative w-full sm:w-96">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input 
             type="text" 
             placeholder="ค้นหาชื่อลูกค้า, เลขผู้เสียภาษี..." 
@@ -186,7 +186,7 @@ export default function CustomersPage() {
                   </td>
                   <td data-label="จัดการ">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => handleOpenModal(customer)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors haptic-tap" title="แก้ไข">
+                      <button onClick={() => handleOpenModal(customer)} className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors haptic-tap" title="แก้ไข">
                         <Edit2 size={14} style={{ color: 'var(--color-text-secondary)' }} />
                       </button>
                       <button onClick={() => handleDelete(customer.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors group haptic-tap" title="ลบ">
@@ -207,7 +207,7 @@ export default function CustomersPage() {
           <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden" style={{ backgroundColor: 'var(--color-surface-solid)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
             <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
               <h3 className="font-bold text-lg">{editingCustomer ? 'แก้ไขข้อมูลลูกค้า' : 'เพิ่มลูกค้าใหม่'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <button onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
                 <X size={20} />
               </button>
             </div>

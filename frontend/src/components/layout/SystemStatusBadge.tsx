@@ -8,30 +8,30 @@ export default function SystemStatusBadge() {
 
   // Determine icon and colors based on status
   let Icon = Activity;
-  let colorClass = 'text-gray-400';
-  let bgClass = 'bg-gray-100 dark:bg-gray-800';
-  let badgeColor = 'bg-gray-400';
+  let colorClass = 'text-[var(--color-text-muted)]';
+  let bgClass = 'bg-[var(--color-bg-secondary)]';
+  let badgeColor = 'bg-[var(--color-text-muted)]';
   let pulse = false;
 
   if (!isConnected) {
     Icon = WifiOff;
-    colorClass = 'text-gray-500';
-    badgeColor = 'bg-gray-500';
+    colorClass = 'text-[var(--color-text-secondary)]';
+    badgeColor = 'bg-[var(--color-text-secondary)]';
   } else if (status === 'Healthy') {
     Icon = CheckCircle;
-    colorClass = 'text-green-600 dark:text-green-400';
-    bgClass = 'bg-green-50 dark:bg-green-900/20';
+    colorClass = 'text-[var(--color-success)]';
+    bgClass = 'bg-[var(--color-success-bg)]';
     badgeColor = 'bg-green-500';
     pulse = true;
   } else if (status === 'Degraded') {
     Icon = AlertTriangle;
-    colorClass = 'text-yellow-600 dark:text-yellow-400';
-    bgClass = 'bg-yellow-50 dark:bg-yellow-900/20';
+    colorClass = 'text-[var(--color-warning)]';
+    bgClass = 'bg-[var(--color-warning-bg)]';
     badgeColor = 'bg-yellow-500';
   } else if (status === 'Unhealthy') {
     Icon = XCircle;
-    colorClass = 'text-red-600 dark:text-red-400';
-    bgClass = 'bg-red-50 dark:bg-red-900/20';
+    colorClass = 'text-[var(--color-danger)]';
+    bgClass = 'bg-[var(--color-danger-bg)]';
     badgeColor = 'bg-red-500';
   }
 
@@ -63,17 +63,17 @@ export default function SystemStatusBadge() {
               <h4 className="font-semibold text-sm flex items-center gap-2">
                 <Activity size={16} /> System Monitoring
               </h4>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">
                 Last checked: {lastChecked ? lastChecked.toLocaleTimeString() : 'Never'}
               </p>
             </div>
             <div className="p-2 max-h-64 overflow-y-auto">
               {!isConnected ? (
-                <div className="p-3 text-sm text-gray-500 text-center">
+                <div className="p-3 text-sm text-[var(--color-text-muted)] text-center">
                   Disconnected from Real-time Server.
                 </div>
               ) : components.length === 0 ? (
-                <div className="p-3 text-sm text-gray-500 text-center">
+                <div className="p-3 text-sm text-[var(--color-text-muted)] text-center">
                   No component data available.
                 </div>
               ) : (
@@ -81,7 +81,7 @@ export default function SystemStatusBadge() {
                   <div key={i} className="p-2 flex justify-between items-center border-b last:border-0" style={{ borderColor: 'var(--color-border)' }}>
                     <div>
                       <div className="text-sm font-medium">{c.name}</div>
-                      {c.description && <div className="text-xs text-gray-500">{c.description}</div>}
+                      {c.description && <div className="text-xs text-[var(--color-text-muted)]">{c.description}</div>}
                     </div>
                     <div className="flex flex-col items-end">
                       <span className={`text-xs font-bold ${
@@ -90,7 +90,7 @@ export default function SystemStatusBadge() {
                       }`}>
                         {c.status}
                       </span>
-                      <span className="text-[10px] text-gray-400">{Math.round(c.duration)}ms</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)]">{Math.round(c.duration)}ms</span>
                     </div>
                   </div>
                 ))

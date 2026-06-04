@@ -56,7 +56,7 @@ export default function SettingsPage() {
             
             <div>
               <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <Mail size={14} className="text-gray-400" /> อีเมลติดต่อ
+                <Mail size={14} className="text-[var(--color-text-muted)]" /> อีเมลติดต่อ
               </label>
               <input type="email" className="input-field" value={tenantInfo.email} 
                 onChange={e => setTenantInfo({...tenantInfo, email: e.target.value})} />
@@ -64,7 +64,7 @@ export default function SettingsPage() {
             
             <div>
               <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <Phone size={14} className="text-gray-400" /> เบอร์โทรศัพท์
+                <Phone size={14} className="text-[var(--color-text-muted)]" /> เบอร์โทรศัพท์
               </label>
               <input type="text" className="input-field" value={tenantInfo.phone} 
                 onChange={e => setTenantInfo({...tenantInfo, phone: e.target.value})} />
@@ -72,14 +72,14 @@ export default function SettingsPage() {
             
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <MapPin size={14} className="text-gray-400" /> ที่อยู่จดทะเบียน *
+                <MapPin size={14} className="text-[var(--color-text-muted)]" /> ที่อยู่จดทะเบียน *
               </label>
               <textarea required className="input-field h-24 resize-none" value={tenantInfo.address} 
                 onChange={e => setTenantInfo({...tenantInfo, address: e.target.value})} />
             </div>
           </div>
           
-          <div className="flex justify-end pt-4 border-t dark:border-zinc-800 mt-6">
+          <div className="flex justify-end pt-4 border-t border-[var(--color-border)] mt-6">
             <button type="submit" disabled={isSaving} className="btn btn-primary">
               <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
             </button>
@@ -125,10 +125,10 @@ export default function SettingsPage() {
               {pushNotifications.isSubscribed ? (
                 <span className="badge badge-success flex items-center gap-1"><Bell size={12} /> เปิดใช้งานแล้ว</span>
               ) : (
-                <span className="badge flex items-center gap-1 text-gray-500 bg-gray-200"><BellOff size={12} /> ปิดอยู่</span>
+                <span className="badge badge-neutral flex items-center gap-1"><BellOff size={12} /> ปิดอยู่</span>
               )}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--color-text-muted)]">
               {pushNotifications.isSupported 
                 ? 'เบราว์เซอร์นี้รองรับการแจ้งเตือนแบบ Offline' 
                 : 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน'}

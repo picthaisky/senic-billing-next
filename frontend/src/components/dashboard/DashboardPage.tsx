@@ -315,7 +315,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-center">
                     <button 
                       onClick={() => window.open(`/print/${doc.id}`, '_blank')}
-                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors haptic-tap text-gray-500 hover:text-primary" 
+                      className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors haptic-tap text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
                       title="พิมพ์ / ออก PDF"
                     >
                       <Printer size={16} />
