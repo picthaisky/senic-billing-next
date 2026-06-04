@@ -21,14 +21,33 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
   const [attachments, setAttachments] = useState<any[]>([]);
 
   const config = getDocumentTypeMeta(documentType);
+  const accentClasses: Record<string, { bar: string; text: string }> = {
+    receipt: { bar: 'bg-[var(--doc-receipt)]', text: 'text-[var(--doc-receipt)]' },
+    cashbill: { bar: 'bg-[var(--doc-cashbill)]', text: 'text-[var(--doc-cashbill)]' },
+    delivery: { bar: 'bg-[var(--doc-delivery)]', text: 'text-[var(--doc-delivery)]' },
+    quotation: { bar: 'bg-[var(--doc-quotation)]', text: 'text-[var(--doc-quotation)]' },
+    taxinvoice: { bar: 'bg-[var(--doc-taxinvoice)]', text: 'text-[var(--doc-taxinvoice)]' },
+  };
+  const accent = accentClasses[documentType] ?? { bar: 'bg-[var(--color-primary)]', text: 'text-[var(--color-primary)]' };
   const [isSaving, setIsSaving] = useState(false);
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [errors, setErrors] = useState<{ customerName?: string; customerTaxId?: string; lines?: string }>({});
 
-  const paymentButtonStyle = {
-    background: 'var(--color-info-bg)',
-    color: 'var(--color-info)',
-    borderColor: 'rgba(37, 99, 235, 0.28)',
-  } as const;
+  const clearError = (key: keyof typeof errors) =>
+    setErrors(prev => (prev[key] ? { ...prev, [key]: undefined } : prev));
+
+  const validate = () => {
+    const e: typeof errors = {};
+    if (!customerName.trim()) e.customerName = 'กรุณากรอกชื่อลูกค้า / บริษัท';
+    if (documentType === 'taxinvoice') {
+      if (!customerTaxId.trim()) e.customerTaxId = 'ใบกำกับภาษีต้องระบุเลขประจำตัวผู้เสียภาษี';
+      else if (!/^\d{13}$/.test(customerTaxId.trim())) e.customerTaxId = 'เลขผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก';
+    }
+    const validLines = lines.filter(l => l.description.trim() !== '' && l.quantity > 0 && l.unitPrice > 0);
+    if (validLines.length === 0) e.lines = 'กรุณาเพิ่มรายการที่มีชื่อ จำนวน และราคา อย่างน้อย 1 รายการ';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const formatNumber = useCallback((n: number) => {
     return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -42,10 +61,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
   }, [addLine]);
 
   const handleSave = async () => {
-    if (!customerName) {
-      alert('กรุณากรอกชื่อลูกค้า');
-      return;
-    }
+    if (!validate()) return;
 
     try {
       setIsSaving(true);
@@ -80,28 +96,25 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="document-form-stack">
 
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div
-            className="w-1.5 h-12 rounded-full"
-            style={{ background: config.color }}
-          />
+          <div className={`w-1.5 h-12 rounded-full ${accent.bar}`} />
           <div>
-            <h2 className="text-xl font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+            <h2 className="text-xl font-bold leading-tight text-[var(--color-text)]">
               {title}
             </h2>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              เลขที่เอกสาร: <span className="font-mono font-semibold" style={{ color: config.color }}>
+            <p className="invoice-page-subtitle text-sm text-[var(--color-text-muted)]">
+              เลขที่เอกสาร: <span className={`font-mono font-semibold ${accent.text}`}>
                 {config.prefix}-{new Date().toISOString().slice(0, 7).replace('-', '')}-AUTO
               </span>
             </p>
           </div>
         </div>
 
-        {/* Secondary actions — primary Save lives in the summary rail */}
+        {/* Document actions */}
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
             <RotateCcw size={15} /> ล้างข้อมูล
@@ -111,55 +124,55 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
           </button>
           <button
             onClick={() => setPaymentModalOpen(true)}
-            className="btn btn-secondary"
-            style={paymentButtonStyle}
+            className="btn btn-secondary border !border-[rgba(37,99,235,0.28)] bg-[var(--color-info-bg)] text-[var(--color-info)]"
+            disabled={isSaving}
           >
             <CreditCard size={15} /> ชำระเงินออนไลน์
+          </button>
+          <button onClick={handleSave} className="btn btn-primary" disabled={isSaving}>
+            <Save size={15} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
           </button>
         </div>
       </div>
 
-      {/* ── Two-column working layout: editor (left) + sticky summary rail (right) ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
-
-        {/* ════ LEFT: Editor ════ */}
-        <div className="xl:col-span-2 space-y-5">
-
       {/* ── Customer Info Card ── */}
-      <div className="card p-5">
-        <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
+      <div className="card form-section-card">
+        <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
           ข้อมูลลูกค้า
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
+            <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
               ชื่อลูกค้า / บริษัท <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
-              className="input-field"
+              className={`input-field ${errors.customerName ? 'input-error' : ''}`}
               placeholder="พิมพ์เพื่อค้นหา..."
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              onChange={(e) => { setCustomerName(e.target.value); clearError('customerName'); }}
             />
+            {errors.customerName && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerName}</p>}
           </div>
           {documentType === 'taxinvoice' && (
             <div>
-              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
-                เลขประจำตัวผู้เสียภาษี (13 หลัก)
+              <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+                เลขประจำตัวผู้เสียภาษี (13 หลัก) <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
-                className="input-field"
-                placeholder="X-XXXX-XXXXX-XX-X"
+                inputMode="numeric"
+                className={`input-field font-mono ${errors.customerTaxId ? 'input-error' : ''}`}
+                placeholder="เลข 13 หลัก"
                 maxLength={13}
                 value={customerTaxId}
-                onChange={(e) => setCustomerTaxId(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => { setCustomerTaxId(e.target.value.replace(/\D/g, '')); clearError('customerTaxId'); }}
               />
+              {errors.customerTaxId && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerTaxId}</p>}
             </div>
           )}
           <div className={documentType === 'taxinvoice' ? 'md:col-span-2' : ''}>
-            <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
+            <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
               หมายเหตุ
             </label>
             <input
@@ -175,49 +188,55 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
 
       {/* ── Document Lines (Items Table) ── */}
       <div className="card overflow-hidden">
-        <div className="px-5 py-3.5 flex items-center justify-between border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <h3 className="font-semibold text-xs uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+        <div className="invoice-lines-head flex items-center justify-between border-b border-[var(--color-border)]">
+          <h3 className="font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
             รายการสินค้า / บริการ
           </h3>
-          <button onClick={addLine} className="btn btn-ghost text-xs">
+          <button onClick={() => { addLine(); clearError('lines'); }} className="btn btn-ghost text-xs">
             <Plus size={14} /> เพิ่มรายการ
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="data-table" style={{ minWidth: '720px' }}>
+        {errors.lines && (
+          <p className="px-5 py-2 text-xs text-[var(--color-danger)] bg-[var(--color-danger-bg)]">{errors.lines}</p>
+        )}
+
+        {/* Desktop: full table (horizontal scroll fallback on narrow desktop) */}
+        <div className="overflow-x-auto hidden md:block">
+          <table className="data-table min-w-[720px]">
             <thead>
               <tr>
-                <th style={{ width: '48px', textAlign: 'center' }}>#</th>
+                <th className="w-[48px] text-center">#</th>
                 <th>รายละเอียด</th>
-                <th style={{ width: '88px', textAlign: 'right' }}>จำนวน</th>
-                <th style={{ width: '72px' }}>หน่วย</th>
-                <th style={{ width: '120px', textAlign: 'right' }}>ราคา/หน่วย</th>
-                <th style={{ width: '100px', textAlign: 'right' }}>ส่วนลด</th>
-                <th style={{ width: '120px', textAlign: 'right' }}>รวม</th>
-                <th style={{ width: '44px' }}></th>
+                <th className="w-[88px] text-right">จำนวน</th>
+                <th className="w-[72px]">หน่วย</th>
+                <th className="w-[120px] text-right">ราคา/หน่วย</th>
+                <th className="w-[100px] text-right">ส่วนลด</th>
+                <th className="w-[120px] text-right">รวม</th>
+                <th className="w-[44px]"></th>
               </tr>
             </thead>
             <tbody>
               {lines.map((line, idx) => (
                 <tr key={line.id} className="animate-fade-in">
-                  <td className="text-center font-mono text-sm align-middle" style={{ color: 'var(--color-text-muted)' }}>
+                  <td className="text-center font-mono text-sm align-middle text-[var(--color-text-muted)]">
                     {idx + 1}
                   </td>
                   <td>
                     <input
                       type="text"
-                      className="input-field !py-2 !px-2.5 !text-sm"
+                      className="input-field invoice-input-compact !text-sm"
                       placeholder="ชื่อสินค้า / รายละเอียด"
                       value={line.description}
-                      onChange={(e) => updateLine(line.id, { description: e.target.value })}
+                      onChange={(e) => { updateLine(line.id, { description: e.target.value }); clearError('lines'); }}
                       onKeyDown={(e) => handleKeyDown(e, idx === lines.length - 1)}
                     />
                   </td>
                   <td>
                     <input
                       type="number"
-                      className="input-field !py-2 !px-2.5 !text-sm text-right"
+                      aria-label="จำนวน"
+                      className="input-field invoice-input-compact !text-sm text-right"
                       min={0}
                       step={1}
                       value={line.quantity || ''}
@@ -227,7 +246,8 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="text"
-                      className="input-field !py-2 !px-2.5 !text-sm text-center"
+                      aria-label="หน่วย"
+                      className="input-field invoice-input-compact !text-sm text-center"
                       value={line.unit}
                       onChange={(e) => updateLine(line.id, { unit: e.target.value })}
                     />
@@ -235,7 +255,8 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="number"
-                      className="input-field !py-2 !px-2.5 !text-sm text-right"
+                      aria-label="ราคาต่อหน่วย"
+                      className="input-field invoice-input-compact !text-sm text-right"
                       min={0}
                       step={0.01}
                       value={line.unitPrice || ''}
@@ -245,22 +266,24 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   <td>
                     <input
                       type="number"
-                      className="input-field !py-2 !px-2.5 !text-sm text-right"
+                      aria-label="ส่วนลด"
+                      className="input-field invoice-input-compact !text-sm text-right"
                       min={0}
                       step={0.01}
                       value={line.discountAmount || ''}
                       onChange={(e) => updateLine(line.id, { discountAmount: parseFloat(e.target.value) || 0 })}
                     />
                   </td>
-                  <td className="text-right font-semibold text-sm tabular-nums align-middle pr-3" style={{ color: 'var(--color-text)' }}>
+                  <td className="invoice-line-total-cell text-right font-semibold text-sm tabular-nums align-middle text-[var(--color-text)]">
                     {formatNumber(line.lineTotal)}
                   </td>
                   <td className="text-center align-middle">
                     <button
                       onClick={() => removeLine(line.id)}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
-                      style={{ color: lines.length === 1 ? 'var(--color-text-muted)' : '#dc2626' }}
+                      className={`p-1.5 rounded-lg transition-colors hover:bg-red-50 ${lines.length === 1 ? 'text-[var(--color-text-muted)]' : 'text-[#dc2626]'}`}
                       disabled={lines.length === 1}
+                      aria-label={`ลบรายการที่ ${idx + 1}`}
+                      title={`ลบรายการที่ ${idx + 1}`}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -270,45 +293,152 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile: stacked card list (each line is an editable card) */}
+        <div className="md:hidden flex flex-col gap-3 p-3">
+          {lines.map((line, idx) => (
+            <div
+              key={line.id}
+              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-solid)] p-3 animate-fade-in"
+            >
+              {/* Card header: index + remove */}
+              <div className="invoice-mobile-line-head flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--color-text-muted)]">
+                  รายการที่ {idx + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeLine(line.id)}
+                  title={`ลบรายการที่ ${idx + 1}`}
+                  className={`p-1.5 rounded-lg transition-colors hover:bg-red-50 disabled:opacity-40 ${lines.length === 1 ? 'text-[var(--color-text-muted)]' : 'text-[#dc2626]'}`}
+                  disabled={lines.length === 1}
+                  aria-label={`ลบรายการที่ ${idx + 1}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {/* Description */}
+              <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
+                รายละเอียด
+              </label>
+              <input
+                type="text"
+                className="input-field invoice-input-compact !text-sm invoice-mobile-desc-input"
+                placeholder="ชื่อสินค้า / รายละเอียด"
+                value={line.description}
+                onChange={(e) => updateLine(line.id, { description: e.target.value })}
+                onKeyDown={(e) => handleKeyDown(e, idx === lines.length - 1)}
+              />
+
+              {/* Numeric fields grid */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
+                    จำนวน
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label="จำนวน"
+                    className="input-field invoice-input-compact !text-sm text-right"
+                    min={0}
+                    step={1}
+                    value={line.quantity || ''}
+                    onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
+                    หน่วย
+                  </label>
+                  <input
+                    type="text"
+                    aria-label="หน่วย"
+                    className="input-field invoice-input-compact !text-sm text-center"
+                    value={line.unit}
+                    onChange={(e) => updateLine(line.id, { unit: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
+                    ราคา/หน่วย
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label="ราคาต่อหน่วย"
+                    className="input-field invoice-input-compact !text-sm text-right"
+                    min={0}
+                    step={0.01}
+                    value={line.unitPrice || ''}
+                    onChange={(e) => updateLine(line.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
+                    ส่วนลด
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label="ส่วนลด"
+                    className="input-field invoice-input-compact !text-sm text-right"
+                    min={0}
+                    step={0.01}
+                    value={line.discountAmount || ''}
+                    onChange={(e) => updateLine(line.id, { discountAmount: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              {/* Line total */}
+              <div className="invoice-mobile-line-total flex items-center justify-between border-t border-[var(--color-border)]">
+                <span className="text-xs font-medium text-[var(--color-text-muted)]">
+                  รวม
+                </span>
+                <span className="text-sm font-bold tabular-nums text-[var(--color-text)]">
+                  {formatNumber(line.lineTotal)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ── Attachments (part of the editor column) ── */}
+      {/* ── Attachments ── */}
       <AttachmentUpload
         documentId={documentId}
         attachments={attachments}
         onAttachmentAdded={(att) => setAttachments(prev => [...prev, att])}
       />
 
-        </div>
-        {/* ════ END LEFT ════ */}
+      {/* ── Summary row: tax settings (2fr) + totals (3fr) — matches UI Kit ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
 
-        {/* ════ RIGHT: sticky summary rail ════ */}
-        <div className="xl:col-span-1">
-          <div className="space-y-5 xl:sticky xl:top-20">
-
-            {/* Tax Mode & Discount */}
-            <div className="card p-5">
-              <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
-                ตั้งค่าภาษี
-              </h3>
-              <div className="flex p-1 rounded-lg mb-4" style={{ background: 'var(--color-bg-secondary)' }}>
+        {/* Tax Mode & Discount */}
+        <div className="lg:col-span-2">
+          <div className="card form-section-card">
+            <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+              ตั้งค่าภาษี
+            </h3>
+              <div className="invoice-vat-mode-switch flex rounded-lg bg-[var(--color-bg-secondary)]">
                 {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setVatMode(mode)}
-                    className="flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all duration-200"
-                    style={{
-                      background: vatMode === mode ? 'var(--color-surface-solid)' : 'transparent',
-                      color: vatMode === mode ? 'var(--color-text)' : 'var(--color-text-muted)',
-                      boxShadow: vatMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    }}
+                    className={`invoice-vat-mode-btn flex-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                      vatMode === mode
+                        ? 'bg-[var(--color-surface-solid)] text-[var(--color-text)] shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
+                        : 'bg-transparent text-[var(--color-text-muted)] shadow-none'
+                    }`}
                   >
                     {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
                   </button>
                 ))}
               </div>
               <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
+                <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
                   ส่วนลดรวม (บาท)
                 </label>
                 <input
@@ -321,76 +451,52 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   placeholder="0.00"
                 />
               </div>
-            </div>
+          </div>
+        </div>
 
-            {/* Totals Summary */}
-            <div className="glass-card p-5">
-              <h3 className="font-semibold text-xs uppercase tracking-wider mb-4" style={{ color: 'var(--color-text-muted)' }}>
+        {/* Totals Summary */}
+        <div className="lg:col-span-3">
+          <div className="glass-card form-section-card">
+              <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                 สรุปยอดรวม
               </h3>
-              <div className="space-y-2.5">
+              <div className="form-stack-sm">
                 <div className="flex justify-between text-sm">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>ยอดรวมก่อนส่วนลด</span>
+                  <span className="text-[var(--color-text-secondary)]">ยอดรวมก่อนส่วนลด</span>
                   <span className="font-semibold tabular-nums">{formatNumber(totals.subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span style={{ color: 'var(--color-text-secondary)' }}>ส่วนลดรวม</span>
+                    <span className="text-[var(--color-text-secondary)]">ส่วนลดรวม</span>
                     <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                  <span className="text-[var(--color-text-secondary)]">
                     ยอดรวม{vatMode === 'inclusive' ? '' : 'ก่อน'}ภาษี
                   </span>
                   <span className="font-semibold tabular-nums">{formatNumber(totals.totalBeforeVat)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                  <span className="text-[var(--color-text-secondary)]">
                     ภาษีมูลค่าเพิ่ม 7%
-                    <span className="text-xs ml-1 opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
+                    <span className="invoice-vat-mode-note text-xs opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
                   </span>
                   <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
                 </div>
 
                 {/* Grand Total */}
-                <div
-                  className="flex justify-between items-center pt-3 mt-3 border-t"
-                  style={{ borderColor: 'var(--color-border)' }}
-                >
-                  <span className="font-bold text-base" style={{ color: 'var(--color-text)' }}>
+                <div className="invoice-grand-total-row flex justify-between items-center border-t border-[var(--color-border)]">
+                  <span className="font-bold text-base text-[var(--color-text)]">
                     ยอดรวมสุทธิ
                   </span>
-                  <span
-                    className="text-2xl font-extrabold tabular-nums"
-                    style={{ color: 'var(--color-primary)' }}
-                  >
+                  <span className="text-2xl font-extrabold tabular-nums text-[var(--color-primary)]">
                     ฿{formatNumber(totals.grandTotal)}
                   </span>
                 </div>
               </div>
-
-              {/* Primary Save action — anchored under the total */}
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="btn btn-primary btn-lg w-full mt-5"
-              >
-                <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
-              </button>
-              <button
-                onClick={() => setPaymentModalOpen(true)}
-                disabled={isSaving}
-                className="btn btn-secondary w-full mt-2"
-                style={paymentButtonStyle}
-              >
-                <CreditCard size={15} /> ชำระเงินออนไลน์
-              </button>
-            </div>
-
           </div>
         </div>
-        {/* ════ END RIGHT ════ */}
       </div>
 
       {/* Payment Modal */}

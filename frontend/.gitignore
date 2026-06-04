@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Playwright responsive-screenshot output + browser binaries
+responsive-shots
+/test-results
+/playwright-report
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

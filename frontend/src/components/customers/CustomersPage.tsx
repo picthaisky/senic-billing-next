@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, MapPin, Phone, Building2, X, Save, Download } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Search, Plus, Edit2, Trash2, MapPin, Phone, X, Save, Download } from 'lucide-react';
 import { exportToExcel } from '../../utils/exportUtils';
+
+// First meaningful character for the avatar tile (strips common Thai prefixes)
+const getInitial = (name: string) =>
+  name.replace(/^(บจก\.|บมจ\.|หจก\.|ร้าน|คุณ)\s*/, '').charAt(0) || '?';
 // import { apiClient } from '../../services/apiClient';
 
 interface Customer {
@@ -28,6 +33,25 @@ export default function CustomersPage() {
   // Form State
   const [formData, setFormData] = useState<Partial<Customer>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update a field and clear its inline error as the user types
+  const setField = (key: keyof Customer, value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+    setErrors(prev => (prev[key] ? { ...prev, [key]: '' } : prev));
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!formData.name?.trim()) e.name = 'กรุณากรอกชื่อลูกค้า / บริษัท';
+    if (!formData.branch?.trim()) e.branch = 'กรุณากรอกสาขา';
+    if (!formData.taxId?.trim()) e.taxId = 'กรุณากรอกเลขประจำตัวผู้เสียภาษี';
+    else if (!/^\d{13}$/.test(formData.taxId.trim())) e.taxId = 'เลขผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก';
+    if (!formData.address?.trim()) e.address = 'กรุณากรอกที่อยู่';
+    if (formData.phone?.trim() && !/^[0-9+\-\s()]{6,}$/.test(formData.phone.trim())) e.phone = 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   useEffect(() => {
     fetchCustomers();
@@ -56,11 +80,13 @@ export default function CustomersPage() {
       setEditingCustomer(null);
       setFormData({ name: '', branch: 'สำนักงานใหญ่', taxId: '', address: '', phone: '' });
     }
+    setErrors({});
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     try {
       setIsSaving(true);
       // Simulate API call
@@ -106,14 +132,14 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <div className="w-1.5 h-10 rounded-full" style={{ background: 'var(--color-primary)' }} />
+        <div className="w-1.5 h-10 rounded-full bg-[var(--color-primary)]" />
         <div>
-          <h2 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text)' }}>รายชื่อลูกค้า</h2>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-            ทั้งหมด <span className="font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{customers.length}</span> ราย
+          <h2 className="text-lg font-bold leading-tight text-[var(--color-text)]">รายชื่อลูกค้า</h2>
+          <p className="entity-page-subtitle text-sm text-[var(--color-text-muted)]">
+            ทั้งหมด <span className="font-semibold text-[var(--color-text-secondary)]">{customers.length}</span> ราย
           </p>
         </div>
       </div>
@@ -125,7 +151,7 @@ export default function CustomersPage() {
           <input 
             type="text" 
             placeholder="ค้นหาชื่อลูกค้า, เลขผู้เสียภาษี..." 
-            className="input-field pl-10"
+            className="input-field entity-search-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -155,29 +181,31 @@ export default function CustomersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                <td colSpan={5} className="table-state-cell text-center text-sm text-[var(--color-text-muted)]">
                   กำลังโหลดข้อมูล...
                 </td>
               </tr>
             ) : filteredCustomers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                <td colSpan={5} className="table-state-cell text-center text-sm text-[var(--color-text-muted)]">
                   ไม่พบข้อมูลลูกค้า
                 </td>
               </tr>
             ) : (
               filteredCustomers.map(customer => (
-                <tr key={customer.id} className="animate-fade-in haptic-tap">
+                <tr key={customer.id} className="animate-fade-in">
                   <td data-label="ชื่อลูกค้า / บริษัท">
-                    <div className="font-semibold text-sm flex items-center gap-2">
-                      <Building2 size={14} style={{ color: 'var(--color-primary)' }} />
-                      {customer.name}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 bg-[var(--color-primary-50)] text-[var(--color-primary)]">
+                        {getInitial(customer.name)}
+                      </div>
+                      <span className="font-semibold text-sm">{customer.name}</span>
                     </div>
                   </td>
                   <td data-label="สาขา"><span className="badge badge-neutral">{customer.branch}</span></td>
                   <td data-label="เลขประจำตัวผู้เสียภาษี" className="font-mono text-sm">{customer.taxId}</td>
                   <td data-label="ข้อมูลติดต่อ">
-                    <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    <div className="flex flex-col gap-1 text-xs text-[var(--color-text-secondary)]">
                       <span className="flex items-center gap-1"><Phone size={12} /> {customer.phone}</span>
                       <span className="flex items-center gap-1 truncate max-w-[200px]" title={customer.address}>
                         <MapPin size={12} /> {customer.address}
@@ -185,12 +213,12 @@ export default function CustomersPage() {
                     </div>
                   </td>
                   <td data-label="จัดการ">
-                    <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => handleOpenModal(customer)} className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors haptic-tap" title="แก้ไข">
-                        <Edit2 size={14} style={{ color: 'var(--color-text-secondary)' }} />
+                    <div className="flex items-center justify-center gap-2">
+                      <button type="button" onClick={() => handleOpenModal(customer)} className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)] transition-colors" title="แก้ไข" aria-label={`แก้ไข ${customer.name}`}>
+                        <Edit2 size={16} />
                       </button>
-                      <button onClick={() => handleDelete(customer.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors group haptic-tap" title="ลบ">
-                        <Trash2 size={14} className="text-red-400 group-hover:text-red-600" />
+                      <button type="button" onClick={() => handleDelete(customer.id)} className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] transition-colors" title="ลบ" aria-label={`ลบ ${customer.name}`}>
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -201,51 +229,57 @@ export default function CustomersPage() {
         </table>
       </div>
 
-      {/* Modal Form */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden" style={{ backgroundColor: 'var(--color-surface-solid)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
-            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+      {/* Modal Form — portaled to <body> so it escapes the transformed page wrapper.
+          Backdrop click is intentionally NOT a close trigger (prevents accidental dismissal). */}
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)] my-auto">
+            <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
               <h3 className="font-bold text-lg">{editingCustomer ? 'แก้ไขข้อมูลลูกค้า' : 'เพิ่มลูกค้าใหม่'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors" title="ปิดหน้าต่าง" aria-label="ปิดหน้าต่าง">
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} noValidate className="form-modal-content form-stack-md">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium mb-1">ชื่อลูกค้า / บริษัท *</label>
-                  <input required type="text" className="input-field" value={formData.name || ''} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} />
+                  <label className="layout-form-label-sm block text-sm font-medium">ชื่อลูกค้า / บริษัท *</label>
+                  <input type="text" className={`input-field ${errors.name ? 'input-error' : ''}`} value={formData.name || ''} title="ชื่อลูกค้า / บริษัท" placeholder="กรอกชื่อลูกค้า / บริษัท"
+                    onChange={e => setField('name', e.target.value)} />
+                  {errors.name && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.name}</p>}
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-1">สาขา *</label>
-                  <input required type="text" className="input-field" value={formData.branch || ''} 
-                    onChange={e => setFormData({...formData, branch: e.target.value})} />
+                  <label className="layout-form-label-sm block text-sm font-medium">สาขา *</label>
+                  <input type="text" className={`input-field ${errors.branch ? 'input-error' : ''}`} value={formData.branch || ''} title="สาขา" placeholder="กรอกสาขา"
+                    onChange={e => setField('branch', e.target.value)} />
+                  {errors.branch && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.branch}</p>}
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-1">เลขผู้เสียภาษี *</label>
-                  <input required type="text" className="input-field" value={formData.taxId || ''} 
-                    onChange={e => setFormData({...formData, taxId: e.target.value})} />
+                  <label className="layout-form-label-sm block text-sm font-medium">เลขผู้เสียภาษี *</label>
+                  <input type="text" inputMode="numeric" maxLength={13} className={`input-field font-mono ${errors.taxId ? 'input-error' : ''}`} value={formData.taxId || ''} title="เลขประจำตัวผู้เสียภาษี (13 หลัก)" placeholder="เลข 13 หลัก"
+                    onChange={e => setField('taxId', e.target.value.replace(/\D/g, ''))} />
+                  {errors.taxId && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.taxId}</p>}
                 </div>
-                
+
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium mb-1">ที่อยู่ *</label>
-                  <input required type="text" className="input-field" value={formData.address || ''} 
-                    onChange={e => setFormData({...formData, address: e.target.value})} />
+                  <label className="layout-form-label-sm block text-sm font-medium">ที่อยู่ *</label>
+                  <input type="text" className={`input-field ${errors.address ? 'input-error' : ''}`} value={formData.address || ''} title="ที่อยู่" placeholder="กรอกที่อยู่"
+                    onChange={e => setField('address', e.target.value)} />
+                  {errors.address && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.address}</p>}
                 </div>
-                
+
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium mb-1">เบอร์โทรศัพท์</label>
-                  <input type="text" className="input-field" value={formData.phone || ''} 
-                    onChange={e => setFormData({...formData, phone: e.target.value})} />
+                  <label className="layout-form-label-sm block text-sm font-medium">เบอร์โทรศัพท์</label>
+                  <input type="text" inputMode="tel" className={`input-field ${errors.phone ? 'input-error' : ''}`} value={formData.phone || ''} title="เบอร์โทรศัพท์" placeholder="เช่น 02-123-4567"
+                    onChange={e => setField('phone', e.target.value)} />
+                  {errors.phone && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.phone}</p>}
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 mt-6 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="form-modal-actions">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-ghost">ยกเลิก</button>
                 <button type="submit" disabled={isSaving} className="btn btn-primary">
                   <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
@@ -253,7 +287,8 @@ export default function CustomersPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
