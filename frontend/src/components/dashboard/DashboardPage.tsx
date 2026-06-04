@@ -166,12 +166,12 @@ const formatRelativeTime = (isoDate: string) => {
   return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(new Date(isoDate));
 };
 
-const formatTooltipCurrency = (value: string | number | Array<string | number>) => {
+const formatTooltipCurrency = (value: any) => {
   if (Array.isArray(value)) {
     return value.map((v) => formatCurrency(Number(v))).join(', ');
   }
 
-  return formatCurrency(Number(value));
+  return formatCurrency(Number(value || 0));
 };
 
 export default function DashboardPage() {
