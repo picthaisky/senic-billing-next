@@ -25,6 +25,17 @@ const pageTitles: Record<string, string> = {
 
 export default function DashboardLayout() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     signalRClient.connect();
@@ -62,11 +73,16 @@ export default function DashboardLayout() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:block">
-        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+        <Sidebar 
+          currentPage={currentPage} 
+          onNavigate={setCurrentPage} 
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+        />
       </div>
 
       {/* Main content — offset by sidebar on desktop */}
-      <div className="md:ml-[260px] transition-all duration-300">
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[260px]'}`}>
         <Header 
           pageTitle={pageTitles[currentPage] || 'Senic Billing Next'} 
           onNavigate={setCurrentPage} 

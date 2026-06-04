@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { exportToExcel } from '../../utils/exportUtils';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { useTheme } from '../../hooks/useTheme';
 
 // Mock data for demonstration
 const revenueData = [
@@ -35,9 +36,12 @@ const recentDocs = [
   { id: 4, number: 'DLV-202606-0018', type: 'ใบส่งของ', customer: 'บจก. ดีเอฟจี', amount: 67800, date: 'เมื่อวาน', icon: Truck },
 ];
 
-const CHART_COLORS = ['#ea580c', '#f97316', '#fbbf24', '#fcd34d', '#fef3c7'];
-
 export default function DashboardPage() {
+  const { theme } = useTheme();
+  const chartColors = theme === 'deep-ocean'
+    ? ['#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd']
+    : ['#ea580c', '#f97316', '#fbbf24', '#fcd34d', '#fed7aa'];
+
   const [loading, setLoading] = useState(true);
   const [dashboardData] = useState<any>({
     revenueData,
@@ -241,7 +245,7 @@ export default function DashboardPage() {
                   stroke="none"
                 >
                   {dashboardData.productData.map((_: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                   ))}
                 </Pie>
                 <Tooltip

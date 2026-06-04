@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   LayoutDashboard, Receipt, Banknote, Truck, FileText,
   Users, Package, Settings, ChevronLeft, ChevronRight
@@ -7,6 +6,8 @@ import {
 interface SidebarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const navItems = [
@@ -23,13 +24,12 @@ const navItems = [
   { id: 'settings', label: 'ตั้งค่า', labelEn: 'Settings', icon: Settings },
 ];
 
-export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({ currentPage, onNavigate, collapsed, onToggleCollapse }: SidebarProps) {
 
   return (
     <aside
       style={{ background: 'var(--sidebar-bg)' }}
-      className={`relative flex flex-col h-screen transition-all duration-300 ease-in-out ${collapsed ? 'w-[72px]' : 'w-[260px]'}`}
+      className={`fixed left-0 top-0 z-40 flex flex-col h-screen transition-all duration-300 ease-in-out ${collapsed ? 'w-[72px]' : 'w-[260px]'}`}
     >
       {/* Brand Logo */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
@@ -94,7 +94,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
       {/* Collapse Toggle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={onToggleCollapse}
         className="absolute -right-3 top-20 w-6 h-6 rounded-full border flex items-center justify-center
           bg-white shadow-md hover:shadow-lg transition-all duration-200 z-10"
         style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}

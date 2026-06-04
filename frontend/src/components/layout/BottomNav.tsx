@@ -1,4 +1,3 @@
-import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Receipt, Users, Package, Menu,
   Settings, Sun, Moon, LogOut, X, Banknote, Truck, FileText

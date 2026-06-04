@@ -9,9 +9,14 @@
 ## 🌟 ฟีเจอร์หลัก (Key Features)
 
 ### 🎨 Frontend & User Experience (React 19 + Tailwind CSS v4)
-- **Dual Theme System**: รองรับการเปลี่ยนธีม "Warm Horizon" (สีส้มอบอุ่น) และ "Deep Ocean" (สีน้ำเงินเข้ม) สลับได้ทันทีแบบ Real-time
+- **Dual Theme System**: รองรับการเปลี่ยนธีม "Warm Horizon" (สีส้มอบอุ่น) และ "Deep Ocean" (สีน้ำเงินเข้ม) สลับได้ทันทีแบบ Real-time พร้อมปรับโทนสีของกราฟและ Modal ต่างๆ ให้กลมกลืนอัตโนมัติ
 - **Glassmorphism UI**: การออกแบบโปร่งแสงระดับพรีเมียม สบายตาและให้ความรู้สึกทันสมัย
-- **Interactive Dashboard**: สรุปยอดขายแบบ Real-time พร้อมกราฟ (Recharts) และ KPI Cards แบบมี Animation
+- **Balanced Layout Architecture (ศึกษาต้นแบบจาก PMO)**:
+  - **Desktop Layout**: มี Sidebar ขนาดใหญ่เลื่อนและหด (Collapse) ได้อย่างลื่นไหล พร้อมคงความกว้างหลักไว้ไม่ให้เนื้อหาบิดเบี้ยว
+  - **Mobile Layout**: ซ่อน Sidebar เพื่อประหยัดพื้นที่ และใช้ **BottomNav** (แถบควบคุมด้านล่างสไตล์ Native App) พร้อม **Floating Action Button (FAB)** สำหรับเรียกออกเอกสารด่วน
+  - **Responsive Tables**: แปลงหน้าตารางข้อมูลขนาดใหญ่ (เช่น รายการสินค้า/ลูกค้า) ให้เป็น Card List ที่สวยงามและอ่านง่ายอัตโนมัติเมื่ออยู่บนหน้าจอมือถือ
+  - **Micro-interactions**: เพิ่ม Pull-to-refresh บนหน้าแดชบอร์ด, Haptic Tap feedback และ Shimmer skeleton โหลดข้อมูลเสมือนจริง
+- **Interactive Dashboard**: สรุปยอดขายแบบ Real-time พร้อมกราฟแบบโต้ตอบได้ (Recharts) และ KPI Cards แบบมี Animation คลาสสิก
 - **Smart Forms**: ฟอร์มออกเอกสารที่รองรับการคำนวณภาษีมูลค่าเพิ่ม (VAT 7%) ทั้งแบบ **รวมภาษี (Inclusive)** และ **แยกภาษี (Exclusive)** พร้อมการเพิ่มบรรทัดอัตโนมัติเมื่อกด Enter
 
 ### ⚙️ Backend & Architecture (.NET 10 + PostgreSQL)
