@@ -1,0 +1,237 @@
+/* ════════════════════════════════════════════════════════════════
+   SENIC BILLING NEXT — Colors & Type
+   Dual Theme: "Warm Horizon" (orange-brown, default) / "Deep Ocean" (blue)
+   Source of truth: senic-billing-next/frontend/src/index.css
+   Fonts: Inter (Latin UI) + Sarabun (Thai). Loaded from Google Fonts.
+   ════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Self-hosted brand display face (user-supplied). Kanit is a geometric Thai/Latin
+   family — use for display moments via var(--font-display). Body UI stays Inter/Sarabun. */
+@font-face {
+  font-family: 'Kanit';
+  src: url('fonts/Kanit-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─────────────────────────────────────────────
+   THEME — Warm Horizon (default)
+   ───────────────────────────────────────────── */
+:root,
+:root[data-theme="warm-horizon"] {
+  /* Brand / primary */
+  --color-primary:        #ea580c;
+  --color-primary-hover:  #c2410c;
+  --color-primary-dark:   #9a3412;
+  --color-primary-light:  #fed7aa;
+  --color-primary-50:     #fff7ed;
+  --color-accent:         #92400e;
+  --color-accent-light:   #fbbf24;
+
+  /* Backgrounds & surfaces */
+  --color-bg:             #faf9f7;
+  --color-bg-secondary:   #f5f4f0;
+  --color-surface:        rgba(255, 255, 255, 0.85);
+  --color-surface-solid:  #ffffff;
+  --color-surface-hover:  #fef3e2;
+  --color-surface-active: #fde9cc;
+
+  /* Text */
+  --color-text:           #1c1917;
+  --color-text-secondary: #57534e;
+  --color-text-muted:     #a8a29e;
+  --color-text-inverse:   #ffffff;
+
+  /* Borders */
+  --color-border:         #e7e5e4;
+  --color-border-hover:   #d6d3d1;
+
+  /* Glassmorphism */
+  --glass-bg:     rgba(255, 237, 213, 0.25);
+  --glass-border: rgba(234, 88, 12, 0.15);
+  --glass-shadow: 0 8px 32px rgba(154, 52, 18, 0.08);
+
+  /* Sidebar (always dark) */
+  --sidebar-bg:          linear-gradient(180deg, #1c1917 0%, #292524 50%, #44403c 100%);
+  --sidebar-text:        #d6d3d1;
+  --sidebar-active-bg:   rgba(234, 88, 12, 0.2);
+  --sidebar-active-text: #fb923c;
+
+  /* Signature gradients */
+  --gradient-brand: linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fb923c 100%);
+  --gradient-card:  linear-gradient(135deg, rgba(255,237,213,0.3) 0%, rgba(255,255,255,0.8) 100%);
+
+  /* Chart palette (ordered) */
+  --chart-1: #ea580c;
+  --chart-2: #f97316;
+  --chart-3: #fbbf24;
+  --chart-4: #fcd34d;
+  --chart-5: #fed7aa;
+}
+
+/* ─────────────────────────────────────────────
+   THEME — Deep Ocean
+   ───────────────────────────────────────────── */
+:root[data-theme="deep-ocean"] {
+  --color-primary:        #0284c7;
+  --color-primary-hover:  #0369a1;
+  --color-primary-dark:   #0c4a6e;
+  --color-primary-light:  #bae6fd;
+  --color-primary-50:     #f0f9ff;
+  --color-accent:         #164e63;
+  --color-accent-light:   #22d3ee;
+
+  --color-bg:             #f8fafc;
+  --color-bg-secondary:   #f1f5f9;
+  --color-surface:        rgba(255, 255, 255, 0.88);
+  --color-surface-solid:  #ffffff;
+  --color-surface-hover:  #e0f2fe;
+  --color-surface-active: #bae6fd;
+
+  --color-text:           #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94a3b8;
+  --color-text-inverse:   #ffffff;
+
+  --color-border:         #e2e8f0;
+  --color-border-hover:   #cbd5e1;
+
+  --glass-bg:     rgba(186, 230, 253, 0.2);
+  --glass-border: rgba(2, 132, 199, 0.12);
+  --glass-shadow: 0 8px 32px rgba(12, 74, 110, 0.08);
+
+  --sidebar-bg:          linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  --sidebar-text:        #cbd5e1;
+  --sidebar-active-bg:   rgba(2, 132, 199, 0.2);
+  --sidebar-active-text: #38bdf8;
+
+  --gradient-brand: linear-gradient(135deg, #0284c7 0%, #0ea5e9 50%, #38bdf8 100%);
+  --gradient-card:  linear-gradient(135deg, rgba(186,230,253,0.2) 0%, rgba(255,255,255,0.8) 100%);
+
+  --chart-1: #0284c7;
+  --chart-2: #0ea5e9;
+  --chart-3: #38bdf8;
+  --chart-4: #7dd3fc;
+  --chart-5: #bae6fd;
+}
+
+/* ─────────────────────────────────────────────
+   SEMANTIC STATUS COLORS (theme-independent)
+   ───────────────────────────────────────────── */
+:root {
+  --color-success:    #16a34a;
+  --color-success-bg: rgba(34, 197, 94, 0.10);
+  --color-warning:    #ca8a04;
+  --color-warning-bg: rgba(234, 179, 8, 0.10);
+  --color-danger:     #dc2626;
+  --color-danger-bg:  rgba(239, 68, 68, 0.10);
+  --color-info:       #2563eb;
+  --color-info-bg:    rgba(59, 130, 246, 0.10);
+
+  /* Document-type accent colors (used on form headers / icons) */
+  --doc-taxinvoice: #ea580c; /* INV */
+  --doc-receipt:    #16a34a; /* RCP */
+  --doc-cashbill:   #2563eb; /* CSB */
+  --doc-delivery:   #9333ea; /* DLV */
+}
+
+/* ─────────────────────────────────────────────
+   RADII / SHADOWS / MOTION
+   ───────────────────────────────────────────── */
+:root {
+  --radius-sm:  0.5rem;   /*  8px */
+  --radius-md:  0.75rem;  /* 12px */
+  --radius-lg:  1rem;     /* 16px */
+  --radius-xl:  1.25rem;  /* 20px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   Family: 'Inter' (Latin) with 'Sarabun' fallback for Thai glyphs.
+   The app ships a single UI sans stack — no serif, no separate display
+   face. Hierarchy comes from weight + size, not family.
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --font-sans: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Kanit', 'Inter', 'Sarabun', sans-serif; /* geometric display face (self-hosted) */
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace; /* doc numbers, tax IDs */
+
+  /* Type scale (px @ 16px root) */
+  --text-2xs: 0.625rem;   /* 10px — sidebar captions, micro-labels */
+  --text-xs:  0.6875rem;  /* 11px — table headers (uppercase) */
+  --text-sm:  0.875rem;   /* 14px — body, table cells */
+  --text-base:0.9375rem;  /* 15px — inputs */
+  --text-md:  1rem;       /* 16px — emphasised body / button-lg */
+  --text-lg:  1.125rem;   /* 18px — header page title */
+  --text-xl:  1.25rem;    /* 20px — form section title */
+  --text-2xl: 1.5rem;     /* 24px — KPI value */
+  --text-3xl: 1.875rem;   /* 30px — grand total / login */
+}
+
+/* Base element styles */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Semantic text roles ── */
+.h1, h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+.h2, h2 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+.h3, h3 {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-text);
+}
+/* Form/section eyebrow — uppercase muted micro-heading */
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+.p, p {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted     { color: var(--color-text-muted); }
+/* Numbers — currency, totals, tax IDs */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.mono, code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}

@@ -1,0 +1,27 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #292524; padding: 18px; font-family: var(--font-sans); }
+  .nav { width: 230px; }
+  .grp { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: rgba(214,211,209,.5); padding: 6px 12px 4px; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius-xl); margin-bottom: 2px; color: #d6d3d1; font-size: 14px; font-weight: 500; }
+  .item.active { background: rgba(234,88,12,.2); color: #fb923c; }
+  .item.active .ind { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: #fb923c; }
+  svg { width: 20px; height: 20px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>แดชบอร์ด<span class="ind"></span></div>
+    <div class="grp">เอกสาร</div>
+    <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/></svg>ใบเสร็จรับเงิน</div>
+    <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>บิลเงินสด</div>
+    <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>ใบส่งของ</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 20px; }
+  .wrap { background: var(--color-surface-solid); border: 1px solid var(--color-border); border-radius: var(--radius-xl); overflow: hidden; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>เลขที่เอกสาร</th><th>ประเภท</th><th>ลูกค้า</th><th style="text-align:right">จำนวนเงิน</th><th style="text-align:right">เวลา</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span style="font-family:var(--font-mono);font-weight:600;font-size:13px">INV-202606-0012</span></td><td><span class="badge badge-info">ใบกำกับภาษี</span></td><td style="color:var(--color-text-secondary)">บจก. เอบีซี</td><td style="text-align:right" class="num">32,100.00</td><td style="text-align:right;color:var(--color-text-muted)">2 ชม.ที่แล้ว</td></tr>
+        <tr><td><span style="font-family:var(--font-mono);font-weight:600;font-size:13px">RCP-202606-0045</span></td><td><span class="badge" style="background:rgba(22,163,74,.1);color:#16a34a">ใบเสร็จรับเงิน</span></td><td style="color:var(--color-text-secondary)">ร้านมิตรภาพ</td><td style="text-align:right" class="num">8,500.00</td><td style="text-align:right;color:var(--color-text-muted)">5 ชม.ที่แล้ว</td></tr>
+        <tr><td><span style="font-family:var(--font-mono);font-weight:600;font-size:13px">CSB-202606-0023</span></td><td><span class="badge" style="background:rgba(37,99,235,.1);color:#2563eb">บิลเงินสด</span></td><td style="color:var(--color-text-secondary)">คุณสมชาย</td><td style="text-align:right" class="num">3,200.00</td><td style="text-align:right;color:var(--color-text-muted)">เมื่อวาน</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!-- @dsCard group="Colors" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 22px; }
+  .wrap { display: flex; flex-direction: column; gap: 14px; }
+  .line { display: flex; align-items: center; gap: 14px; }
+  .pill-set { display: flex; gap: 8px; }
+  .sl { display: flex; align-items: center; gap: 9px; min-width: 150px; }
+  .dot { width: 16px; height: 16px; border-radius: 5px; }
+  .t { font-size: 12px; font-weight: 600; color: var(--color-text); }
+  .h { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="line">
+      <div class="sl"><span class="dot" style="background:#16a34a"></span><div><div class="t">success</div><div class="h">#16a34a</div></div></div>
+      <span class="badge badge-success"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>ชำระแล้ว</span>
+    </div>
+    <div class="line">
+      <div class="sl"><span class="dot" style="background:#ca8a04"></span><div><div class="t">warning</div><div class="h">#ca8a04</div></div></div>
+      <span class="badge badge-warning">รอดำเนินการ</span>
+    </div>
+    <div class="line">
+      <div class="sl"><span class="dot" style="background:#dc2626"></span><div><div class="t">danger</div><div class="h">#dc2626</div></div></div>
+      <span class="badge badge-danger">เกินกำหนด</span>
+    </div>
+    <div class="line">
+      <div class="sl"><span class="dot" style="background:#2563eb"></span><div><div class="t">info</div><div class="h">#2563eb</div></div></div>
+      <span class="badge badge-info">ใบกำกับภาษี</span>
+    </div>
+  </div>
+</body>
+</html>

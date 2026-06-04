@@ -1,0 +1,125 @@
+version: 1
+project: senic-billing-next
+instruction_file: .github/copilot-instructions.md
+knowledge_root: .ai-agents/knowledge
+
+orchestrator:
+  id: senic-maestro
+  name: Senic Maestro
+  purpose: Coordinate requirements, architecture, implementation, validation, security, deployment, and learning.
+  delegates:
+    - senic-athena
+    - senic-atlas
+    - senic-ledger
+    - senic-sage
+    - senic-nova
+    - senic-milo
+    - senic-argus
+    - senic-aegis
+    - senic-hermes
+    - senic-mnemosyne
+
+agents:
+  - id: senic-athena
+    name: Athena
+    role: Business and requirements analyst
+    triggers: [requirements, acceptance criteria, user story, scope, impact, Thai SME workflow]
+    owns: [requirements, process analysis, success criteria, feature impact]
+    validates: [business clarity, acceptance testability]
+
+  - id: senic-atlas
+    name: Atlas
+    role: Solution architect
+    triggers: [architecture, API contract, data model, CQRS, Clean Architecture, ADR]
+    owns: [system design, API boundaries, database design, integration boundaries]
+    validates: [layer boundaries, scalability, maintainability]
+
+  - id: senic-ledger
+    name: Ledger
+    role: Billing domain specialist
+    triggers: [VAT, tax invoice, receipt, cash bill, delivery note, payment, document number]
+    owns: [financial invariants, document lifecycle, VAT correctness, numbering behavior]
+    validates: [decimal precision, rounding, lifecycle state transitions]
+    subagents: [vat-precision-auditor, document-numbering-sentinel, payment-webhook-specialist]
+
+  - id: senic-sage
+    name: Sage
+    role: Backend engineer
+    triggers: [.NET, EF Core, controller, service, SignalR, MinIO, JWT, PostgreSQL]
+    owns: [backend implementation, migrations, API endpoints, server-side integration]
+    validates: [dotnet build, API contract compatibility]
+
+  - id: senic-nova
+    name: Nova
+    role: Frontend engineer
+    triggers: [React, TypeScript, Vite, Zustand, component, hook, API client, PWA]
+    owns: [frontend implementation, state, routes, forms, client integration]
+    validates: [npm build, lint, browser behavior]
+
+  - id: senic-milo
+    name: Milo
+    role: UX/UI design system specialist
+    triggers: [UI, UX, theme, Thai copy, glassmorphism, mobile, accessibility]
+    owns: [visual consistency, interaction design, responsive behavior, accessibility]
+    validates: [design token usage, Thai-first copy, Lucide icons, mobile layout]
+    subagents: [design-system-guardian, pwa-mobile-interaction-reviewer, pdf-print-specialist]
+
+  - id: senic-argus
+    name: Argus
+    role: QA and testing engineer
+    triggers: [test, regression, validation, QA, bug reproduction, acceptance]
+    owns: [test plan, test cases, regression matrix, verification evidence]
+    validates: [coverage of acceptance criteria, edge cases, failure modes]
+    subagents: [regression-scenario-generator]
+
+  - id: senic-aegis
+    name: Aegis
+    role: Security and compliance reviewer
+    triggers: [security, auth, JWT, tenant isolation, OWASP, secret, webhook, upload]
+    owns: [threat review, authorization, data isolation, secret handling]
+    validates: [tenant boundary safety, webhook validation, upload safety]
+    subagents: [tenant-isolation-auditor]
+
+  - id: senic-hermes
+    name: Hermes
+    role: DevOps and SRE engineer
+    triggers: [Docker, CI/CD, deployment, Portainer, health check, environment, rollback]
+    owns: [build pipeline, deployment reliability, observability, environment config]
+    validates: [container build readiness, workflow risks, rollback plan]
+    subagents: [release-readiness-checker]
+
+  - id: senic-mnemosyne
+    name: Mnemosyne
+    role: Knowledge and learning curator
+    triggers: [learning, retrospective, knowledge, pattern, ADR, lessons learned, skill update]
+    owns: [knowledge base, patterns, decisions, feedback, skill evolution]
+    validates: [evidence quality, staleness, no secrets]
+
+subagents:
+  - id: vat-precision-auditor
+    parent: senic-ledger
+    output: VAT formulas, rounding test vectors, precision risks.
+  - id: document-numbering-sentinel
+    parent: senic-ledger
+    output: concurrency analysis and uniqueness risks.
+  - id: payment-webhook-specialist
+    parent: senic-ledger
+    output: payment lifecycle, webhook idempotency, and failure-mode review.
+  - id: tenant-isolation-auditor
+    parent: senic-aegis
+    output: cross-tenant data leak analysis and authorization risks.
+  - id: design-system-guardian
+    parent: senic-milo
+    output: theme, typography, copy, icon, and component consistency review.
+  - id: pwa-mobile-interaction-reviewer
+    parent: senic-milo
+    output: mobile/PWA interaction and browser behavior checklist.
+  - id: pdf-print-specialist
+    parent: senic-milo
+    output: A4 print, PDF, Thai document layout, and print CSS risks.
+  - id: regression-scenario-generator
+    parent: senic-argus
+    output: focused test matrix tied to acceptance criteria.
+  - id: release-readiness-checker
+    parent: senic-hermes
+    output: deploy checklist, environment risks, and rollback notes.

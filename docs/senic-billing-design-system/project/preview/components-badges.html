@@ -1,0 +1,32 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 22px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row + .row { margin-top: 14px; }
+  .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); width: 78px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <span class="lbl">status</span>
+    <span class="badge badge-success"><span class="dot"></span>ชำระแล้ว</span>
+    <span class="badge badge-warning">รอดำเนินการ</span>
+    <span class="badge badge-danger">เกินกำหนด</span>
+    <span class="badge badge-neutral">ร่าง</span>
+  </div>
+  <div class="row">
+    <span class="lbl">doc type</span>
+    <span class="badge badge-info">ใบกำกับภาษี</span>
+    <span class="badge" style="background:rgba(22,163,74,.1);color:#16a34a">ใบเสร็จรับเงิน</span>
+    <span class="badge" style="background:rgba(37,99,235,.1);color:#2563eb">บิลเงินสด</span>
+    <span class="badge" style="background:rgba(147,51,234,.1);color:#9333ea">ใบส่งของ</span>
+  </div>
+</body>
+</html>

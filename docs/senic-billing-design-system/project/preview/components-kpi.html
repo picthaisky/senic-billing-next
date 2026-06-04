@@ -1,0 +1,43 @@
+<!-- @dsCard group="Components" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+  body { margin: 0; background: var(--color-bg); padding: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .tile { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; background: var(--color-primary-50); color: var(--color-primary); }
+  .chg { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--color-success); }
+  .val { font-size: 24px; font-weight: 700; color: var(--color-text); margin: 10px 0 2px; }
+  .lbl { font-size: 11px; color: var(--color-text-muted); }
+  .wm { position: absolute; right: -10px; bottom: -10px; opacity: .05; transform: rotate(12deg); }
+  svg.i { width: 20px; height: 20px; }
+  svg.w { width: 78px; height: 78px; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="kpi-card" style="position:relative;overflow:hidden;padding:18px">
+      <div class="wm"><svg class="w" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div class="tile"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+        <span class="chg"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>+18.5%</span>
+      </div>
+      <div class="val">฿1,050,000</div>
+      <div class="lbl">รายได้รวม — เทียบเดือนก่อน</div>
+    </div>
+    <div class="kpi-card" style="position:relative;overflow:hidden;padding:18px">
+      <div class="wm"><svg class="w" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div class="tile"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <span class="chg"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>+12</span>
+      </div>
+      <div class="val">156</div>
+      <div class="lbl">เอกสารที่ออก — เดือนนี้</div>
+    </div>
+  </div>
+</body>
+</html>

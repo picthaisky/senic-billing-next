@@ -1,0 +1,63 @@
+# Senic Learning Engine
+
+## Purpose
+
+The learning engine turns validated project work into reusable knowledge. It is repository-visible, versioned, and reviewable so future agents improve without relying on hidden assumptions.
+
+## Learning Sources
+
+- Project docs under `docs/`
+- Code structure under `backend/src/` and `frontend/src/`
+- Test/build/lint results
+- Code review findings
+- User decisions and product clarifications
+- Deployment incidents or environment issues
+- Repeated bugs or recurring implementation patterns
+
+## Knowledge Lifecycle
+
+1. Capture the observation with source evidence.
+2. Classify it as domain rule, pattern, decision, risk, bug lesson, or deprecated assumption.
+3. Validate the observation through code, docs, test result, or user confirmation.
+4. Promote stable knowledge into `.ai-agents/knowledge/` or `.github/copilot-instructions.md` when it affects most work.
+5. Retire stale knowledge by marking it deprecated or replacing it with a newer decision.
+
+## Promotion Criteria
+
+| Destination | Promote When |
+| --- | --- |
+| `codebase-index.md` | File/module ownership or build commands change |
+| `domain-rules.md` | Billing, VAT, tenant, payment, or document rules are clarified |
+| `patterns/*.md` | A repeatable implementation pattern is validated |
+| `decisions/*.md` | A durable architecture/product tradeoff is decided |
+| `feedback/*.md` | A bug, review finding, or user feedback changes future behavior |
+| `.github/copilot-instructions.md` | A rule applies to nearly every task |
+
+## Auto-Update Guardrails
+
+- Never store secrets, tokens, private keys, real customer data, payment card data, or production webhook payloads.
+- Every learning entry must include source, date, and confidence.
+- Prefer short, actionable rules over long prose.
+- Mark assumptions explicitly. Do not promote assumptions to rules without evidence.
+- Review existing knowledge before adding a duplicate entry.
+
+## Learning Entry Template
+
+```markdown
+## YYYY-MM-DD - Short Title
+
+- Type: pattern | decision | bug-lesson | risk | domain-rule | deprecated
+- Source: docs/code/test/user/incident
+- Evidence: path, command, or user decision
+- Confidence: low | medium | high
+- Rule: One actionable sentence
+- Follow-up: Optional future check
+```
+
+## Retrospective Questions
+
+- What did we learn that would prevent a future bug or slower implementation?
+- Did a validation failure reveal a missing rule or pattern?
+- Did the codebase contradict a document or old assumption?
+- Should an agent description, prompt, or instruction be updated?
+- Is any knowledge now stale because of this project change?
