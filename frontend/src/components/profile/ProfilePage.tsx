@@ -83,7 +83,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       
       {/* Header Section */}
       <div className="card p-8 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
@@ -159,13 +159,14 @@ export default function ProfilePage() {
             <div className="card p-6 animate-fade-in">
               <h3 className="text-lg font-bold mb-6" style={{ color: 'var(--color-text)' }}>ข้อมูลทั่วไป (General Information)</h3>
               <form onSubmit={handleUpdateProfile} className="space-y-5">
-                <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
                     ชื่อผู้ใช้งาน (Email)
                   </label>
-                  <input 
-                    type="text" 
-                    className="input-field bg-gray-50 cursor-not-allowed" 
+                  <input
+                    type="text"
+                    className="input-field bg-gray-50 cursor-not-allowed"
                     value={user?.email || ''}
                     disabled
                   />
@@ -200,7 +201,8 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                
+                </div>
+
                 <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
                   <button type="submit" disabled={loading} className="btn btn-primary">
                     {loading ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
@@ -214,13 +216,14 @@ export default function ProfilePage() {
             <div className="card p-6 animate-fade-in">
               <h3 className="text-lg font-bold mb-6" style={{ color: 'var(--color-text)' }}>เปลี่ยนรหัสผ่าน (Change Password)</h3>
               <form onSubmit={handleChangePassword} className="space-y-5">
-                <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
                     รหัสผ่านปัจจุบัน (Current Password)
                   </label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
+                  <input
+                    type="password"
+                    className="input-field"
                     value={currentPassword}
                     onChange={e => setCurrentPassword(e.target.value)}
                     required
@@ -252,7 +255,8 @@ export default function ProfilePage() {
                     minLength={6}
                   />
                 </div>
-                
+                </div>
+
                 <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
                   <button type="submit" disabled={loading} className="btn btn-primary">
                     {loading ? 'กำลังบันทึก...' : 'อัปเดตรหัสผ่าน'}

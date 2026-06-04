@@ -142,6 +142,15 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-1.5 h-10 rounded-full" style={{ background: 'var(--color-primary)' }} />
+        <div>
+          <h2 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text)' }}>ภาพรวมธุรกิจ</h2>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>สรุปรายได้และเอกสารล่าสุด</p>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (

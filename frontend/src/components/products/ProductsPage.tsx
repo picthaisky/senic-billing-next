@@ -109,7 +109,18 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-1.5 h-10 rounded-full" style={{ background: 'var(--color-primary)' }} />
+        <div>
+          <h2 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text)' }}>รายการสินค้า / บริการ</h2>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+            ทั้งหมด <span className="font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{products.length}</span> รายการ
+          </p>
+        </div>
+      </div>
+
+      {/* Search & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="relative w-full sm:w-96">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
