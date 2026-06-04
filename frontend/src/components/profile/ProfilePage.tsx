@@ -128,24 +128,24 @@ export default function ProfilePage() {
         <div className="md:col-span-1 space-y-2">
           <button
             onClick={() => setActiveTab('general')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-              activeTab === 'general' ? 'bg-white shadow-sm' : 'hover:bg-black/5'
-            }`}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-85"
             style={{ 
               color: activeTab === 'general' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-              border: activeTab === 'general' ? '1px solid var(--color-border)' : '1px solid transparent'
+              border: activeTab === 'general' ? '1px solid var(--color-border)' : '1px solid transparent',
+              backgroundColor: activeTab === 'general' ? 'var(--color-surface-solid)' : 'transparent',
+              boxShadow: activeTab === 'general' ? 'var(--shadow-sm)' : 'none'
             }}
           >
             <User size={18} /> ข้อมูลทั่วไป
           </button>
           <button
             onClick={() => setActiveTab('security')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-              activeTab === 'security' ? 'bg-white shadow-sm' : 'hover:bg-black/5'
-            }`}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-85"
             style={{ 
               color: activeTab === 'security' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-              border: activeTab === 'security' ? '1px solid var(--color-border)' : '1px solid transparent'
+              border: activeTab === 'security' ? '1px solid var(--color-border)' : '1px solid transparent',
+              backgroundColor: activeTab === 'security' ? 'var(--color-surface-solid)' : 'transparent',
+              boxShadow: activeTab === 'security' ? 'var(--shadow-sm)' : 'none'
             }}
           >
             <Lock size={18} /> ความปลอดภัย

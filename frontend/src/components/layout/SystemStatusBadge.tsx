@@ -58,8 +58,8 @@ export default function SystemStatusBadge() {
       {showDetails && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowDetails(false)}></div>
-          <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border dark:border-zinc-800 z-50 overflow-hidden animate-fade-in-up">
-            <div className="p-3 border-b dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800">
+          <div className="absolute right-0 mt-2 w-64 rounded-xl shadow-xl border z-50 overflow-hidden animate-fade-in-up" style={{ backgroundColor: 'var(--color-surface-solid)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
+            <div className="p-3 border-b" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
               <h4 className="font-semibold text-sm flex items-center gap-2">
                 <Activity size={16} /> System Monitoring
               </h4>
@@ -78,7 +78,7 @@ export default function SystemStatusBadge() {
                 </div>
               ) : (
                 components.map((c, i) => (
-                  <div key={i} className="p-2 flex justify-between items-center border-b dark:border-zinc-800 last:border-0">
+                  <div key={i} className="p-2 flex justify-between items-center border-b last:border-0" style={{ borderColor: 'var(--color-border)' }}>
                     <div>
                       <div className="text-sm font-medium">{c.name}</div>
                       {c.description && <div className="text-xs text-gray-500">{c.description}</div>}

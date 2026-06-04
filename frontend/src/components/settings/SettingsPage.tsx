@@ -91,7 +91,7 @@ export default function SettingsPage() {
         <p className="text-sm mb-4" style={{ color: 'var(--color-text-muted)' }}>
           ข้อมูลผู้ใช้งานระบบที่กำลังล็อกอินอยู่
         </p>
-        <div className="flex items-center gap-4 p-4 rounded-xl border dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900">
+        <div className="flex items-center gap-4 p-4 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg" 
                style={{ background: 'var(--gradient-brand)' }}>
             {user?.firstName?.[0] || 'A'}
@@ -115,7 +115,7 @@ export default function SettingsPage() {
           รับการแจ้งเตือนเมื่อมีเอกสารใหม่ หรือการอัปเดตสถานะที่สำคัญ ผ่านเบราว์เซอร์และมือถือ
         </p>
 
-        <div className="p-4 border dark:border-zinc-800 rounded-xl bg-gray-50 dark:bg-zinc-900 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="p-4 border rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <div>
             <div className="font-semibold mb-1 flex items-center gap-2">
               สถานะ: 

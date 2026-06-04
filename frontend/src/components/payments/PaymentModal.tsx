@@ -75,13 +75,19 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in relative border dark:border-zinc-800">
+      <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in relative border" style={{ backgroundColor: 'var(--color-surface-solid)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
         
         {/* Header */}
-        <div className="p-4 border-b dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-zinc-800/50">
+        <div className="p-4 border-b flex justify-between items-center" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <h3 className="font-bold text-lg text-indigo-600 dark:text-indigo-400">ชำระเงินออนไลน์ (PromptPay)</h3>
           {!isPaid && (
-            <button onClick={onClose} className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
+            <button 
+              onClick={onClose} 
+              className="p-1 rounded-full transition-colors" 
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               <X size={20} />
             </button>
           )}
@@ -101,7 +107,7 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
             </p>
           </div>
 
-          <div className="flex justify-center items-center min-h-[250px] bg-gray-50 dark:bg-zinc-800 rounded-xl p-4 border dark:border-zinc-700">
+          <div className="flex justify-center items-center min-h-[250px] rounded-xl p-4 border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
             {isPaid ? (
               <div className="flex flex-col items-center gap-4 text-green-500 animate-fade-in-up">
                 <CheckCircle size={80} className="text-green-500" />

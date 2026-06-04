@@ -190,8 +190,8 @@ export default function ProductsPage() {
       {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg border dark:border-zinc-800 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b dark:border-zinc-800">
+          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden" style={{ backgroundColor: 'var(--color-surface-solid)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
               <h3 className="font-bold text-lg">{editingProduct ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                 <X size={20} />
@@ -231,7 +231,7 @@ export default function ProductsPage() {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 mt-6 pt-4 border-t dark:border-zinc-800">
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-ghost">ยกเลิก</button>
                 <button type="submit" disabled={isSaving} className="btn btn-primary">
                   <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
