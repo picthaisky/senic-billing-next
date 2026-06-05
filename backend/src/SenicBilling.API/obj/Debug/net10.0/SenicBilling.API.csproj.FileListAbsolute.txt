@@ -141,7 +141,6 @@ C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilli
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\staticwebassets.development.json
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\staticwebassets.build.endpoints.json
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\swae.build.ex.cache
-C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\SenicBil.6517BA2B.Up2Date
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\SenicBilling.API.dll
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\refint\SenicBilling.API.dll

@@ -81,5 +81,19 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
         return Ok(new ApiResponse<ProductDto>(true, "อัปเดตสินค้าสำเร็จ", dto));
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var p = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+        if (p is null) return NotFound(new ApiResponse<bool>(false, "ไม่พบสินค้า", false));
+
+        p.IsActive = false;
+        p.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(ct);
+
+        return Ok(new ApiResponse<bool>(true, "ลบสินค้าสำเร็จ", true));
+    }
+
     private Guid GetTenantId() => Guid.Parse(User.FindFirst("tenantId")!.Value);
 }

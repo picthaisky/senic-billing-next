@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useTranslation } from 'react-i18next';
 import { useLocaleStore } from '../../store/useLocaleStore';
+import RecurringInvoicesConfig from './RecurringInvoicesConfig';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -213,6 +214,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Recurring Invoices */}
+      <RecurringInvoicesConfig />
     </div>
   );
 }

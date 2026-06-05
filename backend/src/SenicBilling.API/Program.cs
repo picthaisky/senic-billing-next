@@ -17,12 +17,20 @@ var builder = WebApplication.CreateBuilder(args);
 // ──────────────────────────────────────────────
 // Database (PostgreSQL via EF Core 10)
 // ──────────────────────────────────────────────
-builder.Services.AddDbContext<SenicBillingDbContext>(options =>
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<SenicBilling.Infrastructure.Data.Interceptors.AuditInterceptor>();
+
+builder.Services.AddDbContext<SenicBillingDbContext>((sp, options) =>
+{
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection") ??
         "Host=localhost;Port=5432;Database=senic_billing;Username=postgres;Password=postgres",
         npgsqlOptions => npgsqlOptions.MigrationsAssembly("SenicBilling.Infrastructure")
-    ));
+    );
+    
+    var interceptor = sp.GetRequiredService<SenicBilling.Infrastructure.Data.Interceptors.AuditInterceptor>();
+    options.AddInterceptors(interceptor);
+});
 
 // ──────────────────────────────────────────────
 // Authentication (JWT)
@@ -47,6 +55,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, SenicBilling.Infrastructure.Auth.PermissionPolicyProvider>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, SenicBilling.Infrastructure.Auth.PermissionAuthorizationHandler>();
 
 // ──────────────────────────────────────────────
 // Services (DI Registration)
@@ -55,7 +65,15 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IDocumentNumberGeneratorService, DocumentNumberGeneratorService>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IPaymentService, OmisePaymentService>();
+builder.Services.AddScoped<IEmailService, MockEmailService>();
+builder.Services.AddScoped<IAIAssistantService, GeminiAIAssistantService>();
 builder.Services.AddScoped<DevelopmentDataSeeder>();
+
+// ──────────────────────────────────────────────
+// Background Jobs (Hosted Services)
+// ──────────────────────────────────────────────
+builder.Services.AddHostedService<SenicBilling.Infrastructure.BackgroundJobs.RecurringInvoiceWorker>();
+builder.Services.AddHostedService<SenicBilling.Infrastructure.BackgroundJobs.OverdueMonitorWorker>();
 
 // MinIO Storage
 var minioEndpoint = builder.Configuration["Minio:Endpoint"] ?? "localhost:9000";

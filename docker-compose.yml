@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-senic_billing}
+    ports:
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - senic-pgdata:/var/lib/postgresql/data
     restart: unless-stopped
@@ -18,11 +20,16 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY}-backend:latest
     container_name: senic-backend
     environment:
-      ConnectionStrings__DefaultConnection: "Host=database;Port=5432;Database=${DB_NAME:-senic_billing};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres}"
+      ConnectionStrings__DefaultConnection: "Host=database;Port=${DB_PORT:-5432};Database=${DB_NAME:-senic_billing};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres}"
       JwtSettings__SecretKey: ${JWT_SECRET}
       JwtSettings__Issuer: ${JWT_ISSUER:-SenicBillingNext}
       JwtSettings__Audience: ${JWT_AUDIENCE:-SenicBillingNextClient}
       JwtSettings__ExpiryMinutes: ${JWT_EXPIRY:-480}
+      Gemini__ApiKey: ${GEMINI_API_KEY}
+      Omise__PublicKey: ${OMISE_PUBLIC_KEY}
+      Omise__SecretKey: ${OMISE_SECRET_KEY}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       - database
     restart: unless-stopped
@@ -33,7 +40,7 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY}-frontend:latest
     container_name: senic-frontend
     ports:
-      - "8810:80"
+      - "${FRONTEND_PORT:-8810}:80"
     depends_on:
       - backend
     restart: unless-stopped

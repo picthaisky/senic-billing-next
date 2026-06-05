@@ -1,10 +1,10 @@
 ---
 name: senic-learning-cycle
-description: 'Self-learning workflow for Senic Billing agents. Use after validated features, bug fixes, reviews, incidents, repeated patterns, ADRs, stale assumptions, or updates to project-specific agent skills and knowledge.'
+description: 'Invoke Mnemosyne for self-learning workflow. Use after validated features, bug fixes, reviews, incidents, repeated patterns, ADRs, stale assumptions, or updates to project-specific agent skills and knowledge.'
 argument-hint: 'Validated learning or completed work to capture'
 ---
 
-# Senic Learning Cycle
+# Senic Learning Cycle (Mnemosyne)
 
 ## When to Use
 

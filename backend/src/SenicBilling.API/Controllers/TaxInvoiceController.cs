@@ -244,15 +244,22 @@ public class TaxInvoiceController(
             doc.VatAmount = Math.Round(doc.TotalBeforeVat * doc.VatRate / (100m + doc.VatRate), 2);
             doc.TotalBeforeVat = doc.GrandTotal - doc.VatAmount;
         }
+
+        // ภาษีหัก ณ ที่จ่าย (WHT) — applied against TotalBeforeVat
+        doc.WhtAmount = doc.WhtRate > 0
+            ? Math.Round(doc.TotalBeforeVat * doc.WhtRate / 100m, 2)
+            : 0m;
     }
 
     private static DocumentResponse MapToResponse(DocumentHeader d) => new(
         d.Id, d.DocumentType, d.DocumentNumber, d.DocumentDate, d.DueDate,
         d.CustomerId, d.CustomerName, d.CustomerAddress, d.CustomerTaxId,
         d.Status, d.VatMode, d.VatRate,
-        d.Subtotal, d.DiscountAmount, d.TotalBeforeVat, d.VatAmount, d.GrandTotal,
-        d.Notes, d.ReferenceDocumentId, d.DeliveryStatus, d.CancellationReason,
-        d.CreatedAt, d.CreatedBy,
+        d.Subtotal, d.DiscountAmount, d.TotalBeforeVat, d.VatAmount,
+        d.WhtRate, d.WhtAmount, d.GrandTotal,
+        d.Notes, d.ReferenceDocumentId, d.ConvertedFromDocumentId,
+        d.DeliveryStatus, d.CancellationReason,
+        d.SentAt, d.ViewedAt, d.CreatedAt, d.CreatedBy,
         d.Lines.OrderBy(l => l.SortOrder).Select(l => new DocumentLineDto(
             l.Id, l.SortOrder, l.ProductId, l.Description,
             l.Quantity, l.Unit, l.UnitPrice, l.DiscountAmount, l.LineTotal

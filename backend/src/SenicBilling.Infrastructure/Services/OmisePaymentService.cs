@@ -77,6 +77,37 @@ public class OmisePaymentService : IPaymentService
         }
     }
 
+    public async Task<string> CreatePaymentLinkAsync(decimal amount, string title, string description, string referenceId)
+    {
+        try
+        {
+            var amountInSubunits = (long)(amount * 100);
+
+            var linkContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("amount", amountInSubunits.ToString()),
+                new KeyValuePair<string, string>("currency", "THB"),
+                new KeyValuePair<string, string>("title", title),
+                new KeyValuePair<string, string>("description", description),
+                new KeyValuePair<string, string>("multiple", "false")
+            });
+
+            var res = await _httpClient.PostAsync("https://api.omise.co/links", linkContent);
+            res.EnsureSuccessStatusCode();
+            
+            var json = await res.Content.ReadAsStringAsync();
+            var data = JsonSerializer.Deserialize<JsonElement>(json);
+            
+            var paymentUrl = data.GetProperty("payment_uri").GetString();
+            return paymentUrl ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Omise Payment Link for Reference: {ReferenceId}", referenceId);
+            return string.Empty;
+        }
+    }
+
     public async Task<bool> VerifyChargeAsync(string chargeId)
     {
         try

@@ -39,6 +39,22 @@ type TopProductDto = {
   totalQuantity: number;
 };
 
+type AgingReportDto = {
+  current: number;
+  overdue1_30: number;
+  overdue31_60: number;
+  overdue61_90: number;
+  overdue90Plus: number;
+  totalOverdue: number;
+};
+
+type TaxEstimatorDto = {
+  totalSalesVat: number;
+  totalPurchaseVat: number;
+  estimatedTaxPayable: number;
+  whtDeducted: number;
+};
+
 type RecentActivityDto = {
   id: string;
   documentNumber: string;
@@ -73,6 +89,8 @@ type DashboardViewModel = {
   revenueData: RevenueChartPoint[];
   productData: ProductPiePoint[];
   recentDocs: RecentDocumentItem[];
+  agingData: AgingReportDto | null;
+  taxData: TaxEstimatorDto | null;
   kpiStats: {
     totalRevenue: number;
     documentsIssued: number;
@@ -185,6 +203,8 @@ export default function DashboardPage() {
     revenueData: [],
     productData: [],
     recentDocs: [],
+    agingData: null,
+    taxData: null,
     kpiStats: {
       totalRevenue: 0,
       documentsIssued: 0,
@@ -198,17 +218,21 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      const [summaryRes, revenueRes, topProductRes, recentRes] = await Promise.all([
+      const [summaryRes, revenueRes, topProductRes, recentRes, agingRes, taxRes] = await Promise.all([
         apiClient.get<ApiEnvelope<DashboardSummaryDto>>('/dashboard/summary'),
         apiClient.get<ApiEnvelope<MonthlyRevenueDto[]>>('/dashboard/revenue-chart'),
         apiClient.get<ApiEnvelope<TopProductDto[]>>('/dashboard/top-products?top=5'),
-        apiClient.get<ApiEnvelope<RecentActivityDto[]>>('/dashboard/recent-activity?count=8')
+        apiClient.get<ApiEnvelope<RecentActivityDto[]>>('/dashboard/recent-activity?count=8'),
+        apiClient.get<ApiEnvelope<AgingReportDto>>('/dashboard/aging-report'),
+        apiClient.get<ApiEnvelope<TaxEstimatorDto>>('/dashboard/tax-estimator')
       ]);
 
       const summary = summaryRes.data.data;
       const monthlyRevenue = revenueRes.data.data ?? [];
       const topProducts = topProductRes.data.data ?? [];
       const recentActivity = recentRes.data.data ?? [];
+      const agingData = agingRes.data.data;
+      const taxData = taxRes.data.data;
 
       const monthKeys = getLastSixMonthKeys();
       const revenueByMonth = new Map(monthlyRevenue.map((item) => [item.month, item]));
@@ -243,6 +267,8 @@ export default function DashboardPage() {
         revenueData: normalizedRevenue,
         productData: normalizedProducts,
         recentDocs: normalizedRecentDocs,
+        agingData: agingData,
+        taxData: taxData,
         kpiStats: {
           totalRevenue: Number(summary.totalRevenue ?? 0),
           documentsIssued: Number(summary.documentsIssued ?? 0),
@@ -466,6 +492,79 @@ export default function DashboardPage() {
                 />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 mb-6">
+        {/* Tax Estimator */}
+        <div className="card dashboard-panel-card bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-bg)]">
+          <div className="dashboard-panel-head">
+            <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+              <FileText size={18} className="text-[var(--color-primary)]" />
+              ประมาณการภาษี (Tax Estimator)
+            </h3>
+            <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
+              ข้อมูลภาษีมูลค่าเพิ่มที่ต้องนำส่งเดือนนี้
+            </p>
+          </div>
+          <div className={`mt-4 grid grid-cols-2 gap-4 ${loading ? 'opacity-50' : ''}`}>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)]">
+              <p className="text-xs text-[var(--color-text-muted)]">ภาษีขาย (Sales VAT)</p>
+              <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(dashboardData.taxData?.totalSalesVat || 0)}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)]">
+              <p className="text-xs text-[var(--color-text-muted)]">ภาษีซื้อ (Purchase VAT)</p>
+              <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
+            </div>
+            <div className="bg-[var(--color-primary)] p-4 rounded-xl shadow-sm col-span-2 text-white">
+              <p className="text-sm opacity-90">ยอดภาษีที่ต้องชำระสุทธิ</p>
+              <p className="text-3xl font-bold mt-1">{formatCurrency(dashboardData.taxData?.estimatedTaxPayable || 0)}</p>
+              <p className="text-xs opacity-80 mt-2">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* A/R Aging Report */}
+        <div className="card dashboard-panel-card">
+          <div className="dashboard-panel-head flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                <Clock size={18} className="text-orange-500" />
+                รายงานอายุหนี้ (A/R Aging)
+              </h3>
+              <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
+                ยอดหนี้ค้างชำระแบ่งตามช่วงเวลา
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-[var(--color-text-muted)]">ยอดค้างชำระรวม</p>
+              <p className="text-lg font-bold text-red-600">{formatCurrency(dashboardData.agingData?.totalOverdue || 0)}</p>
+            </div>
+          </div>
+          <div className={`mt-4 ${loading ? 'opacity-50' : ''}`}>
+            <div className="space-y-3">
+              {[
+                { label: 'ยังไม่ถึงกำหนด (Current)', value: dashboardData.agingData?.current || 0, color: 'bg-green-500' },
+                { label: 'เกินกำหนด 1-30 วัน', value: dashboardData.agingData?.overdue1_30 || 0, color: 'bg-yellow-400' },
+                { label: 'เกินกำหนด 31-60 วัน', value: dashboardData.agingData?.overdue31_60 || 0, color: 'bg-orange-500' },
+                { label: 'เกินกำหนด 61-90 วัน', value: dashboardData.agingData?.overdue61_90 || 0, color: 'bg-red-500' },
+                { label: 'เกินกำหนด > 90 วัน', value: dashboardData.agingData?.overdue90Plus || 0, color: 'bg-red-700' }
+              ].map((item, idx) => {
+                const total = (dashboardData.agingData?.totalOverdue || 0) + (dashboardData.agingData?.current || 0);
+                const percent = total > 0 ? (item.value / total) * 100 : 0;
+                return (
+                  <div key={idx} className="flex items-center gap-3 text-sm">
+                    <div className="w-32 text-[var(--color-text-muted)]">{item.label}</div>
+                    <div className="flex-1 h-3 bg-[var(--color-border)] rounded-full overflow-hidden">
+                      <div className={`h-full ${item.color} rounded-full transition-all duration-1000`} style={{ width: `${percent}%` }} />
+                    </div>
+                    <div className="w-24 text-right font-medium">{formatCurrency(item.value)}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import CustomersPage from '../customers/CustomersPage';
 import ProductsPage from '../products/ProductsPage';
 import SettingsPage from '../settings/SettingsPage';
 import ProfilePage from '../profile/ProfilePage';
+import FloatingAIChat from './FloatingAIChat';
 import { useTranslation } from 'react-i18next';
 
 export default function DashboardLayout() {
@@ -106,6 +107,9 @@ export default function DashboardLayout() {
 
       {/* Floating Action Button (mobile only) */}
       <FloatingActionButton currentPage={currentPage} onNavigate={setCurrentPage} />
+
+      {/* AI Assistant Chat */}
+      <FloatingAIChat />
     </div>
   );
 }

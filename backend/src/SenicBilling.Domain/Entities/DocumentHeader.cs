@@ -72,6 +72,21 @@ public class DocumentHeader
     /// <summary>สถานะการส่งของ (for DeliveryNote only)</summary>
     public string? DeliveryStatus { get; set; }
 
+    /// <summary>อัตราภาษีหัก ณ ที่จ่าย (0%, 1%, 3%, 5%) — applied per document</summary>
+    public decimal WhtRate { get; set; }
+
+    /// <summary>จำนวนเงินภาษีหัก ณ ที่จ่าย</summary>
+    public decimal WhtAmount { get; set; }
+
+    /// <summary>เอกสารต้นทางที่แปลงมา (1-Click Convert)</summary>
+    public Guid? ConvertedFromDocumentId { get; set; }
+
+    /// <summary>วันที่ส่งเอกสารให้ลูกค้า</summary>
+    public DateTime? SentAt { get; set; }
+
+    /// <summary>วันที่ลูกค้าเปิดดูเอกสาร (Read Receipt)</summary>
+    public DateTime? ViewedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public string? CreatedBy { get; set; }

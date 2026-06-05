@@ -57,6 +57,7 @@ public record CreateDocumentRequest(
     VatCalculationMode VatMode,
     decimal VatRate,
     decimal DiscountAmount,
+    decimal WhtRate,
     string? Notes,
     Guid? ReferenceDocumentId,
     string? DeliveryStatus,
@@ -73,6 +74,7 @@ public record UpdateDocumentRequest(
     VatCalculationMode VatMode,
     decimal VatRate,
     decimal DiscountAmount,
+    decimal WhtRate,
     string? Notes,
     string? DeliveryStatus,
     List<DocumentLineDto> Lines
@@ -95,17 +97,43 @@ public record DocumentResponse(
     decimal DiscountAmount,
     decimal TotalBeforeVat,
     decimal VatAmount,
+    decimal WhtRate,
+    decimal WhtAmount,
     decimal GrandTotal,
     string? Notes,
     Guid? ReferenceDocumentId,
+    Guid? ConvertedFromDocumentId,
     string? DeliveryStatus,
     string? CancellationReason,
+    DateTime? SentAt,
+    DateTime? ViewedAt,
     DateTime CreatedAt,
     string? CreatedBy,
     List<DocumentLineDto> Lines
 );
 
 public record CancelDocumentRequest(string Reason);
+
+/// <summary>Request to convert one document type to another (1-Click Convert)</summary>
+public record ConvertDocumentRequest(
+    DocumentType TargetType,
+    DateTime? DocumentDate,
+    DateTime? DueDate,
+    string? Notes
+);
+
+/// <summary>Request to create a Credit Note or Debit Note against a source document</summary>
+public record CreateCreditDebitNoteRequest(
+    DocumentType NoteType,
+    Guid SourceDocumentId,
+    DateTime DocumentDate,
+    string Reason,
+    decimal AdjustmentAmount,
+    VatCalculationMode VatMode,
+    decimal VatRate,
+    decimal WhtRate,
+    List<DocumentLineDto> Lines
+);
 
 // ──────────────────────────────────────────────
 // Customer DTOs
@@ -170,3 +198,64 @@ public record RecentDocumentActivity(
 // ──────────────────────────────────────────────
 
 public record PaginatedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
+
+// ──────────────────────────────────────────────
+// Analytics & Reporting DTOs
+// ──────────────────────────────────────────────
+
+public record TaxEstimatorDto(
+    int Year,
+    int Month,
+    decimal TotalSales,
+    decimal TotalVatCollected,
+    decimal TotalPurchases,
+    decimal TotalVatPaid,
+    decimal NetVatPayable
+);
+
+public record AgingReportDto(
+    Guid CustomerId,
+    string CustomerName,
+    decimal Current,
+    decimal Overdue1To30Days,
+    decimal Overdue31To60Days,
+    decimal Overdue61To90Days,
+    decimal OverdueOver90Days,
+    decimal TotalOverdue
+);
+
+public record CustomerPurchaseHistoryDto(
+    Guid CustomerId,
+    string CustomerName,
+    int TotalOrders,
+    decimal TotalSpent,
+    DateTime? LastPurchaseDate,
+    List<DocumentResponse> RecentDocuments
+);
+// ──────────────────────────────────────────────
+// Automation DTOs
+// ──────────────────────────────────────────────
+
+public record RecurringInvoiceDto(
+    Guid Id,
+    Guid SourceDocumentId,
+    string Frequency,
+    DateTime NextRunDate,
+    bool IsActive,
+    int? MaxOccurrences,
+    int CurrentOccurrence
+);
+
+public record CreateRecurringInvoiceRequest(
+    Guid SourceDocumentId,
+    string Frequency,
+    DateTime NextRunDate,
+    int? MaxOccurrences
+);
+
+public record UpdateRecurringInvoiceRequest(
+    string Frequency,
+    DateTime NextRunDate,
+    bool IsActive,
+    int? MaxOccurrences
+);

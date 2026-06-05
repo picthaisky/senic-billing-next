@@ -141,5 +141,121 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
         return Ok(new ApiResponse<List<RecentDocumentActivity>>(true, "สำเร็จ", data));
     }
 
+    /// <summary>Tax Estimator API — monthly VAT output summary</summary>
+    [HttpGet("tax-estimator")]
+    public async Task<ActionResult<ApiResponse<TaxEstimatorDto>>> GetTaxEstimator(
+        [FromQuery] int year, [FromQuery] int month, CancellationToken ct = default)
+    {
+        var tenantId = GetTenantId();
+        
+        // This is a simplified estimator. In reality, you'd calculate Input VAT from expenses.
+        var docs = await dbContext.DocumentHeaders
+            .Where(d =>
+                d.TenantId == tenantId &&
+                d.DocumentType == DocumentType.TaxInvoice &&
+                d.Status != DocumentStatus.Cancelled &&
+                d.DocumentDate.Year == year &&
+                d.DocumentDate.Month == month)
+            .ToListAsync(ct);
+
+        var totalSales = docs.Sum(d => d.TotalBeforeVat);
+        var totalVatCollected = docs.Sum(d => d.VatAmount);
+        
+        // For demonstration, input VAT is 0.
+        var dto = new TaxEstimatorDto(year, month, totalSales, totalVatCollected, 0, 0, totalVatCollected);
+        return Ok(new ApiResponse<TaxEstimatorDto>(true, "สำเร็จ", dto));
+    }
+
+    /// <summary>A/R Aging Report API — overdue bucketing</summary>
+    [HttpGet("aging-report")]
+    public async Task<ActionResult<ApiResponse<List<AgingReportDto>>>> GetAgingReport(CancellationToken ct = default)
+    {
+        var tenantId = GetTenantId();
+        var now = DateTime.UtcNow.Date;
+
+        var overdueDocs = await dbContext.DocumentHeaders
+            .Where(d =>
+                d.TenantId == tenantId &&
+                (d.Status == DocumentStatus.Issued || d.Status == DocumentStatus.Sent || d.Status == DocumentStatus.Viewed || d.Status == DocumentStatus.Overdue) &&
+                d.DocumentType != DocumentType.Quotation &&
+                d.DocumentType != DocumentType.DeliveryNote &&
+                d.DocumentType != DocumentType.Receipt &&
+                d.CustomerId != null)
+            .Select(d => new
+            {
+                d.CustomerId,
+                d.CustomerName,
+                d.DueDate,
+                d.GrandTotal
+            })
+            .ToListAsync(ct);
+
+        var report = overdueDocs
+            .GroupBy(d => new { d.CustomerId, d.CustomerName })
+            .Select(g =>
+            {
+                var current = g.Where(d => d.DueDate == null || d.DueDate >= now).Sum(d => d.GrandTotal);
+                var over1to30 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays <= 30).Sum(d => d.GrandTotal);
+                var over31to60 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 30 && (now - d.DueDate.Value).TotalDays <= 60).Sum(d => d.GrandTotal);
+                var over61to90 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 60 && (now - d.DueDate.Value).TotalDays <= 90).Sum(d => d.GrandTotal);
+                var over90 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 90).Sum(d => d.GrandTotal);
+                
+                return new AgingReportDto(
+                    g.Key.CustomerId ?? Guid.Empty,
+                    g.Key.CustomerName ?? "Unknown",
+                    current,
+                    over1to30,
+                    over31to60,
+                    over61to90,
+                    over90,
+                    over1to30 + over31to60 + over61to90 + over90
+                );
+            })
+            .Where(r => r.Current > 0 || r.TotalOverdue > 0)
+            .OrderByDescending(r => r.TotalOverdue)
+            .ToList();
+
+        return Ok(new ApiResponse<List<AgingReportDto>>(true, "สำเร็จ", report));
+    }
+
+    /// <summary>Top Spenders API — customer ranking by revenue</summary>
+    [HttpGet("top-spenders")]
+    public async Task<ActionResult<ApiResponse<List<CustomerPurchaseHistoryDto>>>> GetTopSpenders(
+        [FromQuery] int top = 5, CancellationToken ct = default)
+    {
+        var tenantId = GetTenantId();
+
+        var spenders = await dbContext.DocumentHeaders
+            .Where(d =>
+                d.TenantId == tenantId &&
+                d.Status != DocumentStatus.Cancelled &&
+                d.Status != DocumentStatus.Draft &&
+                d.DocumentType != DocumentType.Quotation &&
+                d.CustomerId != null)
+            .GroupBy(d => new { d.CustomerId, d.CustomerName })
+            .Select(g => new
+            {
+                CustomerId = g.Key.CustomerId,
+                CustomerName = g.Key.CustomerName,
+                TotalOrders = g.Count(),
+                TotalSpent = g.Sum(d => d.GrandTotal),
+                LastPurchaseDate = g.Max(d => d.DocumentDate)
+            })
+            .OrderByDescending(x => x.TotalSpent)
+            .Take(top)
+            .ToListAsync(ct);
+
+        var data = spenders.Select(s => new CustomerPurchaseHistoryDto(
+            s.CustomerId ?? Guid.Empty,
+            s.CustomerName ?? "Unknown",
+            s.TotalOrders,
+            s.TotalSpent,
+            s.LastPurchaseDate,
+            new List<DocumentResponse>() // Skip detailed docs for top spenders list
+        )).ToList();
+
+        return Ok(new ApiResponse<List<CustomerPurchaseHistoryDto>>(true, "สำเร็จ", data));
+    }
+
     private Guid GetTenantId() => Guid.Parse(User.FindFirst("tenantId")!.Value);
 }

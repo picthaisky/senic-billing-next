@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
+using SenicBilling.Domain.Enums;
 using SenicBilling.Infrastructure.Data;
 
 namespace SenicBilling.API.Controllers;
@@ -76,6 +77,59 @@ public class CustomersController(SenicBillingDbContext dbContext) : ControllerBa
 
         var dto = new CustomerDto(c.Id, c.Name, c.TaxId, c.Address, c.Phone, c.Email, c.ContactPerson, c.Notes, c.IsActive);
         return Ok(new ApiResponse<CustomerDto>(true, "อัปเดตข้อมูลลูกค้าสำเร็จ", dto));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<bool>>> Delete(Guid id, CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var c = await dbContext.Customers.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+        if (c is null) return NotFound(new ApiResponse<bool>(false, "ไม่พบข้อมูลลูกค้า", false));
+
+        c.IsActive = false;
+        c.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(ct);
+
+        return Ok(new ApiResponse<bool>(true, "ลบข้อมูลลูกค้าสำเร็จ", true));
+    }
+
+    [HttpGet("{id:guid}/purchase-history")]
+    public async Task<ActionResult<ApiResponse<CustomerPurchaseHistoryDto>>> GetPurchaseHistory(
+        Guid id, [FromQuery] int recentDocsCount = 5, CancellationToken ct = default)
+    {
+        var tenantId = GetTenantId();
+        
+        var customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId, ct);
+        if (customer is null) return NotFound(new ApiResponse<CustomerPurchaseHistoryDto>(false, "ไม่พบข้อมูลลูกค้า", null));
+
+        var docs = await dbContext.DocumentHeaders
+            .Where(d =>
+                d.TenantId == tenantId &&
+                d.CustomerId == id &&
+                d.Status != DocumentStatus.Cancelled &&
+                d.Status != DocumentStatus.Draft &&
+                d.DocumentType != DocumentType.Quotation)
+            .OrderByDescending(d => d.DocumentDate)
+            .ToListAsync(ct);
+
+        var totalOrders = docs.Count;
+        var totalSpent = docs.Sum(d => d.GrandTotal);
+        var lastPurchaseDate = docs.FirstOrDefault()?.DocumentDate;
+
+        var recentDocs = docs.Take(recentDocsCount).Select(d => new DocumentResponse(
+            d.Id, d.DocumentType, d.DocumentNumber, d.DocumentDate, d.DueDate,
+            d.CustomerId, d.CustomerName, d.CustomerAddress, d.CustomerTaxId,
+            d.Status, d.VatMode, d.VatRate,
+            d.Subtotal, d.DiscountAmount, d.TotalBeforeVat, d.VatAmount,
+            d.WhtRate, d.WhtAmount, d.GrandTotal,
+            d.Notes, d.ReferenceDocumentId, d.ConvertedFromDocumentId,
+            d.DeliveryStatus, d.CancellationReason,
+            d.SentAt, d.ViewedAt, d.CreatedAt, d.CreatedBy,
+            new List<DocumentLineDto>() // omit lines for summary
+        )).ToList();
+
+        var dto = new CustomerPurchaseHistoryDto(id, customer.Name, totalOrders, totalSpent, lastPurchaseDate, recentDocs);
+        return Ok(new ApiResponse<CustomerPurchaseHistoryDto>(true, "สำเร็จ", dto));
     }
 
     private Guid GetTenantId() => Guid.Parse(User.FindFirst("tenantId")!.Value);
