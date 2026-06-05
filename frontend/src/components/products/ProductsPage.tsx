@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Plus, Edit2, Trash2, Package, X, Save, Download } from 'lucide-react';
 import { exportToExcel } from '../../utils/exportUtils';
-// import { apiClient } from '../../services/apiClient';
-
+import { apiClient } from '../../services/apiClient';
 interface Product {
   id: string;
   sku: string;
@@ -12,11 +11,6 @@ interface Product {
   unitPrice: number;
   unit: string;
 }
-
-const mockProducts: Product[] = [
-  { id: '1', sku: 'P-001', name: 'กระดาษ A4 80 แกรม', category: 'เครื่องใช้สำนักงาน', unitPrice: 120, unit: 'รีม' },
-  { id: '2', sku: 'P-002', name: 'หมึกพิมพ์ Toner', category: 'อุปกรณ์ไอที', unitPrice: 1500, unit: 'ตลับ' },
-];
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -53,12 +47,14 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      // const res = await apiClient.get('/products');
-      // setProducts(res.data);
-      setTimeout(() => {
-        setProducts(mockProducts);
-        setLoading(false);
-      }, 500);
+      const res = await apiClient.get('/products');
+      // res.data is ApiResponse<PaginatedResponse<ProductDto>>
+      if (res.data?.success && res.data?.data?.items) {
+        setProducts(res.data.data.items);
+      } else {
+        setProducts([]);
+      }
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
       setLoading(false);
@@ -82,28 +78,42 @@ export default function ProductsPage() {
     if (!validate()) return;
     try {
       setIsSaving(true);
-      // Simulate API call
-      // if (editingProduct) await apiClient.put(`/products/${editingProduct.id}`, formData);
-      // else await apiClient.post(`/products`, formData);
+      const payload = {
+        sku: formData.sku,
+        name: formData.name,
+        category: formData.category,
+        unitPrice: formData.unitPrice,
+        unit: formData.unit,
+        description: formData.name, // using name as description if not separated
+        stockQuantity: 0,
+        isActive: true
+      };
+
+      if (editingProduct) {
+        await apiClient.put(`/products/${editingProduct.id}`, payload);
+      } else {
+        await apiClient.post(`/products`, payload);
+      }
       
-      setTimeout(() => {
-        if (editingProduct) {
-          setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...formData } as Product : p));
-        } else {
-          setProducts([...products, { ...formData, id: Math.random().toString(36).substring(2,9) } as Product]);
-        }
-        setIsModalOpen(false);
-        setIsSaving(false);
-      }, 500);
+      await fetchProducts(); // Refresh list from backend
+      setIsModalOpen(false);
+      setIsSaving(false);
     } catch (error) {
       console.error('Save failed', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
       setIsSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('คุณต้องการลบสินค้านี้ใช่หรือไม่?')) {
-      setProducts(products.filter(p => p.id !== id));
+      try {
+        await apiClient.delete(`/products/${id}`);
+        await fetchProducts(); // Refresh list from backend
+      } catch (error) {
+        console.error('Delete failed', error);
+        alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+      }
     }
   };
 

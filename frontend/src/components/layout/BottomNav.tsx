@@ -6,45 +6,43 @@ import { useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-interface BottomNavProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-}
-
-export default function BottomNav({ currentPage, onNavigate }: BottomNavProps) {
+export default function BottomNav() {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const [showMore, setShowMore] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
   const mainTabs = [
-    { id: 'dashboard', label: t('nav.home'), icon: LayoutDashboard },
-    { id: 'receipt', label: t('nav.receipt'), icon: Receipt },
-    { id: 'customers', label: t('nav.customers'), icon: Users },
-    { id: 'products', label: t('nav.products'), icon: Package },
+    { id: 'dashboard', path: '/dashboard', label: t('nav.home'), icon: LayoutDashboard },
+    { id: 'receipt', path: '/documents/receipt', label: t('nav.receipt'), icon: Receipt },
+    { id: 'customers', path: '/customers', label: t('nav.customers'), icon: Users },
+    { id: 'products', path: '/products', label: t('nav.products'), icon: Package },
   ];
 
   const moreMenuItems = [
-    { id: 'cashbill', label: t('nav.cashbill'), icon: Banknote },
-    { id: 'delivery', label: t('nav.delivery'), icon: Truck },
-    { id: 'quotation', label: t('nav.quotation'), icon: FileText },
-    { id: 'taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
-    { id: 'settings', label: t('nav.settings'), icon: Settings },
+    { id: 'cashbill', path: '/documents/cashbill', label: t('nav.cashbill'), icon: Banknote },
+    { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
+    { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
+    { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
+    { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
-  const moreMenuIds = moreMenuItems.map(i => i.id);
-  const isMoreActive = moreMenuIds.includes(currentPage);
+  const moreMenuPaths = moreMenuItems.map(i => i.path);
+  const isMoreActive = moreMenuPaths.some(p => location.pathname.startsWith(p));
 
   return (
     <>
       {/* Bottom Navigation Bar */}
       <nav className="layout-bottom-nav fixed bottom-0 left-0 right-0 z-50 md:hidden">
         <div className="layout-bottom-nav-shell flex items-center justify-around h-16">
-          {mainTabs.map(({ id, label, icon: Icon }) => {
-            const isActive = currentPage === id;
+          {mainTabs.map(({ id, path, label, icon: Icon }) => {
+            const isActive = location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path));
             return (
               <button
                 key={id}
-                onClick={() => onNavigate(id)}
+                onClick={() => navigate(path)}
                 className={`layout-bottom-nav-item layout-bottom-nav-tab haptic-tap flex flex-col items-center justify-center gap-0.5 flex-1 relative ${isActive ? 'is-active' : ''}`}
               >
                 {isActive && (
@@ -104,12 +102,12 @@ export default function BottomNav({ currentPage, onNavigate }: BottomNavProps) {
 
             {/* Menu Items */}
             <div className="layout-bottom-sheet-list">
-              {moreMenuItems.map(({ id, label, icon: Icon }) => {
-                const isActive = currentPage === id;
+              {moreMenuItems.map(({ id, path, label, icon: Icon }) => {
+                const isActive = location.pathname.startsWith(path);
                 return (
                   <button
                     key={id}
-                    onClick={() => { onNavigate(id); setShowMore(false); }}
+                    onClick={() => { navigate(path); setShowMore(false); }}
                     className={`layout-bottom-sheet-item layout-bottom-sheet-item-row haptic-tap flex items-center gap-4 w-full rounded-xl transition-colors text-left ${isActive ? 'is-active' : ''}`}
                   >
                     <Icon size={22} />

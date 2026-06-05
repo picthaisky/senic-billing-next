@@ -84,11 +84,18 @@ export function useDocumentForm(vatRate: number = 7) {
     setWhtRate(0);
   }, []);
 
+  const restoreState = useCallback((savedState: any) => {
+    if (savedState.lines && Array.isArray(savedState.lines)) setLines(savedState.lines);
+    if (savedState.vatMode) setVatMode(savedState.vatMode);
+    if (savedState.discountAmount !== undefined) setDiscountAmount(savedState.discountAmount);
+    if (savedState.whtRate !== undefined) setWhtRate(savedState.whtRate);
+  }, []);
+
   return {
     lines, addLine, removeLine, updateLine,
     vatMode, setVatMode,
     discountAmount, setDiscountAmount,
     whtRate, setWhtRate,
-    totals, resetForm,
+    totals, resetForm, restoreState,
   };
 }

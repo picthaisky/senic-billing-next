@@ -6,7 +6,7 @@ import { exportToExcel } from '../../utils/exportUtils';
 // First meaningful character for the avatar tile (strips common Thai prefixes)
 const getInitial = (name: string) =>
   name.replace(/^(บจก\.|บมจ\.|หจก\.|ร้าน|คุณ)\s*/, '').charAt(0) || '?';
-// import { apiClient } from '../../services/apiClient';
+import { apiClient } from '../../services/apiClient';
 
 interface Customer {
   id: string;
@@ -16,12 +16,6 @@ interface Customer {
   address: string;
   phone: string;
 }
-
-// Mock Data as fallback
-const mockCustomers: Customer[] = [
-  { id: '1', name: 'บจก. เอบีซี', branch: 'สำนักงานใหญ่', taxId: '0105550000001', address: '123 ถ.สุขุมวิท กรุงเทพฯ', phone: '02-111-1111' },
-  { id: '2', name: 'ร้านมิตรภาพ', branch: 'สาขา 1', taxId: '0105550000002', address: '456 ถ.สีลม กรุงเทพฯ', phone: '02-222-2222' },
-];
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -60,12 +54,13 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      // const res = await apiClient.get('/customers');
-      // setCustomers(res.data);
-      setTimeout(() => {
-        setCustomers(mockCustomers);
-        setLoading(false);
-      }, 500);
+      const res = await apiClient.get('/customers');
+      if (res.data?.success && res.data?.data?.items) {
+        setCustomers(res.data.data.items);
+      } else {
+        setCustomers([]);
+      }
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching customers:', error);
       setLoading(false);
@@ -89,29 +84,31 @@ export default function CustomersPage() {
     if (!validate()) return;
     try {
       setIsSaving(true);
-      // Simulate API call
-      // if (editingCustomer) await apiClient.put(`/customers/${editingCustomer.id}`, formData);
-      // else await apiClient.post(`/customers`, formData);
+      if (editingCustomer) {
+        await apiClient.put(`/customers/${editingCustomer.id}`, formData);
+      } else {
+        await apiClient.post(`/customers`, formData);
+      }
       
-      setTimeout(() => {
-        if (editingCustomer) {
-          setCustomers(customers.map(c => c.id === editingCustomer.id ? { ...c, ...formData } as Customer : c));
-        } else {
-          setCustomers([...customers, { ...formData, id: Math.random().toString(36).substring(2,9) } as Customer]);
-        }
-        setIsModalOpen(false);
-        setIsSaving(false);
-      }, 500);
+      await fetchCustomers();
+      setIsModalOpen(false);
+      setIsSaving(false);
     } catch (error) {
       console.error('Save failed', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
       setIsSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('คุณต้องการลบลูกค้ารายนี้ใช่หรือไม่?')) {
-      // await apiClient.delete(`/customers/${id}`);
-      setCustomers(customers.filter(c => c.id !== id));
+      try {
+        await apiClient.delete(`/customers/${id}`);
+        await fetchCustomers();
+      } catch (error) {
+        console.error('Delete failed', error);
+        alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+      }
     }
   };
 

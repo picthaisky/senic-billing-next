@@ -1,6 +1,6 @@
 import { Plus, Trash2, Save, Printer, RotateCcw, CreditCard } from 'lucide-react';
 import { useDocumentForm, type VatMode } from '../../hooks/useDocumentForm';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { apiClient } from '../../services/apiClient';
 import { getDocumentTypeMeta } from '../../utils/documentTypeMeta';
 
@@ -13,12 +13,46 @@ interface InvoiceFormProps {
 }
 
 export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
-  const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm } = useDocumentForm(7);
+  const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
   const [customerName, setCustomerName] = useState('');
   const [customerTaxId, setCustomerTaxId] = useState('');
   const [notes, setNotes] = useState('');
   const [documentId] = useState(() => crypto.randomUUID());
   const [attachments, setAttachments] = useState<any[]>([]);
+
+  const draftKey = `senic_draft_${documentType}`;
+  const isInitialMount = useRef(true);
+
+  // Load draft on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(draftKey);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.customerName) setCustomerName(draft.customerName);
+        if (draft.customerTaxId) setCustomerTaxId(draft.customerTaxId);
+        if (draft.notes) setNotes(draft.notes);
+        restoreState(draft.formState);
+      } catch (e) {
+        console.error('Failed to load draft', e);
+      }
+    }
+  }, [documentType, draftKey, restoreState]);
+
+  // Save draft on change
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const draft = {
+      customerName,
+      customerTaxId,
+      notes,
+      formState: { lines, vatMode, discountAmount, whtRate }
+    };
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [customerName, customerTaxId, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
 
   const config = getDocumentTypeMeta(documentType);
   const accentClasses: Record<string, { bar: string; text: string }> = {
@@ -77,13 +111,10 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
         ...totals,
       };
 
-      // Mock API call if backend is not ready
-      await apiClient.post('/document', payload).catch(() => {
-        console.warn('API /document is not available, simulating success');
-        return new Promise(resolve => setTimeout(resolve, 800));
-      });
-      
+      // API call to create document
+      await apiClient.post('/documents', payload);      
       alert('บันทึกเอกสารสำเร็จ');
+      localStorage.removeItem(draftKey);
       resetForm();
       setCustomerName('');
       setCustomerTaxId('');

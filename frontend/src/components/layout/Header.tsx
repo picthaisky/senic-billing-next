@@ -16,10 +16,10 @@ import { useAuthStore } from '../../store/useAuthStore';
 import SystemStatusBadge from './SystemStatusBadge';
 import { useTranslation } from 'react-i18next';
 import { useLocaleStore } from '../../store/useLocaleStore';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   pageTitle: string;
-  onNavigate?: (page: string) => void;
 }
 
 interface NotificationItem {
@@ -64,8 +64,9 @@ const toneDotClass: Record<NotificationItem['tone'], string> = {
   warning: 'layout-notif-dot--warning',
 };
 
-export default function Header({ pageTitle, onNavigate }: HeaderProps) {
+export default function Header({ pageTitle }: HeaderProps) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const language = useLocaleStore((state) => state.language);
   const setLanguage = useLocaleStore((state) => state.setLanguage);
@@ -364,7 +365,7 @@ export default function Header({ pageTitle, onNavigate }: HeaderProps) {
               <div className="layout-profile-menu-group">
                 <button
                   onClick={() => {
-                    onNavigate?.('profile');
+                    navigate('/profile');
                     setShowProfile(false);
                   }}
                   className="layout-profile-menu-item layout-profile-menu-item-pad focus-ring w-full flex items-center gap-2.5 text-sm transition-colors"
@@ -373,7 +374,7 @@ export default function Header({ pageTitle, onNavigate }: HeaderProps) {
                 </button>
                 <button
                   onClick={() => {
-                    onNavigate?.('settings');
+                    navigate('/settings');
                     setShowProfile(false);
                   }}
                   className="layout-profile-menu-item layout-profile-menu-item-pad focus-ring w-full flex items-center gap-2.5 text-sm transition-colors"
