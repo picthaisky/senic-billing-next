@@ -13,7 +13,7 @@ interface InvoiceFormProps {
 }
 
 export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
-  const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, totals, resetForm } = useDocumentForm(7);
+  const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm } = useDocumentForm(7);
   const [customerName, setCustomerName] = useState('');
   const [customerTaxId, setCustomerTaxId] = useState('');
   const [notes, setNotes] = useState('');
@@ -72,6 +72,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
         notes,
         vatMode,
         discountAmount,
+        whtRate,
         lines: lines.filter(l => l.description.trim() !== ''),
         ...totals,
       };
@@ -182,6 +183,28 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
+          </div>
+          <div className="md:col-span-2 p-3 border border-orange-100 bg-orange-50/50 rounded-xl mt-2 flex items-center gap-3">
+            <div className="flex-1">
+              <label className="invoice-field-label text-xs font-medium block text-orange-800">
+                ออกเอกสารนี้ซ้ำอัตโนมัติ (Recurring)
+              </label>
+              <p className="text-[10px] text-orange-600">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
+            </div>
+            <select
+              className="input-field max-w-[200px] border-orange-200"
+              value={''} // Default off
+              onChange={async (e) => {
+                if (e.target.value) {
+                  alert('จะสามารถตั้งค่า Recurring ได้หลังจากบันทึกเอกสารแล้ว (หรือไปที่หน้าตั้งค่า)');
+                }
+              }}
+            >
+              <option value="">ไม่ทำซ้ำ</option>
+              <option value="weekly">ทุกสัปดาห์</option>
+              <option value="monthly">ทุกเดือน</option>
+              <option value="yearly">ทุกปี</option>
+            </select>
           </div>
         </div>
       </div>
@@ -451,6 +474,21 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   placeholder="0.00"
                 />
               </div>
+              <div className="mt-4">
+                <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+                  หักภาษี ณ ที่จ่าย (WHT)
+                </label>
+                <select
+                  className="input-field mt-1"
+                  value={whtRate}
+                  onChange={(e) => setWhtRate(Number(e.target.value))}
+                >
+                  <option value={0}>ไม่มีหัก ณ ที่จ่าย (0%)</option>
+                  <option value={1}>1% - ค่าขนส่ง</option>
+                  <option value={3}>3% - ค่าบริการ/รับจ้างทำของ</option>
+                  <option value={5}>5% - ค่าเช่า</option>
+                </select>
+              </div>
           </div>
         </div>
 
@@ -484,6 +522,13 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
                   </span>
                   <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
                 </div>
+
+                {whtRate > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--color-text-secondary)]">หัก ณ ที่จ่าย {whtRate}%</span>
+                    <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(totals.whtAmount)}</span>
+                  </div>
+                )}
 
                 {/* Grand Total */}
                 <div className="invoice-grand-total-row flex justify-between items-center border-t border-[var(--color-border)]">

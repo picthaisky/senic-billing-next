@@ -1,10 +1,10 @@
 ---
 name: senic-agent-orchestration
-description: 'Coordinate Senic Billing multi-agent work. Use for complex features, cross-cutting changes, architecture reviews, implementation plans, security/QA/devops routing, and automated handoffs between Senic agents.'
+description: 'Invoke Senic Maestro to coordinate multi-agent work. Use for complex features, cross-cutting changes, architecture reviews, implementation plans, security/QA/devops routing, and automated handoffs between Senic agents.'
 argument-hint: 'Senic Billing task to orchestrate'
 ---
 
-# Senic Agent Orchestration
+# Senic Agent Orchestration (Senic Maestro)
 
 ## When to Use
 
@@ -25,11 +25,13 @@ argument-hint: 'Senic Billing task to orchestrate'
 
 ## Quality Gates
 
-- Athena: requirements and acceptance criteria.
-- Atlas: architecture and contracts.
-- Ledger: billing, VAT, payment, lifecycle, numbering.
-- Aegis: tenant isolation, auth, secrets, webhooks, uploads.
-- Milo: Thai-first UX, design system, mobile, print/PDF.
-- Argus: tests and regression coverage.
-- Hermes: deployment and release readiness.
-- Mnemosyne: learning capture.
+- **Athena** (Business/Requirements): requirements and acceptance criteria.
+- **Atlas** (Architecture): architecture and contracts.
+- **Ledger** (Billing/Domain): billing, VAT, payment, lifecycle, numbering.
+- **Sage** (Backend): API, EF Core, controllers.
+- **Nova** (Frontend): UI implementation, React, Zustand.
+- **Milo** (Design/UX): Thai-first UX, design system, mobile, print/PDF.
+- **Argus** (QA): tests and regression coverage.
+- **Aegis** (Security): tenant isolation, auth, secrets, webhooks, uploads.
+- **Hermes** (DevOps): deployment and release readiness.
+- **Mnemosyne** (Knowledge): learning capture.

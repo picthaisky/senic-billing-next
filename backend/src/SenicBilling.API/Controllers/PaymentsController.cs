@@ -82,6 +82,60 @@ public class PaymentsController : ControllerBase
         }
     }
 
+    [HttpPost("{documentId}/payment-link")]
+    [Authorize]
+    public async Task<IActionResult> CreatePaymentLink(Guid documentId)
+    {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out var tenantId))
+            return Unauthorized();
+
+        var document = await _dbContext.DocumentHeaders
+            .FirstOrDefaultAsync(d => d.Id == documentId && d.TenantId == tenantId);
+
+        if (document == null)
+            return NotFound("Document not found");
+
+        if (document.Status == DocumentStatus.Paid)
+            return BadRequest("Document is already paid");
+
+        try
+        {
+            var amount = document.GrandTotal;
+            var reference = document.Id.ToString();
+            var title = $"Invoice {document.DocumentNumber}";
+            var description = $"Payment for {document.CustomerName}";
+
+            var paymentUrl = await _paymentService.CreatePaymentLinkAsync(amount, title, description, reference);
+
+            if (string.IsNullOrEmpty(paymentUrl))
+                return StatusCode(500, "Failed to create payment link");
+
+            var transaction = new PaymentTransaction
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                DocumentId = documentId,
+                Amount = amount,
+                PaymentMethod = "payment_link",
+                GatewayReference = "LINK_" + Guid.NewGuid().ToString("N").Substring(0, 8),
+                QrCodeUrl = paymentUrl, // Reuse QrCodeUrl for the link URL
+                Status = "pending",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.PaymentTransactions.Add(transaction);
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new { paymentUrl, amount });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating Payment Link for Document {DocumentId}", documentId);
+            return StatusCode(500, "Payment gateway error");
+        }
+    }
+
     // Omise Webhook Endpoint (No Authorization needed, it's called by Omise)
     [HttpPost("webhook")]
     [AllowAnonymous]

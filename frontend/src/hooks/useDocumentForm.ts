@@ -17,6 +17,7 @@ export function useDocumentForm(vatRate: number = 7) {
   const [lines, setLines] = useState<DocumentLineItem[]>([createEmptyLine()]);
   const [vatMode, setVatMode] = useState<VatMode>('exclusive');
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [whtRate, setWhtRate] = useState(0); // 0, 1, 3, 5
 
   function createEmptyLine(): DocumentLineItem {
     return {
@@ -54,29 +55,40 @@ export function useDocumentForm(vatRate: number = 7) {
     const totalBeforeVat = subtotal - discountAmount;
 
     let vatAmount: number;
-    let grandTotal: number;
+    let baseGrandTotal: number;
 
     if (vatMode === 'exclusive') {
       vatAmount = Math.round((totalBeforeVat * vatRate / 100) * 100) / 100;
-      grandTotal = totalBeforeVat + vatAmount;
+      baseGrandTotal = totalBeforeVat + vatAmount;
     } else {
-      grandTotal = totalBeforeVat;
+      baseGrandTotal = totalBeforeVat;
       vatAmount = Math.round((totalBeforeVat * vatRate / (100 + vatRate)) * 100) / 100;
     }
+    
+    // WHT is calculated on TotalBeforeVat (Thai standard)
+    // For inclusive vat, totalBeforeVat is currently the GrandTotal including VAT in this calculation logic.
+    // Wait, if VAT is inclusive, totalBeforeVat here is the user input sum. 
+    // True totalBeforeVat = baseGrandTotal - vatAmount
+    const trueTotalBeforeVat = vatMode === 'inclusive' ? baseGrandTotal - vatAmount : totalBeforeVat;
+    
+    const whtAmount = Math.round((trueTotalBeforeVat * whtRate / 100) * 100) / 100;
+    const grandTotal = baseGrandTotal - whtAmount;
 
-    return { subtotal, totalBeforeVat, vatAmount, grandTotal };
-  }, [lines, discountAmount, vatMode, vatRate]);
+    return { subtotal, totalBeforeVat: trueTotalBeforeVat, vatAmount, whtAmount, grandTotal };
+  }, [lines, discountAmount, vatMode, vatRate, whtRate]);
 
   const resetForm = useCallback(() => {
     setLines([createEmptyLine()]);
     setDiscountAmount(0);
     setVatMode('exclusive');
+    setWhtRate(0);
   }, []);
 
   return {
     lines, addLine, removeLine, updateLine,
     vatMode, setVatMode,
     discountAmount, setDiscountAmount,
+    whtRate, setWhtRate,
     totals, resetForm,
   };
 }

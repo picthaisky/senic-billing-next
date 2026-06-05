@@ -19,5 +19,11 @@ public enum DocumentType
     TaxInvoice = 4,
 
     /// <summary>ใบเสนอราคา</summary>
-    Quotation = 5
+    Quotation = 5,
+
+    /// <summary>ใบลดหนี้ (Credit Note) — ลดยอดจากเอกสารต้นทาง</summary>
+    CreditNote = 6,
+
+    /// <summary>ใบเพิ่มหนี้ (Debit Note) — เพิ่มยอดจากเอกสารต้นทาง</summary>
+    DebitNote = 7
 }

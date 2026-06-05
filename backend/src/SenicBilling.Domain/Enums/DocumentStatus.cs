@@ -2,7 +2,7 @@ namespace SenicBilling.Domain.Enums;
 
 /// <summary>
 /// Represents the lifecycle status of a billing document.
-/// Documents transition: Draft → Issued → (optionally) Cancelled.
+/// Documents transition: Draft → Issued → Sent → Viewed → Paid / Overdue → (optionally) Cancelled.
 /// Cancelled documents require a Credit Note reference for audit compliance.
 /// </summary>
 public enum DocumentStatus
@@ -17,5 +17,14 @@ public enum DocumentStatus
     Cancelled = 3,
 
     /// <summary>ชำระเงินแล้ว - fully paid online or offline</summary>
-    Paid = 4
+    Paid = 4,
+
+    /// <summary>ส่งแล้ว - sent to customer via email/link</summary>
+    Sent = 5,
+
+    /// <summary>เปิดดูแล้ว - customer has viewed the document (read receipt)</summary>
+    Viewed = 6,
+
+    /// <summary>เกินกำหนดชำระ - past DueDate and not yet paid</summary>
+    Overdue = 7
 }

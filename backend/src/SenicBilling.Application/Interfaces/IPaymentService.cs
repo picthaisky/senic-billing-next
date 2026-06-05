@@ -3,5 +3,6 @@ namespace SenicBilling.Application.Interfaces;
 public interface IPaymentService
 {
     Task<(string ChargeId, string QrCodeUrl)> CreatePromptPayChargeAsync(decimal amount, string referenceId, string returnUrl = "");
+    Task<string> CreatePaymentLinkAsync(decimal amount, string title, string description, string referenceId);
     Task<bool> VerifyChargeAsync(string chargeId);
 }

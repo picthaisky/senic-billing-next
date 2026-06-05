@@ -19,7 +19,10 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
-
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<RecurringInvoice> RecurringInvoices => Set<RecurringInvoice>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -114,6 +117,8 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
             entity.Property(e => e.VatAmount).HasPrecision(18, 4);
             entity.Property(e => e.GrandTotal).HasPrecision(18, 4);
             entity.Property(e => e.VatRate).HasPrecision(5, 2);
+            entity.Property(e => e.WhtRate).HasPrecision(5, 2);
+            entity.Property(e => e.WhtAmount).HasPrecision(18, 4);
 
             // Enum conversions stored as string for readability
             entity.Property(e => e.DocumentType).HasConversion<string>().HasMaxLength(20);
@@ -140,6 +145,8 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
             entity.HasIndex(e => new { e.TenantId, e.DocumentType, e.DocumentDate });
             entity.HasIndex(e => new { e.TenantId, e.DocumentNumber }).IsUnique();
             entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.ConvertedFromDocumentId })
+                .HasFilter("\"ConvertedFromDocumentId\" IS NOT NULL");
         });
 
         // ──────────────────────────────────────────────
@@ -267,6 +274,80 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
                 .WithMany()
                 .HasForeignKey(e => e.DocumentId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ──────────────────────────────────────────────
+        // AuditLog Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Username).HasMaxLength(100);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EntityName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.EntityId).IsRequired().HasMaxLength(100);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.EntityName, e.EntityId });
+            entity.HasIndex(e => new { e.TenantId, e.Timestamp });
+        });
+
+        // ──────────────────────────────────────────────
+        // Permission Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        // ──────────────────────────────────────────────
+        // RolePermission Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RoleName).IsRequired().HasMaxLength(50);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Permission)
+                .WithMany()
+                .HasForeignKey(e => e.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.RoleName, e.PermissionId }).IsUnique();
+        });
+
+        // ──────────────────────────────────────────────
+        // RecurringInvoice Configuration
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<RecurringInvoice>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Frequency).IsRequired().HasMaxLength(50);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.SourceDocument)
+                .WithMany()
+                .HasForeignKey(e => e.SourceDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.TenantId, e.IsActive, e.NextRunDate });
         });
 
         // ──────────────────────────────────────────────

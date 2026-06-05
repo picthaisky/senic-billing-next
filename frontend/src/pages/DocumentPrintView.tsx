@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, ChevronLeft, Download } from 'lucide-react';
 import A4DocumentTemplate, { type DocumentData } from '../components/forms/A4DocumentTemplate';
+import { apiClient } from '../services/apiClient';
 
 // Mock data generator for the demo
 const getMockData = (id: string): DocumentData => {
@@ -77,12 +78,48 @@ export default function DocumentPrintView() {
           <ChevronLeft size={18} /> กลับ
         </button>
         
-        <div className="flex gap-3">
+        <div className="flex gap-2 items-center">
+          <button 
+            onClick={async () => {
+              try {
+                const res = await apiClient.post(`/Payments/${id}/payment-link`);
+                const url = res.data?.paymentUrl || res.data?.data?.paymentUrl;
+                if (url) {
+                  navigator.clipboard.writeText(url);
+                  alert('สร้างและคัดลอกลิงก์รับชำระเงินเรียบร้อยแล้ว: \n' + url);
+                }
+              } catch (error) {
+                alert('เกิดข้อผิดพลาดในการสร้างลิงก์');
+              }
+            }}
+            className="btn border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-50)]"
+          >
+            💳 สร้างลิงก์รับเงิน
+          </button>
+
+          <button 
+            onClick={async () => {
+              try {
+                const res = await apiClient.post(`/Document/${id}/convert/TaxInvoice`);
+                const newId = res.data?.data?.id || res.data?.id;
+                if (newId) {
+                  alert('แปลงเป็นใบกำกับภาษีสำเร็จ');
+                  navigate(`/print/${newId}`);
+                }
+              } catch (error) {
+                alert('เกิดข้อผิดพลาดในการแปลงเอกสาร');
+              }
+            }}
+            className="btn btn-secondary border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100"
+          >
+            🔄 แปลงเป็นใบกำกับภาษี
+          </button>
+          
           <button onClick={handlePrint} className="btn btn-secondary">
-            <Download size={18} /> ออกเป็น PDF
+            <Download size={18} /> PDF
           </button>
           <button onClick={handlePrint} className="btn btn-primary">
-            <Printer size={18} /> สั่งพิมพ์
+            <Printer size={18} /> พิมพ์
           </button>
         </div>
       </div>
