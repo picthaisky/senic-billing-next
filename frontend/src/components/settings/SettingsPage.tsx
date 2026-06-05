@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, Mail, Phone, MapPin, Save, Bell, BellOff, Send, Languages } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useTranslation } from 'react-i18next';
 import { useLocaleStore } from '../../store/useLocaleStore';
 import RecurringInvoicesConfig from './RecurringInvoicesConfig';
+import { apiClient } from '../../services/apiClient';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -15,25 +16,46 @@ export default function SettingsPage() {
   const pushNotifications = usePushNotifications();
   
   const [tenantInfo, setTenantInfo] = useState({
-    companyName: 'Senic Corporation',
-    taxId: '0105560000000',
-    email: 'contact@senic.co.th',
-    phone: '02-999-9999',
-    address: '99/9 ถ.พระราม 9 ห้วยขวาง กรุงเทพฯ 10310'
+    companyName: '',
+    taxId: '',
+    email: '',
+    phone: '',
+    address: '',
+    branchName: ''
   });
+
+  useEffect(() => {
+    const fetchTenant = async () => {
+      try {
+        const res = await apiClient.get('/tenants/current');
+        if (res.data?.success && res.data?.data) {
+          setTenantInfo({
+            companyName: res.data.data.companyName || '',
+            taxId: res.data.data.taxId || '',
+            email: res.data.data.email || '',
+            phone: res.data.data.phone || '',
+            address: res.data.data.address || '',
+            branchName: res.data.data.branchName || 'สำนักงานใหญ่'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch tenant:', error);
+      }
+    };
+    fetchTenant();
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsSaving(true);
-      // await apiClient.put(`/tenants/${user?.tenantId}`, tenantInfo);
-      setTimeout(() => {
-        setIsSaving(false);
-        alert('บันทึกการตั้งค่าสำเร็จ');
-      }, 500);
+      await apiClient.put(`/tenants/${user?.tenantId}`, tenantInfo);
+      setIsSaving(false);
+      alert('บันทึกการตั้งค่าสำเร็จ');
     } catch (error) {
       console.error('Failed to save settings:', error);
       setIsSaving(false);
+      alert('เกิดข้อผิดพลาดในการบันทึกการตั้งค่า');
     }
   };
 

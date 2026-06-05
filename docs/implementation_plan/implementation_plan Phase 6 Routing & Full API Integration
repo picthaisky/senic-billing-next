@@ -1,0 +1,35 @@
+# 🛣️ Phase 6: Routing & Full API Integration
+
+เป้าหมายของ Phase นี้คือการทำ 2 อย่างหลักตามที่คุณต้องการ:
+1. **Refactor React Routing:** ปรับปรุง `DashboardLayout` ให้ใช้ `react-router-dom` แทนการใช้ State `currentPage` เพื่อให้ URL บนเบราว์เซอร์เปลี่ยนไปตามโมดูล (เช่น `/products`, `/customers`, `/documents/receipt`)
+2. **Full API Integration:** เชื่อมต่อทุกหน้า UI (Modules) เข้ากับ Backend API ของจริงให้ครบถ้วน 100% พร้อมถอดระบบ Mock Data ออกทั้งหมด
+
+## Proposed Changes
+
+### 1. 🧭 Routing System (`App.tsx` & `DashboardLayout.tsx`)
+- [MODIFY] `frontend/src/App.tsx`
+  - ย้าย Routing หลักจากที่เคยเป็นแค่ `/* -> DashboardLayout` ให้มี Nested Routes ภายใน
+  - ตัวอย่าง Path: `/dashboard`, `/customers`, `/products`, `/settings`, `/profile`, `/documents/:type`
+- [MODIFY] `frontend/src/components/layout/DashboardLayout.tsx`
+  - นำ State `currentPage` ออก และใช้ `<Outlet />` ของ `react-router-dom` ในการ Render หน้าลูก
+- [MODIFY] `frontend/src/components/layout/Sidebar.tsx` และ `Header.tsx`
+  - เปลี่ยนจากการกดปุ่มเพื่อเปลี่ยน State ไปเป็นการใช้คำสั่ง `useNavigate()` หรือ Component `<Link />` เพื่อให้ URL เปลี่ยนแปลงจริงๆ
+
+### 2. 🔌 API Integration (ถอด Mock Data)
+- **`CustomersPage.tsx`**
+  - [MODIFY] เปิดการใช้งาน `apiClient` แบบเดียวกับ `ProductsPage`
+  - ทำการเรียก `GET /api/customers`, `POST /api/customers`, `PUT`, และ `DELETE`
+- **`InvoiceForm.tsx` (การออกเอกสาร)**
+  - [MODIFY] แก้ไข Endpoint จากที่จำลองการบันทึก (`/document` จำลอง) เป็นการยิงจริงไปที่ `POST /api/documents` (หรือ `POST /api/taxinvoices` ขึ้นอยู่กับชนิดเอกสาร)
+- **`DashboardPage.tsx`**
+  - [MODIFY] ตรวจสอบให้มั่นใจว่า Widget ต่างๆ (สรุปรายได้, Tax Estimator, Aging Report) ดึงข้อมูลจาก API จริง (`GET /api/dashboard/*`) ทั้งหมดและลบ Mock
+
+## User Review Required
+
+> [!WARNING]  
+> การเปลี่ยนระบบ Routing จะกระทบการทำงานของหน้า Frontend ทั้งหมด โปรดตรวจสอบว่ามี Path ชื่อไหนที่คุณอยากกำหนดเป็นพิเศษไหมครับ? (ค่าเริ่มต้นจะเป็นภาษาอังกฤษ เช่น `/products`, `/customers`)
+
+## Verification Plan
+1. กดที่เมนูใน Sidebar แล้วสังเกตช่อง URL ว่ามีการเปลี่ยน Path จริง (เช่น `https://.../customers`)
+2. กดปุ่ม F5 รีเฟรชหน้าแล้วยังต้องอยู่ที่หน้าเดิม ไม่เด้งกลับไปหน้าแรก
+3. ลองสร้างลูกค้าใหม่, สร้างเอกสารใหม่, และดู Dashboard ว่ามีการยิง Request กลับไปที่ Backend และไม่มีข้อผิดพลาด (Network Status 200/201)

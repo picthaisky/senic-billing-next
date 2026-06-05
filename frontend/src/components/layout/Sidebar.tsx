@@ -4,31 +4,32 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-export default function Sidebar({ currentPage, onNavigate, collapsed, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const navItems = [
-    { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { id: 'dashboard', path: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
     { id: 'divider-1', divider: true, label: t('nav.documents') },
-    { id: 'receipt', label: t('nav.receipt'), icon: Receipt },
-    { id: 'cashbill', label: t('nav.cashbill'), icon: Banknote },
-    { id: 'delivery', label: t('nav.delivery'), icon: Truck },
-    { id: 'quotation', label: t('nav.quotation'), icon: FileText },
-    { id: 'taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
+    { id: 'receipt', path: '/documents/receipt', label: t('nav.receipt'), icon: Receipt },
+    { id: 'cashbill', path: '/documents/cashbill', label: t('nav.cashbill'), icon: Banknote },
+    { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
+    { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
+    { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
     { id: 'divider-2', divider: true, label: t('nav.masters') },
-    { id: 'customers', label: t('nav.customers'), icon: Users },
-    { id: 'products', label: t('nav.products'), icon: Package },
+    { id: 'customers', path: '/customers', label: t('nav.customers'), icon: Users },
+    { id: 'products', path: '/products', label: t('nav.products'), icon: Package },
     { id: 'divider-3', divider: true, label: t('nav.system') },
-    { id: 'settings', label: t('nav.settings'), icon: Settings },
+    { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const fullName = user
@@ -78,13 +79,13 @@ export default function Sidebar({ currentPage, onNavigate, collapsed, onToggleCo
           }
 
           const Icon = item.icon!;
-          const isActive = currentPage === item.id;
+          const isActive = location.pathname === item.path || (item.path !== '/dashboard' && location.pathname.startsWith(item.path!));
 
           return (
             <button
               type="button"
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => navigate(item.path!)}
               className={`layout-sidebar-nav-item focus-ring relative w-full flex items-center gap-3 rounded-xl transition-all duration-200 group ${collapsed ? 'layout-sidebar-nav-item--collapsed' : 'layout-sidebar-nav-item--expanded'} ${isActive ? 'is-active' : ''}`}
               title={collapsed ? item.label : undefined}
               aria-label={item.label}

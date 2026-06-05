@@ -2,14 +2,11 @@ import { useState } from 'react';
 import { Plus, X, Receipt, Banknote, Truck, FileText, FileCheck } from 'lucide-react';
 import { DOCUMENT_TYPE_META, type DocumentTypeId } from '../../utils/documentTypeMeta';
 import { useTranslation } from 'react-i18next';
-
-interface FloatingActionButtonProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-}
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface FabAction {
   id: DocumentTypeId;
+  path: string;
   label: string;
   icon: React.ElementType;
 }
@@ -22,21 +19,23 @@ const actionColorClass: Record<DocumentTypeId, string> = {
   taxinvoice: 'layout-fab-action-btn--taxinvoice',
 };
 
-export default function FloatingActionButton({ currentPage, onNavigate }: FloatingActionButtonProps) {
+export default function FloatingActionButton() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const quickActions: FabAction[] = [
-    { id: 'receipt', label: t('docType.receipt', { defaultValue: DOCUMENT_TYPE_META.receipt.label }), icon: Receipt },
-    { id: 'cashbill', label: t('docType.cashbill', { defaultValue: DOCUMENT_TYPE_META.cashbill.label }), icon: Banknote },
-    { id: 'delivery', label: t('docType.delivery', { defaultValue: DOCUMENT_TYPE_META.delivery.label }), icon: Truck },
-    { id: 'quotation', label: t('docType.quotation', { defaultValue: DOCUMENT_TYPE_META.quotation.label }), icon: FileText },
-    { id: 'taxinvoice', label: t('docType.taxinvoice', { defaultValue: DOCUMENT_TYPE_META.taxinvoice.label }), icon: FileCheck },
+    { id: 'receipt', path: '/documents/receipt', label: t('docType.receipt', { defaultValue: DOCUMENT_TYPE_META.receipt.label }), icon: Receipt },
+    { id: 'cashbill', path: '/documents/cashbill', label: t('docType.cashbill', { defaultValue: DOCUMENT_TYPE_META.cashbill.label }), icon: Banknote },
+    { id: 'delivery', path: '/documents/delivery', label: t('docType.delivery', { defaultValue: DOCUMENT_TYPE_META.delivery.label }), icon: Truck },
+    { id: 'quotation', path: '/documents/quotation', label: t('docType.quotation', { defaultValue: DOCUMENT_TYPE_META.quotation.label }), icon: FileText },
+    { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('docType.taxinvoice', { defaultValue: DOCUMENT_TYPE_META.taxinvoice.label }), icon: FileCheck },
   ];
 
-  // Hide FAB on document form pages (user is already creating a doc)
-  const hiddenPages = ['receipt', 'cashbill', 'delivery', 'quotation', 'taxinvoice', 'settings', 'profile'];
-  if (hiddenPages.includes(currentPage)) return null;
+  // Hide FAB on document form pages and settings/profile
+  const isHiddenPage = location.pathname.startsWith('/documents') || location.pathname.startsWith('/settings') || location.pathname.startsWith('/profile');
+  if (isHiddenPage) return null;
 
   return (
     <>
@@ -51,7 +50,7 @@ export default function FloatingActionButton({ currentPage, onNavigate }: Floati
       {/* Quick Action Items */}
       {isExpanded && (
         <div className="layout-fab-actions fixed z-40 flex flex-col gap-3 items-end md:hidden">
-          {quickActions.map(({ id, label, icon: Icon }, index) => (
+          {quickActions.map(({ id, path, label, icon: Icon }, index) => (
             <div
               key={id}
               className={`layout-fab-action-row flex items-center gap-3 delay-${Math.min(index + 1, 5)}`}
@@ -61,7 +60,7 @@ export default function FloatingActionButton({ currentPage, onNavigate }: Floati
               </span>
               <button
                 onClick={() => {
-                  onNavigate(id);
+                  navigate(path);
                   setIsExpanded(false);
                 }}
                 className={`layout-fab-action-btn ${actionColorClass[id]} haptic-tap w-12 h-12 rounded-full flex items-center justify-center shadow-lg`}
