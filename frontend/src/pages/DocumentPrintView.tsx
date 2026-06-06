@@ -47,7 +47,7 @@ export default function DocumentPrintView() {
             customerName: doc.customerName || '',
             customerAddress: doc.customerAddress || '',
             customerPhone: '', // Not in DTO currently, might need fallback
-            customerBranch: 'สำนักงานใหญ่',
+            customerBranch: doc.customerBranch || 'สำนักงานใหญ่',
             customerTaxId: doc.customerTaxId || '',
             reference: doc.referenceDocumentId ? `อ้างอิง: ${doc.referenceDocumentId}` : '',
             items: (doc.lines || []).map((line: any, idx: number) => ({

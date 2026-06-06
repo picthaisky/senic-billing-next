@@ -53,6 +53,7 @@ public record CreateDocumentRequest(
     Guid? CustomerId,
     string? CustomerName,
     string? CustomerAddress,
+    string? CustomerBranch,
     string? CustomerTaxId,
     VatCalculationMode VatMode,
     decimal VatRate,
@@ -70,6 +71,7 @@ public record UpdateDocumentRequest(
     Guid? CustomerId,
     string? CustomerName,
     string? CustomerAddress,
+    string? CustomerBranch,
     string? CustomerTaxId,
     VatCalculationMode VatMode,
     decimal VatRate,
@@ -89,6 +91,7 @@ public record DocumentResponse(
     Guid? CustomerId,
     string? CustomerName,
     string? CustomerAddress,
+    string? CustomerBranch,
     string? CustomerTaxId,
     DocumentStatus Status,
     VatCalculationMode VatMode,
@@ -140,17 +143,17 @@ public record CreateCreditDebitNoteRequest(
 // ──────────────────────────────────────────────
 
 public record CustomerDto(
-    Guid Id, string Name, string? TaxId, string? Address,
+    Guid Id, string Name, string? TaxId, string? Branch, string? Address,
     string? Phone, string? Email, string? ContactPerson, string? Notes, bool IsActive
 );
 
 public record CreateCustomerRequest(
-    string Name, string? TaxId, string? Address,
+    string Name, string? TaxId, string? Branch, string? Address,
     string? Phone, string? Email, string? ContactPerson, string? Notes
 );
 
 public record UpdateCustomerRequest(
-    string Name, string? TaxId, string? Address,
+    string Name, string? TaxId, string? Branch, string? Address,
     string? Phone, string? Email, string? ContactPerson, string? Notes, bool IsActive
 );
 

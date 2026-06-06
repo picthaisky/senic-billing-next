@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Eye, EyeOff, Shield } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 
@@ -79,7 +80,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-[var(--color-surface-solid)] w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
@@ -194,4 +195,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 }

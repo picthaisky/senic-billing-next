@@ -1,4 +1,4 @@
-import { Plus, Trash2, Save, Printer, RotateCcw, CreditCard } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, RotateCcw, CreditCard, Search } from 'lucide-react';
 import { useDocumentForm, type VatMode } from '../../hooks/useDocumentForm';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { apiClient } from '../../services/apiClient';
@@ -6,6 +6,7 @@ import { getDocumentTypeMeta } from '../../utils/documentTypeMeta';
 
 import AttachmentUpload from './AttachmentUpload';
 import PaymentModal from '../payments/PaymentModal';
+import CustomerSelectModal, { Customer } from '../customers/CustomerSelectModal';
 
 interface InvoiceFormProps {
   documentType: string;
@@ -15,8 +16,11 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ documentType, title, documentId: propDocumentId }: InvoiceFormProps) {
   const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerTaxId, setCustomerTaxId] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerBranch, setCustomerBranch] = useState('');
   const [notes, setNotes] = useState('');
   const [documentId] = useState(() => propDocumentId || crypto.randomUUID());
   const [attachments, setAttachments] = useState<any[]>([]);
@@ -31,8 +35,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       apiClient.get(`/documents/${propDocumentId}`).then(res => {
         if (res.data?.success) {
           const doc = res.data.data;
+          setCustomerId(doc.customerId || null);
           setCustomerName(doc.customerName || '');
           setCustomerTaxId(doc.customerTaxId || '');
+          setCustomerAddress(doc.customerAddress || '');
+          setCustomerBranch(doc.customerBranch || '');
           setNotes(doc.notes || '');
           restoreState({
             lines: doc.lines,
@@ -51,8 +58,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
+        if (draft.customerId) setCustomerId(draft.customerId);
         if (draft.customerName) setCustomerName(draft.customerName);
         if (draft.customerTaxId) setCustomerTaxId(draft.customerTaxId);
+        if (draft.customerAddress) setCustomerAddress(draft.customerAddress);
+        if (draft.customerBranch) setCustomerBranch(draft.customerBranch);
         if (draft.notes) setNotes(draft.notes);
         restoreState(draft.formState);
       } catch (e) {
@@ -68,13 +78,16 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       return;
     }
     const draft = {
+      customerId,
       customerName,
       customerTaxId,
+      customerAddress,
+      customerBranch,
       notes,
       formState: { lines, vatMode, discountAmount, whtRate }
     };
     localStorage.setItem(draftKey, JSON.stringify(draft));
-  }, [customerName, customerTaxId, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
+  }, [customerId, customerName, customerTaxId, customerAddress, customerBranch, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
 
   const config = getDocumentTypeMeta(documentType);
   const accentClasses: Record<string, { bar: string; text: string }> = {
@@ -87,6 +100,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
   const accent = accentClasses[documentType] ?? { bar: 'bg-[var(--color-primary)]', text: 'text-[var(--color-primary)]' };
   const [isSaving, setIsSaving] = useState(false);
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
   const [errors, setErrors] = useState<{ customerName?: string; customerTaxId?: string; lines?: string }>({});
 
   const clearError = (key: keyof typeof errors) =>
@@ -135,8 +149,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       const payload = {
         documentType: mapDocType(documentType),
         documentDate: new Date().toISOString(),
+        customerId,
         customerName,
         customerTaxId,
+        customerAddress,
+        customerBranch,
         notes,
         vatMode,
         vatRate: 7,
@@ -160,8 +177,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       };
 
       // API call to create or update document
-      if (documentId) {
-        await apiClient.put(`${getEndpoint(documentType)}/${documentId}`, payload);
+      if (propDocumentId) {
+        await apiClient.put(`${getEndpoint(documentType)}/${propDocumentId}`, payload);
         alert('อัปเดตเอกสารสำเร็จ');
       } else {
         await apiClient.post(getEndpoint(documentType), payload);      
@@ -169,8 +186,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       }
       localStorage.removeItem(draftKey);
       resetForm();
+      setCustomerId(null);
       setCustomerName('');
       setCustomerTaxId('');
+      setCustomerAddress('');
+      setCustomerBranch('');
       setNotes('');
     } catch (error) {
       console.error('Failed to save document:', error);
@@ -230,13 +250,23 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
               ชื่อลูกค้า / บริษัท <span className="text-red-400">*</span>
             </label>
-            <input
-              type="text"
-              className={`input-field ${errors.customerName ? 'input-error' : ''}`}
-              placeholder="พิมพ์เพื่อค้นหา..."
-              value={customerName}
-              onChange={(e) => { setCustomerName(e.target.value); clearError('customerName'); }}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                className={`input-field pr-10 ${errors.customerName ? 'input-error' : ''}`}
+                placeholder="พิมพ์เพื่อค้นหา..."
+                value={customerName}
+                onChange={(e) => { setCustomerName(e.target.value); clearError('customerName'); }}
+              />
+              <button
+                type="button"
+                onClick={() => setCustomerModalOpen(true)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] rounded-md transition-colors"
+                title="ค้นหาลูกค้าจากฐานข้อมูล"
+              >
+                <Search size={18} />
+              </button>
+            </div>
             {errors.customerName && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerName}</p>}
           </div>
           {documentType === 'taxinvoice' && (
@@ -637,7 +667,23 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
         documentNumber={`${config.prefix}-202606-AUTO`}
         amount={totals.grandTotal}
         onSuccess={() => {
-          alert('ชำระเงินสำเร็จแล้ว!');
+          setPaymentModalOpen(false);
+          // Optional: trigger refresh if needed
+        }}
+      />
+      
+      <CustomerSelectModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setCustomerModalOpen(false)}
+        onSelect={(customer) => {
+          setCustomerId(customer.id);
+          setCustomerName(customer.name);
+          setCustomerTaxId(customer.taxId || '');
+          setCustomerAddress(customer.address || '');
+          setCustomerBranch(customer.branch || 'สำนักงานใหญ่');
+          clearError('customerName');
+          clearError('customerTaxId');
+          setCustomerModalOpen(false);
         }}
       />
     </div>

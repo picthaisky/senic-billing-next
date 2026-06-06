@@ -36,6 +36,9 @@ public class DocumentHeader
     /// <summary>เลขประจำตัวผู้เสียภาษี (snapshot)</summary>
     public string? CustomerTaxId { get; set; }
 
+    /// <summary>สาขาของลูกค้า (snapshot)</summary>
+    public string? CustomerBranch { get; set; }
+
     /// <summary>สถานะเอกสาร</summary>
     public DocumentStatus Status { get; set; } = DocumentStatus.Draft;
 

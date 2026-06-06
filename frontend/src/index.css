@@ -197,6 +197,8 @@
    UTILITY CLASSES
    ═══════════════════════════════════════════════ */
 
+@layer components {
+
 /* Glass Card */
 .glass-card {
   background: var(--color-surface);
@@ -1915,4 +1917,5 @@
 .dashboard-recent-table th:nth-child(4),
 .dashboard-recent-table th:nth-child(5) {
   font-variant-numeric: tabular-nums;
+}
 }
