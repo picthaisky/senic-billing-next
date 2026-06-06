@@ -98,30 +98,35 @@ export default function DocumentsListPage() {
         </Link>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-border)] flex flex-col sm:flex-row gap-4 justify-between items-center bg-[var(--color-bg-secondary)]/50">
-          <form onSubmit={handleSearch} className="relative w-full sm:w-96">
-            <input
-              type="text"
-              placeholder="ค้นหาเลขที่เอกสาร หรือชื่อลูกค้า..."
-              className="input-field pl-10 w-full bg-[var(--color-bg)]"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          </form>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="relative w-full sm:w-96">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <input
+            type="text"
+            placeholder="ค้นหาเลขที่เอกสาร หรือชื่อลูกค้า..."
+            className="input-field pl-10 w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch(e as any);
+              }
+            }}
+          />
         </div>
+      </div>
 
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs uppercase bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]">
+          <table className="data-table w-full text-sm text-left">
+            <thead>
               <tr>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">วันที่</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">เลขที่เอกสาร</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">ลูกค้า</th>
-                <th className="px-6 py-4 font-semibold text-right whitespace-nowrap">ยอดรวม (บาท)</th>
-                <th className="px-6 py-4 font-semibold text-center whitespace-nowrap">สถานะ</th>
-                <th className="px-6 py-4 font-semibold text-right whitespace-nowrap">จัดการ</th>
+                <th className="whitespace-nowrap">วันที่</th>
+                <th className="whitespace-nowrap">เลขที่เอกสาร</th>
+                <th className="whitespace-nowrap">ลูกค้า</th>
+                <th className="text-right whitespace-nowrap">ยอดรวม (บาท)</th>
+                <th className="text-center whitespace-nowrap">สถานะ</th>
+                <th className="text-right whitespace-nowrap">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
