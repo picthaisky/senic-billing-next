@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Clock, User, FileText, CheckCircle, Trash2 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 
@@ -58,7 +59,7 @@ export default function DocumentHistoryModal({ documentId, documentNumber, onClo
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-[var(--color-surface-solid)] w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
@@ -127,4 +128,7 @@ export default function DocumentHistoryModal({ documentId, documentNumber, onClo
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 }

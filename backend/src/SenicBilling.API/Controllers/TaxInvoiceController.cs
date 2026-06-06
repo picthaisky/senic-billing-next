@@ -253,7 +253,7 @@ public class TaxInvoiceController(
 
     private static DocumentResponse MapToResponse(DocumentHeader d) => new(
         d.Id, d.DocumentType, d.DocumentNumber, d.DocumentDate, d.DueDate,
-        d.CustomerId, d.CustomerName, d.CustomerAddress, d.CustomerTaxId,
+        d.CustomerId, d.CustomerName, d.CustomerAddress, d.CustomerBranch, d.CustomerTaxId,
         d.Status, d.VatMode, d.VatRate,
         d.Subtotal, d.DiscountAmount, d.TotalBeforeVat, d.VatAmount,
         d.WhtRate, d.WhtAmount, d.GrandTotal,

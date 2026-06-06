@@ -21,6 +21,9 @@ public class Customer
     /// <summary>เบอร์โทรศัพท์</summary>
     public string? Phone { get; set; }
 
+    /// <summary>สาขา</summary>
+    public string? Branch { get; set; }
+
     /// <summary>อีเมล</summary>
     public string? Email { get; set; }
 
