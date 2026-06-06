@@ -10,6 +10,8 @@ interface Product {
   category: string;
   unitPrice: number;
   unit: string;
+  stockQuantity?: number | null;
+  barcode?: string | null;
 }
 
 export default function ProductsPage() {
@@ -24,7 +26,7 @@ export default function ProductsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const setField = (key: keyof Product, value: string | number) => {
+  const setField = (key: keyof Product, value: string | number | null) => {
     setFormData(prev => ({ ...prev, [key]: value }));
     setErrors(prev => (prev[key] ? { ...prev, [key]: '' } : prev));
   };
@@ -156,8 +158,8 @@ export default function ProductsPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input 
             type="text" 
-            placeholder="ค้นหาชื่อสินค้า, รหัส SKU..." 
-            className="input-field entity-search-input"
+            placeholder="ค้นหาชื่อสินค้า, รหัสสินค้า..." 
+            className="input-field pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -181,6 +183,7 @@ export default function ProductsPage() {
               <th>ชื่อสินค้า / บริการ</th>
               <th>หมวดหมู่</th>
               <th className="text-right">ราคาต่อหน่วย</th>
+              <th className="text-center">คงเหลือ</th>
               <th>หน่วยนับ</th>
               <th className="w-24 text-center">จัดการ</th>
             </tr>
@@ -212,6 +215,11 @@ export default function ProductsPage() {
                   </td>
                   <td data-label="หมวดหมู่"><span className="badge badge-info">{product.category}</span></td>
                   <td data-label="ราคาต่อหน่วย" className="text-right font-semibold tabular-nums">฿{formatCurrency(product.unitPrice)}</td>
+                  <td data-label="คงเหลือ" className="text-center tabular-nums">
+                    {product.stockQuantity !== null && product.stockQuantity !== undefined 
+                      ? product.stockQuantity 
+                      : '-'}
+                  </td>
                   <td data-label="หน่วยนับ"><span className="text-sm text-[var(--color-text-secondary)]">{product.unit}</span></td>
                   <td data-label="จัดการ">
                     <div className="flex items-center justify-center gap-2">
@@ -234,7 +242,7 @@ export default function ProductsPage() {
           Backdrop click is intentionally NOT a close trigger (prevents accidental dismissal). */}
       {isModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)] my-auto">
+          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)] ">
             <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
               <h3 className="font-bold text-lg">{editingProduct ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors" title="ปิดหน้าต่าง" aria-label="ปิดหน้าต่าง">
@@ -253,9 +261,16 @@ export default function ProductsPage() {
 
                 <div>
                   <label className="layout-form-label-sm block text-sm font-medium">รหัสสินค้า (SKU) *</label>
-                  <input type="text" className={`input-field font-mono ${errors.sku ? 'input-error' : ''}`} value={formData.sku || ''} title="รหัสสินค้า (SKU)" placeholder="กรอกรหัสสินค้า (SKU)"
+                  <input type="text" className={`input-field font-mono ${errors.sku ? 'input-error' : ''}`} value={formData.sku || ''} title="รหัสสินค้า (SKU)" placeholder="กรอกรหัสสินค้า"
                     onChange={e => setField('sku', e.target.value)} />
                   {errors.sku && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.sku}</p>}
+                </div>
+
+                <div>
+                  <label className="layout-form-label-sm block text-sm font-medium">บาร์โค้ด</label>
+                  <input type="text" className={`input-field font-mono ${errors.barcode ? 'input-error' : ''}`} value={formData.barcode || ''} title="บาร์โค้ด" placeholder="สแกนหรือกรอกบาร์โค้ด (ไม่บังคับ)"
+                    onChange={e => setField('barcode', e.target.value)} />
+                  {errors.barcode && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.barcode}</p>}
                 </div>
 
                 <div>
@@ -270,6 +285,13 @@ export default function ProductsPage() {
                   <input type="number" inputMode="decimal" min={0} step={0.01} className={`input-field text-right ${errors.unitPrice ? 'input-error' : ''}`} value={formData.unitPrice || ''} title="ราคาต่อหน่วย (บาท)" placeholder="0.00"
                     onChange={e => setField('unitPrice', parseFloat(e.target.value) || 0)} />
                   {errors.unitPrice && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.unitPrice}</p>}
+                </div>
+
+                <div>
+                  <label className="layout-form-label-sm block text-sm font-medium">จำนวนคงเหลือ (สต็อก)</label>
+                  <input type="number" inputMode="decimal" step={0.01} className={`input-field text-right ${errors.stockQuantity ? 'input-error' : ''}`} value={formData.stockQuantity ?? ''} title="จำนวนคงเหลือ" placeholder="ปล่อยว่างหากไม่นับสต็อก"
+                    onChange={e => setField('stockQuantity', e.target.value === '' ? null : parseFloat(e.target.value))} />
+                  {errors.stockQuantity && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.stockQuantity}</p>}
                 </div>
 
                 <div>

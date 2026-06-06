@@ -1,4 +1,4 @@
-import { Plus, Trash2, Save, Printer, RotateCcw, CreditCard, Search } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, RotateCcw, CreditCard, Search, ScanLine } from 'lucide-react';
 import { useDocumentForm, type VatMode } from '../../hooks/useDocumentForm';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { apiClient } from '../../services/apiClient';
@@ -15,7 +15,7 @@ interface InvoiceFormProps {
 }
 
 export default function InvoiceForm({ documentType, title, documentId: propDocumentId }: InvoiceFormProps) {
-  const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
+  const { lines, addLine, appendLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerTaxId, setCustomerTaxId] = useState('');
@@ -24,6 +24,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
   const [notes, setNotes] = useState('');
   const [documentId] = useState(() => propDocumentId || crypto.randomUUID());
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const draftKey = `senic_draft_${documentType}`;
   const isInitialMount = useRef(true);
@@ -130,6 +132,56 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     }
   }, [addLine]);
 
+  // Barcode scanning logic
+  const handleBarcodeSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = barcodeInput.trim();
+      if (!code) return;
+
+      try {
+        const res = await apiClient.get(`/products?search=${encodeURIComponent(code)}`);
+        if (res.data?.success && res.data?.data?.items) {
+          // Exact match on SKU or Barcode first
+          const products = res.data.data.items;
+          const exactMatch = products.find((p: any) => p.sku === code || p.barcode === code) || products[0];
+          
+          if (exactMatch) {
+            // Check if product already in lines
+            const existingLineIndex = lines.findIndex(l => l.productId === exactMatch.id);
+            if (existingLineIndex >= 0) {
+              const existingLine = lines[existingLineIndex];
+              updateLine(existingLine.id, { quantity: existingLine.quantity + 1 });
+            } else {
+              // Replace the first empty line if it exists
+              const firstEmptyLine = lines.find(l => !l.productId && !l.description);
+              if (firstEmptyLine && lines.length === 1) {
+                updateLine(firstEmptyLine.id, {
+                  productId: exactMatch.id,
+                  description: exactMatch.name,
+                  unitPrice: exactMatch.unitPrice,
+                  unit: exactMatch.unit,
+                  quantity: 1
+                });
+              } else {
+                appendLine({
+                  productId: exactMatch.id,
+                  description: exactMatch.name,
+                  unitPrice: exactMatch.unitPrice,
+                  unit: exactMatch.unit,
+                  quantity: 1
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Barcode scan error:', err);
+      }
+      setBarcodeInput('');
+    }
+  };
+
   const handleSave = async () => {
     if (!validate()) return;
 
@@ -166,7 +218,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       };
 
       const getEndpoint = (t: string) => {
-        switch(t) {
+        switch (t) {
           case 'receipt': return '/receipts';
           case 'cashbill': return '/cashbills';
           case 'delivery': return '/deliveries';
@@ -181,7 +233,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
         await apiClient.put(`${getEndpoint(documentType)}/${propDocumentId}`, payload);
         alert('อัปเดตเอกสารสำเร็จ');
       } else {
-        await apiClient.post(getEndpoint(documentType), payload);      
+        await apiClient.post(getEndpoint(documentType), payload);
         alert('บันทึกเอกสารสำเร็จ');
       }
       localStorage.removeItem(draftKey);
@@ -253,7 +305,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             <div className="relative">
               <input
                 type="text"
-                className={`input-field pr-10 ${errors.customerName ? 'input-error' : ''}`}
+                className={`input-field pr-12 ${errors.customerName ? 'input-error' : ''}`}
                 placeholder="พิมพ์เพื่อค้นหา..."
                 value={customerName}
                 onChange={(e) => { setCustomerName(e.target.value); clearError('customerName'); }}
@@ -298,7 +350,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
-          
+
           <div className="md:col-span-2 p-5 md:p-6 border border-orange-200 bg-orange-50/70 rounded-xl mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-4 sm:gap-6">
             <div className="space-y-1">
               <label className="text-sm font-semibold block text-orange-900 leading-normal">
@@ -326,13 +378,27 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
       {/* ── Document Lines (Items Table) ── */}
       <div className="card overflow-hidden">
-        <div className="invoice-lines-head flex items-center justify-between border-b border-[var(--color-border)]">
+        <div className="invoice-lines-head flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[var(--color-border)] gap-4">
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
             รายการสินค้า / บริการ
           </h3>
-          <button onClick={() => { addLine(); clearError('lines'); }} className="btn btn-ghost text-xs">
-            <Plus size={14} /> เพิ่มรายการ
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <ScanLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input
+                ref={barcodeInputRef}
+                type="text"
+                placeholder="สแกนบาร์โค้ดสินค้า..."
+                className="input-field pl-9 !py-1.5 text-sm w-full"
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                onKeyDown={handleBarcodeSubmit}
+              />
+            </div>
+            <button onClick={() => { addLine(); clearError('lines'); }} className="btn btn-ghost text-xs whitespace-nowrap">
+              <Plus size={14} /> เพิ่มรายการ
+            </button>
+          </div>
         </div>
 
         {errors.lines && (
@@ -560,101 +626,100 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
               ตั้งค่าภาษี
             </h3>
-              <div className="invoice-vat-mode-switch flex rounded-lg bg-[var(--color-bg-secondary)]">
-                {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setVatMode(mode)}
-                    className={`invoice-vat-mode-btn flex-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                      vatMode === mode
-                        ? 'bg-[var(--color-surface-solid)] text-[var(--color-text)] shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
-                        : 'bg-transparent text-[var(--color-text-muted)] shadow-none'
+            <div className="invoice-vat-mode-switch flex rounded-lg bg-[var(--color-bg-secondary)]">
+              {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setVatMode(mode)}
+                  className={`invoice-vat-mode-btn flex-1 rounded-md text-sm font-medium transition-all duration-200 ${vatMode === mode
+                      ? 'bg-[var(--color-surface-solid)] text-[var(--color-text)] shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
+                      : 'bg-transparent text-[var(--color-text-muted)] shadow-none'
                     }`}
-                  >
-                    {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
-                  </button>
-                ))}
-              </div>
-              <div>
-                <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-                  ส่วนลดรวม (บาท)
-                </label>
-                <input
-                  type="number"
-                  className="input-field"
-                  min={0}
-                  step={0.01}
-                  value={discountAmount || ''}
-                  onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="mt-4">
-                <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-                  หักภาษี ณ ที่จ่าย (WHT)
-                </label>
-                <select
-                  className="input-field mt-1"
-                  value={whtRate}
-                  onChange={(e) => setWhtRate(Number(e.target.value))}
                 >
-                  <option value={0}>ไม่มีหัก ณ ที่จ่าย (0%)</option>
-                  <option value={1}>1% - ค่าขนส่ง</option>
-                  <option value={3}>3% - ค่าบริการ/รับจ้างทำของ</option>
-                  <option value={5}>5% - ค่าเช่า</option>
-                </select>
-              </div>
+                  {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+                ส่วนลดรวม (บาท)
+              </label>
+              <input
+                type="number"
+                className="input-field"
+                min={0}
+                step={0.01}
+                value={discountAmount || ''}
+                onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="mt-4">
+              <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+                หักภาษี ณ ที่จ่าย (WHT)
+              </label>
+              <select
+                className="input-field mt-1"
+                value={whtRate}
+                onChange={(e) => setWhtRate(Number(e.target.value))}
+              >
+                <option value={0}>ไม่มีหัก ณ ที่จ่าย (0%)</option>
+                <option value={1}>1% - ค่าขนส่ง</option>
+                <option value={3}>3% - ค่าบริการ/รับจ้างทำของ</option>
+                <option value={5}>5% - ค่าเช่า</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Totals Summary */}
         <div className="lg:col-span-3">
           <div className="glass-card form-section-card">
-              <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
-                สรุปยอดรวม
-              </h3>
-              <div className="form-stack-sm">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--color-text-secondary)]">ยอดรวมก่อนส่วนลด</span>
-                  <span className="font-semibold tabular-nums">{formatNumber(totals.subtotal)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[var(--color-text-secondary)]">ส่วนลดรวม</span>
-                    <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(discountAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--color-text-secondary)]">
-                    ยอดรวม{vatMode === 'inclusive' ? '' : 'ก่อน'}ภาษี
-                  </span>
-                  <span className="font-semibold tabular-nums">{formatNumber(totals.totalBeforeVat)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--color-text-secondary)]">
-                    ภาษีมูลค่าเพิ่ม 7%
-                    <span className="invoice-vat-mode-note text-xs opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
-                  </span>
-                  <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
-                </div>
-
-                {whtRate > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[var(--color-text-secondary)]">หัก ณ ที่จ่าย {whtRate}%</span>
-                    <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(totals.whtAmount)}</span>
-                  </div>
-                )}
-
-                {/* Grand Total */}
-                <div className="invoice-grand-total-row flex justify-between items-center border-t border-[var(--color-border)]">
-                  <span className="font-bold text-base text-[var(--color-text)]">
-                    ยอดรวมสุทธิ
-                  </span>
-                  <span className="text-2xl font-extrabold tabular-nums text-[var(--color-primary)]">
-                    ฿{formatNumber(totals.grandTotal)}
-                  </span>
-                </div>
+            <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+              สรุปยอดรวม
+            </h3>
+            <div className="form-stack-sm">
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--color-text-secondary)]">ยอดรวมก่อนส่วนลด</span>
+                <span className="font-semibold tabular-nums">{formatNumber(totals.subtotal)}</span>
               </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-text-secondary)]">ส่วนลดรวม</span>
+                  <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--color-text-secondary)]">
+                  ยอดรวม{vatMode === 'inclusive' ? '' : 'ก่อน'}ภาษี
+                </span>
+                <span className="font-semibold tabular-nums">{formatNumber(totals.totalBeforeVat)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--color-text-secondary)]">
+                  ภาษีมูลค่าเพิ่ม 7%
+                  <span className="invoice-vat-mode-note text-xs opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
+                </span>
+                <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
+              </div>
+
+              {whtRate > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-text-secondary)]">หัก ณ ที่จ่าย {whtRate}%</span>
+                  <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(totals.whtAmount)}</span>
+                </div>
+              )}
+
+              {/* Grand Total */}
+              <div className="invoice-grand-total-row flex justify-between items-center border-t border-[var(--color-border)]">
+                <span className="font-bold text-base text-[var(--color-text)]">
+                  ยอดรวมสุทธิ
+                </span>
+                <span className="text-2xl font-extrabold tabular-nums text-[var(--color-primary)]">
+                  ฿{formatNumber(totals.grandTotal)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -671,7 +736,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           // Optional: trigger refresh if needed
         }}
       />
-      
+
       <CustomerSelectModal
         isOpen={isCustomerModalOpen}
         onClose={() => setCustomerModalOpen(false)}

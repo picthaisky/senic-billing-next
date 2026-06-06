@@ -147,7 +147,7 @@ public abstract class DocumentControllerBase(
 
         CalculateTotals(header);
 
-        if (TargetDocumentType == DocumentType.DeliveryNote || TargetDocumentType == DocumentType.TaxInvoice)
+        if (TargetDocumentType == DocumentType.DeliveryNote || TargetDocumentType == DocumentType.TaxInvoice || TargetDocumentType == DocumentType.CashBill)
         {
             await DeductStockAsync(header.Lines, tenantId, ct);
         }
@@ -223,7 +223,6 @@ public abstract class DocumentControllerBase(
             var lineTotal = (lineDto.Quantity * lineDto.UnitPrice) - lineDto.DiscountAmount;
             doc.Lines.Add(new DocumentLine
             {
-                Id = Guid.NewGuid(),
                 DocumentHeaderId = doc.Id,
                 SortOrder = sortOrder++,
                 ProductId = lineDto.ProductId,
