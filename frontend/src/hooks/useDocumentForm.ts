@@ -35,6 +35,14 @@ export function useDocumentForm(vatRate: number = 7) {
     setLines((prev) => [...prev, createEmptyLine()]);
   }, []);
 
+  const appendLine = useCallback((item: Partial<DocumentLineItem>) => {
+    setLines((prev) => {
+      const newLine = { ...createEmptyLine(), ...item };
+      newLine.lineTotal = (newLine.quantity * newLine.unitPrice) - newLine.discountAmount;
+      return [...prev, newLine];
+    });
+  }, []);
+
   const removeLine = useCallback((id: string) => {
     setLines((prev) => prev.length > 1 ? prev.filter((l) => l.id !== id) : prev);
   }, []);
@@ -92,7 +100,7 @@ export function useDocumentForm(vatRate: number = 7) {
   }, []);
 
   return {
-    lines, addLine, removeLine, updateLine,
+    lines, addLine, appendLine, removeLine, updateLine,
     vatMode, setVatMode,
     discountAmount, setDiscountAmount,
     whtRate, setWhtRate,

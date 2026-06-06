@@ -12,6 +12,9 @@ public class Product
     /// <summary>รหัสสินค้า (SKU)</summary>
     public string? Sku { get; set; }
 
+    /// <summary>บาร์โค้ด</summary>
+    public string? Barcode { get; set; }
+
     /// <summary>ชื่อสินค้า/บริการ</summary>
     public string Name { get; set; } = string.Empty;
 

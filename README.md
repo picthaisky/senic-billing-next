@@ -9,6 +9,7 @@
 ## 🌟 ฟีเจอร์หลัก (Key Features)
 
 ### 🤖 AI Integration & Advanced Features
+- **Multi AI Agents System**: สถาปัตยกรรมที่รองรับการทำงานของ AI หลายตัวร่วมกัน (Multi-Agent) เพื่อช่วยประมวลผลข้อมูล วิเคราะห์ และให้คำแนะนำแบบเจาะลึก
 - **Senic AI Assistant**: ระบบแชทบอทอัจฉริยะแบบลอยตัว (Floating Chat) ที่ช่วยตอบคำถามและให้คำแนะนำผู้ใช้งาน พร้อม Integrated Database Search
 - **Recurring Invoices**: ระบบตั้งเวลาสร้างเอกสารซ้ำอัตโนมัติ (Background Service) พร้อม Cron Job Scheduling (รองรับรายวัน, สัปดาห์, เดือน, ปี)
 

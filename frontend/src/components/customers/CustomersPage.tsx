@@ -148,7 +148,7 @@ export default function CustomersPage() {
           <input 
             type="text" 
             placeholder="ค้นหาชื่อลูกค้า, เลขผู้เสียภาษี..." 
-            className="input-field entity-search-input"
+            className="input-field pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -230,7 +230,7 @@ export default function CustomersPage() {
           Backdrop click is intentionally NOT a close trigger (prevents accidental dismissal). */}
       {isModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)] my-auto">
+          <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)] ">
             <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
               <h3 className="font-bold text-lg">{editingCustomer ? 'แก้ไขข้อมูลลูกค้า' : 'เพิ่มลูกค้าใหม่'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors" title="ปิดหน้าต่าง" aria-label="ปิดหน้าต่าง">

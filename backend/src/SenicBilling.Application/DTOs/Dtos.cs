@@ -162,17 +162,17 @@ public record UpdateCustomerRequest(
 // ──────────────────────────────────────────────
 
 public record ProductDto(
-    Guid Id, string? Sku, string Name, string? Description,
+    Guid Id, string? Sku, string? Barcode, string Name, string? Description,
     string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity, bool IsActive
 );
 
 public record CreateProductRequest(
-    string? Sku, string Name, string? Description,
+    string? Sku, string? Barcode, string Name, string? Description,
     string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity
 );
 
 public record UpdateProductRequest(
-    string? Sku, string Name, string? Description,
+    string? Sku, string? Barcode, string Name, string? Description,
     string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity, bool IsActive
 );
 
