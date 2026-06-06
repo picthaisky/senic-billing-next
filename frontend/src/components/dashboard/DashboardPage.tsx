@@ -511,17 +511,17 @@ export default function DashboardPage() {
           </div>
           <div className={`mt-4 grid grid-cols-2 gap-4 ${loading ? 'opacity-50' : ''}`}>
             <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)]">
-              <p className="text-xs text-[var(--color-text-muted)] truncate">ภาษีขาย (Sales VAT)</p>
-              <p className="text-lg font-bold text-green-600 mt-1 pl-[1px]">{formatCurrency(dashboardData.taxData?.totalSalesVat || 0)}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">ภาษีขาย (Sales VAT)</p>
+              <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(dashboardData.taxData?.totalSalesVat || 0)}</p>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)]">
-              <p className="text-xs text-[var(--color-text-muted)] truncate">ภาษีซื้อ (Purchase VAT)</p>
-              <p className="text-lg font-bold text-red-600 mt-1 pl-[1px]">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">ภาษีซื้อ (Purchase VAT)</p>
+              <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
             </div>
             <div className="bg-[var(--color-primary)] p-5 rounded-xl shadow-sm col-span-2 text-white">
-              <p className="text-sm opacity-90 truncate">ยอดภาษีที่ต้องชำระสุทธิ</p>
-              <p className="text-3xl font-bold mt-1 pl-[2px]">{formatCurrency(dashboardData.taxData?.estimatedTaxPayable || 0)}</p>
-              <p className="text-xs opacity-80 mt-2 truncate">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
+              <p className="text-sm opacity-90">ยอดภาษีที่ต้องชำระสุทธิ</p>
+              <p className="text-3xl font-bold mt-1">{formatCurrency(dashboardData.taxData?.estimatedTaxPayable || 0)}</p>
+              <p className="text-xs opacity-80 mt-2">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
             </div>
           </div>
         </div>

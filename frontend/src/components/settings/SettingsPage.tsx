@@ -197,12 +197,12 @@ export default function SettingsPage() {
 
         <div className="p-4 border rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
           <div>
-            <div className="settings-status-row font-semibold flex items-center gap-2">
-              สถานะ: 
+            <div className="settings-status-row font-semibold flex items-center gap-3">
+              <span>สถานะ:</span>
               {pushNotifications.isSubscribed ? (
-                <span className="badge badge-success flex items-center gap-1"><Bell size={12} /> เปิดใช้งานแล้ว</span>
+                <span className="badge badge-success"><Bell size={12} /> เปิดใช้งานแล้ว</span>
               ) : (
-                <span className="badge badge-neutral flex items-center gap-1"><BellOff size={12} /> ปิดอยู่</span>
+                <span className="badge badge-neutral"><BellOff size={12} /> ปิดอยู่</span>
               )}
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
