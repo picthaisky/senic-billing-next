@@ -1822,7 +1822,7 @@ body {
   color: var(--color-info);
 }
 .badge-neutral {
-  background: var(--color-bg-secondary);
+  background: var(--color-border);
   color: var(--color-text-secondary);
 }
 
