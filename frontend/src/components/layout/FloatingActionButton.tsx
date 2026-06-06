@@ -26,11 +26,11 @@ export default function FloatingActionButton() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const quickActions: FabAction[] = [
-    { id: 'receipt', path: '/documents/receipt', label: t('docType.receipt', { defaultValue: DOCUMENT_TYPE_META.receipt.label }), icon: Receipt },
-    { id: 'cashbill', path: '/documents/cashbill', label: t('docType.cashbill', { defaultValue: DOCUMENT_TYPE_META.cashbill.label }), icon: Banknote },
-    { id: 'delivery', path: '/documents/delivery', label: t('docType.delivery', { defaultValue: DOCUMENT_TYPE_META.delivery.label }), icon: Truck },
-    { id: 'quotation', path: '/documents/quotation', label: t('docType.quotation', { defaultValue: DOCUMENT_TYPE_META.quotation.label }), icon: FileText },
-    { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('docType.taxinvoice', { defaultValue: DOCUMENT_TYPE_META.taxinvoice.label }), icon: FileCheck },
+    { id: 'receipt', path: '/documents/receipt/create', label: t('docType.receipt', { defaultValue: DOCUMENT_TYPE_META.receipt.label }), icon: Receipt },
+    { id: 'cashbill', path: '/documents/cashbill/create', label: t('docType.cashbill', { defaultValue: DOCUMENT_TYPE_META.cashbill.label }), icon: Banknote },
+    { id: 'delivery', path: '/documents/delivery/create', label: t('docType.delivery', { defaultValue: DOCUMENT_TYPE_META.delivery.label }), icon: Truck },
+    { id: 'quotation', path: '/documents/quotation/create', label: t('docType.quotation', { defaultValue: DOCUMENT_TYPE_META.quotation.label }), icon: FileText },
+    { id: 'taxinvoice', path: '/documents/taxinvoice/create', label: t('docType.taxinvoice', { defaultValue: DOCUMENT_TYPE_META.taxinvoice.label }), icon: FileCheck },
   ];
 
   // Hide FAB on document form pages and settings/profile
