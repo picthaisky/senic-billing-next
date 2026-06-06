@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { apiClient } from '../../services/apiClient';
-import { Plus, Printer, Eye, Search, FileText } from 'lucide-react';
+import { Plus, Printer, Search, FileText } from 'lucide-react';
 
 interface DocumentLine {
   description: string;
@@ -20,7 +20,6 @@ interface DocumentHeader {
 
 export default function DocumentsListPage() {
   const { type } = useParams<{ type: string }>();
-  const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentHeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
