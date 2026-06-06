@@ -4,45 +4,18 @@ import { Printer, ChevronLeft, Download } from 'lucide-react';
 import A4DocumentTemplate, { type DocumentData } from '../components/forms/A4DocumentTemplate';
 import { apiClient } from '../services/apiClient';
 
-// Mock data generator for the demo
-const getMockData = (id: string): DocumentData => {
-  return {
-    documentNumber: `INV-202606-${id.padStart(4, '0')}`,
-    documentDate: '03/06/2569',
-    documentTypeLabel: 'ใบเสร็จรับเงิน / ใบกำกับภาษี',
-    customerName: 'บริษัท แคนเซอร์อลิอันซ์ จำกัด (สำนักงานใหญ่)',
-    customerAddress: '529 หมู่ 3 ตำบลหนองขาม อำเภอศรีราชา จังหวัดชลบุรี 20110',
-    customerPhone: '033-046-333',
-    customerBranch: 'สำนักงานใหญ่',
-    customerTaxId: '0205561001360',
-    reference: '',
-    saleType: '',
-    items: [
-      {
-        no: 1,
-        description: 'ค่าบริการเปิดเครื่องซ่อมตรวจเช็คและทดสอบระบบต่างๆ ทำชุดระบายความร้อน ติดตั้งระบบปฏิบัติการ และตั้งค่าการใช้งานอื่นๆ และขนส่ง จำนวน 3 เครื่อง',
-        quantity: 3,
-        unit: 'ตัว',
-        unitPrice: 900,
-        discount: 0,
-        total: 2700,
-      },
-      {
-        no: 2,
-        description: 'ค่าอุปกรณ์พร้อมเปลี่ยนถ่านBios 3 เครื่อง',
-        quantity: 3,
-        unit: 'ตัว',
-        unitPrice: 200,
-        discount: 0,
-        total: 600,
-      }
-    ],
-    remark: '',
-    discountTotal: 0,
-    subTotal: 3300,
-    vatAmount: 0,
-    grandTotal: 3300,
-  };
+const getDocumentTypeLabel = (type?: string) => {
+  switch (type) {
+    case 'Receipt': return 'ใบเสร็จรับเงิน';
+    case 'CashBill': return 'บิลเงินสด';
+    case 'DeliveryNote': return 'ใบส่งของ';
+    case 'TaxInvoice': return 'ใบกำกับภาษี';
+    case 'Quotation': return 'ใบเสนอราคา';
+    case 'CreditNote': return 'ใบลดหนี้';
+    case 'DebitNote': return 'ใบเพิ่มหนี้';
+    case 'PurchaseOrder': return 'ใบสั่งซื้อ';
+    default: return 'ใบแจ้งหนี้ / ใบเสร็จรับเงิน';
+  }
 };
 
 export default function DocumentPrintView() {
@@ -51,13 +24,55 @@ export default function DocumentPrintView() {
   const [data, setData] = useState<DocumentData | null>(null);
 
   useEffect(() => {
-    // In a real app, fetch data from API using the ID
-    // apiClient.get(`/document/${id}`).then(...)
+    const fetchData = async () => {
+      try {
+        if (!id) return;
+        
+        const docRes = await apiClient.get(`/documents/${id}`);
+        const tenantRes = await apiClient.get('/tenants/current');
+        
+        const doc = docRes.data?.data || docRes.data;
+        const tenant = tenantRes.data?.data || tenantRes.data;
+
+        if (doc) {
+          const mappedData: DocumentData = {
+            documentNumber: doc.documentNumber || '',
+            documentDate: doc.documentDate ? new Date(doc.documentDate).toLocaleDateString('th-TH') : '',
+            documentTypeLabel: getDocumentTypeLabel(doc.documentType),
+            tenantName: tenant?.companyName,
+            tenantAddress: tenant?.address,
+            tenantPhone: tenant?.phone,
+            tenantTaxId: tenant?.taxId,
+            tenantBranch: tenant?.branchName,
+            customerName: doc.customerName || '',
+            customerAddress: doc.customerAddress || '',
+            customerPhone: '', // Not in DTO currently, might need fallback
+            customerBranch: 'สำนักงานใหญ่',
+            customerTaxId: doc.customerTaxId || '',
+            reference: doc.referenceDocumentId ? `อ้างอิง: ${doc.referenceDocumentId}` : '',
+            items: (doc.lines || []).map((line: any, idx: number) => ({
+              no: line.sortOrder || idx + 1,
+              description: line.description || '',
+              quantity: line.quantity || 0,
+              unit: line.unit || '',
+              unitPrice: line.unitPrice || 0,
+              discount: line.discountAmount || 0,
+              total: line.lineTotal || 0,
+            })),
+            remark: doc.notes || '',
+            discountTotal: doc.discountAmount || 0,
+            subTotal: doc.subtotal || 0,
+            vatAmount: doc.vatAmount || 0,
+            grandTotal: doc.grandTotal || 0,
+          };
+          setData(mappedData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch document print data:', error);
+      }
+    };
     
-    // Using mock data for now
-    if (id) {
-      setData(getMockData(id));
-    }
+    fetchData();
   }, [id]);
 
   const handlePrint = () => {

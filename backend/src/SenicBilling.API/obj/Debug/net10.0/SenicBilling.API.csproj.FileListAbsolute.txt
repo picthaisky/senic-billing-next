@@ -147,3 +147,6 @@ C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilli
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\SenicBilling.API.pdb
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\SenicBilling.API.genruntimeconfig.cache
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\obj\Debug\net10.0\ref\SenicBilling.API.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\MailKit.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\MimeKit.dll

@@ -150,7 +150,7 @@ export default function SettingsPage() {
       </div>
       {/* ── End top row grid ── */}
 
-      <div className="card form-section-card">
+      <div className="card form-section-card p-5">
         <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
           <Languages size={20} className="text-[var(--color-primary)]" />
           {t('settings.languageTitle')}
@@ -182,7 +182,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card form-section-card">
+      <div className="card form-section-card p-5">
         <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
           <Bell size={20} className="text-[var(--color-primary)]" />
           การแจ้งเตือน (Push Notifications)

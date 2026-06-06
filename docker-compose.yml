@@ -28,6 +28,12 @@ services:
       Gemini__ApiKey: ${GEMINI_API_KEY}
       Omise__PublicKey: ${OMISE_PUBLIC_KEY}
       Omise__SecretKey: ${OMISE_SECRET_KEY}
+      SmtpSettings__Host: ${SMTP_HOST:-smtp.gmail.com}
+      SmtpSettings__Port: ${SMTP_PORT:-587}
+      SmtpSettings__Username: ${SMTP_USERNAME}
+      SmtpSettings__Password: ${SMTP_PASSWORD}
+      SmtpSettings__FromName: ${SMTP_FROM_NAME:-Senic Billing}
+      SmtpSettings__FromEmail: ${SMTP_FROM_EMAIL}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:

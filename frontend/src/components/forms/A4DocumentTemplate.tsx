@@ -4,6 +4,11 @@ export interface DocumentData {
   documentNumber: string;
   documentDate: string;
   documentTypeLabel?: string; // e.g. "ใบเสร็จรับเงิน / ใบกำกับภาษี"
+  tenantName?: string;
+  tenantAddress?: string;
+  tenantPhone?: string;
+  tenantTaxId?: string;
+  tenantBranch?: string;
   customerName: string;
   customerAddress: string;
   customerPhone: string;
@@ -44,11 +49,11 @@ export default function A4DocumentTemplate({ data }: Props) {
       <div className="a4-header-row flex justify-between items-start">
         {/* Company Info */}
         <div className="w-1/2">
-          <h1 className="a4-company-title text-2xl font-bold">ร้าน ซีนิค โซลูชั่น</h1>
-          <p className="leading-tight">
-            392/39 หมู่10 ต.บางพระ<br/>
-            อ.ศรีราชา จ.ชลบุรี 20110<br/>
-            087-593-7988, 062-723-6622
+          <h1 className="a4-company-title text-2xl font-bold">{data.tenantName || 'ร้าน ซีนิค โซลูชั่น'}</h1>
+          <p className="leading-tight whitespace-pre-wrap">
+            {data.tenantAddress || '392/39 หมู่10 ต.บางพระ\nอ.ศรีราชา จ.ชลบุรี 20110'}
+            <br/>
+            {data.tenantPhone || '087-593-7988, 062-723-6622'}
           </p>
         </div>
         
@@ -59,11 +64,11 @@ export default function A4DocumentTemplate({ data }: Props) {
             <tbody>
               <tr>
                 <td className="a4-company-meta-label font-semibold w-[140px]">สาขาที่ออกเอกสาร</td>
-                <td>สำนักงานใหญ่</td>
+                <td>{data.tenantBranch || 'สำนักงานใหญ่'}</td>
               </tr>
               <tr>
                 <td className="a4-company-meta-label font-semibold">เลขประจำตัวผู้เสียภาษี</td>
-                <td>1250200133469</td>
+                <td>{data.tenantTaxId || '1250200133469'}</td>
               </tr>
             </tbody>
           </table>
