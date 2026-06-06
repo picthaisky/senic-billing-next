@@ -242,15 +242,15 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
             />
           </div>
           
-          <div className="md:col-span-2 p-5 md:p-6 border border-orange-200 bg-orange-50/70 rounded-xl mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div className="flex-1 space-y-1">
+          <div className="md:col-span-2 p-5 md:p-6 border border-orange-200 bg-orange-50/70 rounded-xl mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-4 sm:gap-6">
+            <div className="space-y-1">
               <label className="text-sm font-semibold block text-orange-900 leading-normal">
                 ออกเอกสารนี้ซ้ำอัตโนมัติ (Recurring)
               </label>
               <p className="text-xs text-orange-700 leading-normal">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
             </div>
             <select
-              className="input-field w-full sm:w-auto min-w-[200px] border-orange-300 bg-white"
+              className="input-field w-full sm:w-[250px] border-orange-300 bg-white"
               value={''} // Default off
               onChange={async (e) => {
                 if (e.target.value) {
