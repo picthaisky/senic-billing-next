@@ -191,7 +191,10 @@ public abstract class DocumentControllerBase(
         if (doc is null)
             return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสาร", null));
 
-        if (doc.Status != DocumentStatus.Draft)
+        var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+        bool isAdmin = userRole == "Admin" || userRole == "SystemAdmin";
+
+        if (!isAdmin && doc.Status != DocumentStatus.Draft)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "แก้ไขได้เฉพาะเอกสารสถานะ 'ร่าง' เท่านั้น", null));
 
         // Update header

@@ -10,6 +10,7 @@ import PaymentModal from '../payments/PaymentModal';
 interface InvoiceFormProps {
   documentType: string;
   title: string;
+  documentId?: string;
 }
 
 export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
@@ -25,6 +26,27 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
 
   // Load draft on mount
   useEffect(() => {
+    if (documentId) {
+      // Fetch document for editing
+      apiClient.get(`/documents/${documentId}`).then(res => {
+        if (res.data?.success) {
+          const doc = res.data.data;
+          setCustomerName(doc.customerName || '');
+          setCustomerTaxId(doc.customerTaxId || '');
+          setNotes(doc.notes || '');
+          restoreState({
+            lines: doc.lines,
+            vatMode: doc.vatMode,
+            discountAmount: doc.discountAmount,
+            whtRate: doc.whtRate
+          });
+        }
+      }).catch(err => {
+        console.error('Failed to load document for editing', err);
+      });
+      return;
+    }
+
     const savedDraft = localStorage.getItem(draftKey);
     if (savedDraft) {
       try {
@@ -37,7 +59,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
         console.error('Failed to load draft', e);
       }
     }
-  }, [documentType, draftKey, restoreState]);
+  }, [documentId, documentType, draftKey, restoreState]);
 
   // Save draft on change
   useEffect(() => {
@@ -137,9 +159,14 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
         }
       };
 
-      // API call to create document
-      await apiClient.post(getEndpoint(documentType), payload);      
-      alert('บันทึกเอกสารสำเร็จ');
+      // API call to create or update document
+      if (documentId) {
+        await apiClient.put(`${getEndpoint(documentType)}/${documentId}`, payload);
+        alert('อัปเดตเอกสารสำเร็จ');
+      } else {
+        await apiClient.post(getEndpoint(documentType), payload);      
+        alert('บันทึกเอกสารสำเร็จ');
+      }
       localStorage.removeItem(draftKey);
       resetForm();
       setCustomerName('');

@@ -21,12 +21,16 @@ export default function BottomNav() {
     { id: 'products', path: '/products', label: t('nav.products'), icon: Package },
   ];
 
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
+
   const moreMenuItems = [
     { id: 'cashbill', path: '/documents/cashbill', label: t('nav.cashbill'), icon: Banknote },
     { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
     { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
     { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
     { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
+    ...(isAdmin ? [{ id: 'users', path: '/users', label: 'จัดการผู้ใช้งาน', icon: Users }] : []),
   ];
 
   const moreMenuPaths = moreMenuItems.map(i => i.path);

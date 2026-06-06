@@ -7,6 +7,7 @@ import DashboardPage from './components/dashboard/DashboardPage';
 import CustomersPage from './components/customers/CustomersPage';
 import ProductsPage from './components/products/ProductsPage';
 import SettingsPage from './components/settings/SettingsPage';
+import UsersManagementPage from './components/users/UsersManagementPage';
 import ProfilePage from './components/profile/ProfilePage';
 import InvoiceForm from './components/forms/InvoiceForm';
 import DocumentsListPage from './components/documents/DocumentsListPage';
@@ -15,7 +16,7 @@ import React from 'react';
 
 // Wrapper for InvoiceForm to pass documentType and title based on URL parameter
 function InvoiceFormWrapper() {
-  const { type } = useParams<{ type: string }>();
+  const { type, id } = useParams<{ type: string; id?: string }>();
   const titles: Record<string, string> = {
     taxinvoice: 'ใบกำกับภาษี',
     receipt: 'ใบเสร็จรับเงิน',
@@ -23,8 +24,9 @@ function InvoiceFormWrapper() {
     delivery: 'ใบส่งของ',
     quotation: 'ใบเสนอราคา',
   };
-  const title = titles[type || ''] || 'สร้างเอกสาร';
-  return <InvoiceForm key={type} documentType={type || 'receipt'} title={title} />;
+  const baseTitle = titles[type || ''] || 'เอกสาร';
+  const title = id ? `แก้ไข${baseTitle}` : `สร้าง${baseTitle}`;
+  return <InvoiceForm key={type} documentType={type || 'receipt'} title={title} documentId={id} />;
 }
 
 // Protected Route Component
@@ -64,9 +66,11 @@ function App() {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="users" element={<UsersManagementPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="documents/:type" element={<DocumentsListPage />} />
           <Route path="documents/:type/create" element={<InvoiceFormWrapper />} />
+          <Route path="documents/:type/edit/:id" element={<InvoiceFormWrapper />} />
         </Route>
       </Routes>
     </BrowserRouter>

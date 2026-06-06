@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SenicBilling.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+05208d98d66e77ced2b2aabcb1621a989b4f23ab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+35de1a4d623c32278641cb8d1a2ce17ca5e5448e")]
 [assembly: System.Reflection.AssemblyProductAttribute("SenicBilling.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SenicBilling.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
