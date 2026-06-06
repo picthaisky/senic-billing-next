@@ -277,14 +277,25 @@ Note: this repository uses `.github/copilot-instructions.md` as the project-wide
 - Use `/Senic Learning Retrospective` after validated work to update knowledge.
 - Use the `senic-agent-orchestration` and `senic-learning-cycle` skills when a workflow should be loaded automatically from task wording.
 
-## 11. First Implementation Milestone
+## 11. Project Implementation Milestones (Delivered via AI Agents)
 
-Milestone 1 creates the usable prototype:
+The Multi AI Agents system has successfully driven the development of several complex core features for Senic Billing Next:
 
-1. Project-wide instructions for Copilot behavior.
-2. Custom agent files for the orchestrator and core specialists.
-3. Knowledge files for codebase map, domain rules, and implementation patterns.
-4. Prompt workflows for new feature, bug fix, code review, and learning retrospective.
-5. A clear routing and quality-gate configuration.
+### ✅ Milestone 1: Foundation & Prototype
+- จัดทำ Project-wide instructions สำหรับพฤติกรรมของ AI 
+- วางโครงสร้าง Agent roles (Orchestrator, Athena, Atlas, Ledger, Sage, Nova, Milo, Argus, Aegis, Hermes, Mnemosyne)
+- สร้าง Knowledge base เบื้องต้นสำหรับสถาปัตยกรรม (Clean Architecture) และ Domain rules
 
-After this milestone, the team can be invoked from VS Code agent picker or through prompt workflows, while every complex task follows the same intake, planning, implementation, validation, and learning cycle consistently.
+### ✅ Milestone 2: Core SaaS Features & Billing Automation
+- **Dashboard AI Assistant**: บูรณาการ AI Chatbot ลงในหน้าจอ Dashboard เพื่อวิเคราะห์และดึงข้อมูลสรุป
+- **Recurring Invoices Background Service**: ระบบ Background Worker สร้างเอกสารอัตโนมัติรายคาบ (รายสัปดาห์/เดือน/ปี)
+- **Granular RBAC & User Management**: ระบบจัดการผู้ใช้งานและผูกสิทธิ์ (Permissions) โดยอิงตาม Role
+- **Document History Audit Log**: ระบบติดตามการเปลี่ยนแปลงข้อมูล (Audit Trail) ผ่าน Entity Framework Interceptors และ UI แบบ Timeline
+- **A4 Print View Templates**: เทมเพลตสำหรับหน้าจอพิมพ์เอกสารที่ปรับ Responsive สำหรับ CSS `@media print` โดยเฉพาะ
+
+### 🚀 Milestone 3: Advanced Integrations (Next)
+1. เชื่อมต่อระบบ Payment Gateway (Omise/PromptPay) แบบอัตโนมัติ
+2. ระบบ Webhook สำหรับรับการแจ้งเตือนจากภายนอก
+3. ระบบแจ้งเตือนผ่าน Line Notify สำหรับผู้ใช้งานเมื่อมีการเปิดบิล
+4. ปรับปรุง Automated E2E Testing coverage
+

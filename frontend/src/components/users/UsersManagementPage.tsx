@@ -112,8 +112,8 @@ export default function UsersManagementPage() {
   const categories = Array.from(new Set(permissions.map(p => p.category)));
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
+      <div className="flex items-center gap-3">
         <div className="w-1.5 h-8 rounded-full bg-[var(--color-primary)]" />
         <h1 className="text-2xl font-bold text-[var(--color-text)]">จัดการผู้ใช้งานและสิทธิ์</h1>
       </div>

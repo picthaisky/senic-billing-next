@@ -8,6 +8,10 @@
 
 ## 🌟 ฟีเจอร์หลัก (Key Features)
 
+### 🤖 AI Integration & Advanced Features
+- **Senic AI Assistant**: ระบบแชทบอทอัจฉริยะแบบลอยตัว (Floating Chat) ที่ช่วยตอบคำถามและให้คำแนะนำผู้ใช้งาน พร้อม Integrated Database Search
+- **Recurring Invoices**: ระบบตั้งเวลาสร้างเอกสารซ้ำอัตโนมัติ (Background Service) พร้อม Cron Job Scheduling (รองรับรายวัน, สัปดาห์, เดือน, ปี)
+
 ### 🎨 Frontend & User Experience (React 19 + Tailwind CSS v4)
 - **Multi-language (i18n) ไทย/อังกฤษ**: รองรับการสลับภาษาได้ทันทีแบบไม่ต้องรีเฟรชหน้า ด้วย `i18next` + `react-i18next` พร้อมจุดสลับภาษาทั้งใน Header และหน้า Settings
 - **Dual Theme System**: รองรับการเปลี่ยนธีม "Warm Horizon" (สีส้มอบอุ่น) และ "Deep Ocean" (สีน้ำเงินเข้ม) สลับได้ทันทีแบบ Real-time พร้อมปรับโทนสีของกราฟและ Modal ต่างๆ ให้กลมกลืนอัตโนมัติ
@@ -19,6 +23,11 @@
   - **Micro-interactions**: เพิ่ม Pull-to-refresh บนหน้าแดชบอร์ด, Haptic Tap feedback และ Shimmer skeleton โหลดข้อมูลเสมือนจริง
 - **Interactive Dashboard**: สรุปยอดขายแบบ Real-time พร้อมกราฟแบบโต้ตอบได้ (Recharts) และ KPI Cards แบบมี Animation คลาสสิก
 - **Smart Forms**: ฟอร์มออกเอกสารที่รองรับการคำนวณภาษีมูลค่าเพิ่ม (VAT 7%) ทั้งแบบ **รวมภาษี (Inclusive)** และ **แยกภาษี (Exclusive)** พร้อมการเพิ่มบรรทัดอัตโนมัติเมื่อกด Enter
+- **A4 Document Print Templates**: ระบบจำลองการพิมพ์เอกสารมาตรฐาน A4 (Print View) ออกแบบมาให้แสดงผลตรงปกทั้งบนหน้าจอและหน้ากระดาษ (CSS `@media print`)
+
+### 🛡️ Security, Auditing & User Management
+- **Role-based Access Control (RBAC)**: ระบบจัดการผู้ใช้งานและกำหนดสิทธิ์แบบละเอียดยิบ (Granular Permissions) ถึงระดับ Action ผ่านหน้าจัดการสิทธิ์ของแอดมิน
+- **Document History & Audit Logs**: ระบบบันทึกประวัติการแก้ไขเอกสาร (Audit Trail) โดยติดตามการเปลี่ยนแปลงระดับ Field แบบ Before/After พร้อมหน้าต่าง Modal แสดงประวัติการแก้ไขและชื่อผู้ทำรายการ
 
 ### ⚙️ Backend & Architecture (.NET 10 + PostgreSQL)
 - **Quotation Module**: เพิ่มโมดูลใบเสนอราคา (`Quotation`) เป็นเอกสารทางธุรกิจประเภทหลัก พร้อม running number prefix (`QUO`) และการใช้งานร่วมกับเอกสารเดิม
