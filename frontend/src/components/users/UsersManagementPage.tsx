@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Users, UserPlus, Key, Power, PowerOff, Edit } from 'lucide-react';
+import { Shield, Users, UserPlus, Key, Edit } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import UserFormModal from './UserFormModal';
 
@@ -79,18 +79,6 @@ export default function UsersManagementPage() {
       console.error('Failed to fetch roles and permissions', error);
     } finally {
       setLoadingRoles(false);
-    }
-  };
-
-  const handleToggleStatus = async (user: User) => {
-    // We assume the user has an isActive property or we just pass false to disable.
-    // Since DTO doesn't have it, we might just call a dummy toggle or assume it's true.
-    // For now, let's just make an API call to toggle.
-    try {
-      // Toggle logic would go here: await apiClient.put(`/admin/users/${user.id}/status`, { isActive: !user.isActive });
-      alert('ฟีเจอร์ระงับการใช้งานอยู่ระหว่างการพัฒนา (ต้องเพิ่ม IsActive ใน DTO)');
-    } catch (error) {
-      console.error('Failed to toggle status', error);
     }
   };
 

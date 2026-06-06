@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, User, FileText, CheckCircle, Trash2, ArrowRight } from 'lucide-react';
+import { X, Clock, User, FileText, CheckCircle, Trash2 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 
 interface AuditLog {
@@ -83,7 +83,7 @@ export default function DocumentHistoryModal({ documentId, documentNumber, onClo
             </div>
           ) : (
             <div className="space-y-6">
-              {logs.map((log, index) => (
+              {logs.map((log) => (
                 <div key={log.id} className="relative pl-6 border-l-2 border-[var(--color-border)] last:border-l-transparent pb-2">
                   <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[var(--color-surface-solid)] border-2 border-[var(--color-border)] flex items-center justify-center">
                     <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)]" />
