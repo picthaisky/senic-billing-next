@@ -32,6 +32,12 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
+  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
+  
+  if (isAdmin) {
+    navItems.push({ id: 'users', path: '/users', label: 'จัดการผู้ใช้งาน', icon: Users });
+  }
+
   const fullName = user
     ? user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'ผู้ดูแลระบบ'
     : 'ผู้ดูแลระบบ';

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient } from '../../services/apiClient';
-import { Plus, Printer, Search, FileText } from 'lucide-react';
+import { Plus, Printer, Search, FileText, Edit, Clock } from 'lucide-react';
+import { useAuthStore } from '../../store/useAuthStore';
+import DocumentHistoryModal from './DocumentHistoryModal';
 
 interface DocumentLine {
   description: string;
@@ -23,6 +25,10 @@ export default function DocumentsListPage() {
   const [documents, setDocuments] = useState<DocumentHeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [historyDoc, setHistoryDoc] = useState<{ id: string; num: string } | null>(null);
+  
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
 
   const titles: Record<string, string> = {
     taxinvoice: 'ใบกำกับภาษี',
@@ -165,6 +171,22 @@ export default function DocumentsListPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="flex justify-end gap-2">
+                        {(isAdmin || doc.status === 'Draft') && (
+                          <button
+                            onClick={() => window.open(`/documents/${type || 'receipt'}/edit/${doc.id}`, '_self')}
+                            className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-md transition-colors"
+                            title="แก้ไข"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setHistoryDoc({ id: doc.id, num: doc.documentNumber })}
+                          className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                          title="ประวัติการแก้ไข"
+                        >
+                          <Clock size={16} />
+                        </button>
                         <button
                           onClick={() => window.open(`/print/${doc.id}`, '_blank')}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -181,6 +203,13 @@ export default function DocumentsListPage() {
           </table>
         </div>
       </div>
+      {historyDoc && (
+        <DocumentHistoryModal
+          documentId={historyDoc.id}
+          documentNumber={historyDoc.num}
+          onClose={() => setHistoryDoc(null)}
+        />
+      )}
     </div>
   );
 }

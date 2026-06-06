@@ -53,6 +53,33 @@ public class SharedDocumentController(SenicBillingDbContext dbContext) : Control
         return Ok(new ApiResponse<bool>(true, "บันทึกการเปิดอ่านสำเร็จ", true));
     }
 
+    [HttpGet("{id:guid}/history")]
+    public async Task<ActionResult<ApiResponse<List<AuditLog>>>> GetHistory(Guid id, CancellationToken ct)
+    {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out var tenantId))
+            return Unauthorized();
+
+        // Get audit logs for the document header and its lines
+        var logs = await dbContext.Set<AuditLog>()
+            .Where(a => a.TenantId == tenantId && 
+                        (a.EntityId == id.ToString() || 
+                         (a.EntityName == "DocumentLine" && a.NewValues!.Contains(id.ToString()))))
+            .OrderByDescending(a => a.Timestamp)
+            .ToListAsync(ct);
+
+        // We can just return the logs directly, but maybe we should format them?
+        // Let's just return the raw logs for the UI to parse.
+        // Wait, for simplicity, we'll just filter by EntityId == id.ToString() for the DocumentHeader.
+        // The lines might have different IDs. Let's just fetch DocumentHeader logs for now to keep it clean.
+        var headerLogs = await dbContext.Set<AuditLog>()
+            .Where(a => a.TenantId == tenantId && a.EntityId == id.ToString() && a.EntityName == "DocumentHeader")
+            .OrderByDescending(a => a.Timestamp)
+            .ToListAsync(ct);
+
+        return Ok(new ApiResponse<List<AuditLog>>(true, "สำเร็จ", headerLogs));
+    }
+
     private static DocumentResponse MapToResponse(DocumentHeader d) => new(
         d.Id, d.DocumentType, d.DocumentNumber, d.DocumentDate, d.DueDate,
         d.CustomerId, d.CustomerName, d.CustomerAddress, d.CustomerTaxId,

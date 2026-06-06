@@ -377,5 +377,34 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
             IsActive = true,
             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
+
+        // Seed Permissions
+        var permissions = new[]
+        {
+            new { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), Name = "Documents.View", Description = "ดูเอกสาร", Category = "Documents" },
+            new { Id = Guid.Parse("10000000-0000-0000-0000-000000000002"), Name = "Documents.Create", Description = "สร้างเอกสาร", Category = "Documents" },
+            new { Id = Guid.Parse("10000000-0000-0000-0000-000000000003"), Name = "Documents.Edit", Description = "แก้ไขเอกสาร", Category = "Documents" },
+            new { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), Name = "Documents.Delete", Description = "ลบเอกสาร", Category = "Documents" },
+            new { Id = Guid.Parse("20000000-0000-0000-0000-000000000001"), Name = "Customers.Manage", Description = "จัดการลูกค้า", Category = "Customers" },
+            new { Id = Guid.Parse("30000000-0000-0000-0000-000000000001"), Name = "Products.Manage", Description = "จัดการสินค้า/บริการ", Category = "Products" },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), Name = "Settings.Manage", Description = "ตั้งค่าระบบ", Category = "Settings" },
+            new { Id = Guid.Parse("50000000-0000-0000-0000-000000000001"), Name = "Users.Manage", Description = "จัดการผู้ใช้งานและสิทธิ์", Category = "Users" },
+            new { Id = Guid.Parse("60000000-0000-0000-0000-000000000001"), Name = "Reports.View", Description = "ดูรายงาน", Category = "Reports" }
+        };
+
+        modelBuilder.Entity<Permission>().HasData(
+            permissions.Select(p => new Permission { Id = p.Id, Name = p.Name, Description = p.Description, Category = p.Category }).ToArray()
+        );
+
+        // Seed RolePermissions for Admin
+        var adminRolePermissions = permissions.Select((p, index) => new RolePermission
+        {
+            Id = Guid.Parse($"70000000-0000-0000-0000-{(index + 1).ToString().PadLeft(12, '0')}"),
+            TenantId = defaultTenantId,
+            RoleName = "Admin",
+            PermissionId = p.Id
+        }).ToArray();
+
+        modelBuilder.Entity<RolePermission>().HasData(adminRolePermissions);
     }
 }
