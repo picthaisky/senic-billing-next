@@ -13,12 +13,12 @@ interface InvoiceFormProps {
   documentId?: string;
 }
 
-export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
+export default function InvoiceForm({ documentType, title, documentId: propDocumentId }: InvoiceFormProps) {
   const { lines, addLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
   const [customerName, setCustomerName] = useState('');
   const [customerTaxId, setCustomerTaxId] = useState('');
   const [notes, setNotes] = useState('');
-  const [documentId] = useState(() => crypto.randomUUID());
+  const [documentId] = useState(() => propDocumentId || crypto.randomUUID());
   const [attachments, setAttachments] = useState<any[]>([]);
 
   const draftKey = `senic_draft_${documentType}`;
@@ -26,9 +26,9 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
 
   // Load draft on mount
   useEffect(() => {
-    if (documentId) {
+    if (propDocumentId) {
       // Fetch document for editing
-      apiClient.get(`/documents/${documentId}`).then(res => {
+      apiClient.get(`/documents/${propDocumentId}`).then(res => {
         if (res.data?.success) {
           const doc = res.data.data;
           setCustomerName(doc.customerName || '');
