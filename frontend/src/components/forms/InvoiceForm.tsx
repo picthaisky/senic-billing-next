@@ -6,7 +6,7 @@ import { getDocumentTypeMeta } from '../../utils/documentTypeMeta';
 
 import AttachmentUpload from './AttachmentUpload';
 import PaymentModal from '../payments/PaymentModal';
-import CustomerSelectModal, { Customer } from '../customers/CustomerSelectModal';
+import CustomerSelectModal from '../customers/CustomerSelectModal';
 
 interface InvoiceFormProps {
   documentType: string;
