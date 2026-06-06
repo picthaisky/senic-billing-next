@@ -57,7 +57,7 @@ export default function RecurringInvoicesConfig() {
   };
 
   return (
-    <div className="card form-section-card">
+    <div className="card form-section-card p-5">
       <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
         <CalendarClock size={20} className="text-[var(--color-primary)]" />
         การออกเอกสารอัตโนมัติ (Recurring Invoices)

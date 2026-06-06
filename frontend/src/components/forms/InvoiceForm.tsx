@@ -215,12 +215,12 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
-          <div className="md:col-span-2 p-3 border border-orange-100 bg-orange-50/50 rounded-xl mt-2 flex items-center gap-3">
+          <div className="md:col-span-2 p-4 border border-orange-100 bg-orange-50/50 rounded-xl mt-2 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1">
-              <label className="invoice-field-label text-xs font-medium block text-orange-800">
+              <label className="text-sm font-semibold block text-orange-800 leading-normal mb-1">
                 ออกเอกสารนี้ซ้ำอัตโนมัติ (Recurring)
               </label>
-              <p className="text-[10px] text-orange-600">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
+              <p className="text-xs text-orange-600 leading-normal">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
             </div>
             <select
               className="input-field max-w-[200px] border-orange-200"

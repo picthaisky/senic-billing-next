@@ -65,7 +65,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IDocumentNumberGeneratorService, DocumentNumberGeneratorService>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IPaymentService, OmisePaymentService>();
-builder.Services.AddScoped<IEmailService, MockEmailService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IAIAssistantService, GeminiAIAssistantService>();
 builder.Services.AddScoped<DevelopmentDataSeeder>();
 
