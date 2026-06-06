@@ -99,20 +99,46 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
 
     try {
       setIsSaving(true);
+      const mapDocType = (t: string) => {
+        const map: Record<string, string> = {
+          'receipt': 'Receipt',
+          'cashbill': 'CashBill',
+          'delivery': 'DeliveryNote',
+          'quotation': 'Quotation',
+          'taxinvoice': 'TaxInvoice'
+        };
+        return map[t] || t;
+      };
+
       const payload = {
-        documentType,
+        documentType: mapDocType(documentType),
+        documentDate: new Date().toISOString(),
         customerName,
         customerTaxId,
         notes,
         vatMode,
+        vatRate: 7,
         discountAmount,
         whtRate,
-        lines: lines.filter(l => l.description.trim() !== ''),
+        lines: lines
+          .filter(l => l.description.trim() !== '')
+          .map(({ id, ...rest }) => rest), // Strip frontend-only ID which breaks C# Guid parsing
         ...totals,
       };
 
+      const getEndpoint = (t: string) => {
+        switch(t) {
+          case 'receipt': return '/receipts';
+          case 'cashbill': return '/cashbills';
+          case 'delivery': return '/deliveries';
+          case 'quotation': return '/quotations';
+          case 'taxinvoice': return '/tax-invoices';
+          default: return '/documents';
+        }
+      };
+
       // API call to create document
-      await apiClient.post('/documents', payload);      
+      await apiClient.post(getEndpoint(documentType), payload);      
       alert('บันทึกเอกสารสำเร็จ');
       localStorage.removeItem(draftKey);
       resetForm();
@@ -172,8 +198,8 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
         <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
           ข้อมูลลูกค้า
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
             <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
               ชื่อลูกค้า / บริษัท <span className="text-red-400">*</span>
             </label>
@@ -187,7 +213,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
             {errors.customerName && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerName}</p>}
           </div>
           {documentType === 'taxinvoice' && (
-            <div>
+            <div className="space-y-1.5">
               <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
                 เลขประจำตัวผู้เสียภาษี (13 หลัก) <span className="text-red-400">*</span>
               </label>
@@ -203,7 +229,7 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
               {errors.customerTaxId && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerTaxId}</p>}
             </div>
           )}
-          <div className={documentType === 'taxinvoice' ? 'md:col-span-2' : ''}>
+          <div className={`${documentType === 'taxinvoice' ? 'md:col-span-2' : ''} space-y-1.5`}>
             <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
               หมายเหตุ
             </label>
@@ -215,15 +241,16 @@ export default function InvoiceForm({ documentType, title }: InvoiceFormProps) {
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
-          <div className="md:col-span-2 p-4 border border-orange-100 bg-orange-50/50 rounded-xl mt-2 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <label className="text-sm font-semibold block text-orange-800 leading-normal mb-1">
+          
+          <div className="md:col-span-2 p-5 md:p-6 border border-orange-200 bg-orange-50/70 rounded-xl mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="flex-1 space-y-1">
+              <label className="text-sm font-semibold block text-orange-900 leading-normal">
                 ออกเอกสารนี้ซ้ำอัตโนมัติ (Recurring)
               </label>
-              <p className="text-xs text-orange-600 leading-normal">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
+              <p className="text-xs text-orange-700 leading-normal">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
             </div>
             <select
-              className="input-field max-w-[200px] border-orange-200"
+              className="input-field w-full sm:w-auto min-w-[200px] border-orange-300 bg-white"
               value={''} // Default off
               onChange={async (e) => {
                 if (e.target.value) {

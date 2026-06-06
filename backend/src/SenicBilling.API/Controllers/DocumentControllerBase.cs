@@ -10,20 +10,19 @@ using SenicBilling.Infrastructure.Data;
 namespace SenicBilling.API.Controllers;
 
 /// <summary>
-/// Generic document controller for Receipt, CashBill, DeliveryNote, and Quotation.
+/// Abstract generic document controller for various document types.
 /// Provides CRUD operations with document-type-specific behavior.
 /// </summary>
-[ApiController]
-[Route("api/documents")]
 [Authorize]
-public class DocumentController(
+public abstract class DocumentControllerBase(
     SenicBillingDbContext dbContext,
     IDocumentNumberGeneratorService numberGenerator) : ControllerBase
 {
-    /// <summary>Get paginated list of documents by type</summary>
+    protected abstract DocumentType TargetDocumentType { get; }
+
+    /// <summary>Get paginated list of documents</summary>
     [HttpGet]
     public async Task<ActionResult<ApiResponse<PaginatedResponse<DocumentResponse>>>> GetAll(
-        [FromQuery] DocumentType type,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
@@ -32,7 +31,7 @@ public class DocumentController(
     {
         var tenantId = GetTenantId();
         var query = dbContext.DocumentHeaders
-            .Where(d => d.TenantId == tenantId && d.DocumentType == type);
+            .Where(d => d.TenantId == tenantId && d.DocumentType == TargetDocumentType);
 
         if (status.HasValue)
             query = query.Where(d => d.Status == status.Value);
@@ -53,7 +52,7 @@ public class DocumentController(
             .ToListAsync(ct);
 
         var result = new PaginatedResponse<DocumentResponse>(items, totalCount, page, pageSize);
-        return Ok(new ApiResponse<PaginatedResponse<DocumentResponse>>(true, "สำเร็จ", result));
+        return Ok(new ApiResponse<PaginatedResponse<DocumentResponse>>(true, "เธชเธณเน€เธฃเนเธ", result));
     }
 
     /// <summary>Get a single document by ID</summary>
@@ -66,11 +65,11 @@ public class DocumentController(
 
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Lines.OrderBy(l => l.SortOrder))
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == TargetDocumentType, ct);
 
-        if (doc is null) return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสาร", null));
+        if (doc is null) return NotFound(new ApiResponse<DocumentResponse>(false, "เนเธกเนเธเธเน€เธญเธเธชเธฒเธฃ", null));
 
-        return Ok(new ApiResponse<DocumentResponse>(true, "สำเร็จ", MapToResponse(doc)));
+        return Ok(new ApiResponse<DocumentResponse>(true, "เธชเธณเน€เธฃเนเธ", MapToResponse(doc)));
     }
 
     /// <summary>Public endpoint for Read-Receipt tracking (Customer opens the link)</summary>
@@ -79,7 +78,7 @@ public class DocumentController(
     public async Task<ActionResult<ApiResponse<bool>>> MarkAsViewed(Guid id, CancellationToken ct)
     {
         var doc = await dbContext.DocumentHeaders.FirstOrDefaultAsync(d => d.Id == id, ct);
-        if (doc is null) return NotFound(new ApiResponse<bool>(false, "ไม่พบเอกสาร", false));
+        if (doc is null) return NotFound(new ApiResponse<bool>(false, "เนเธกเนเธเธเน€เธญเธเธชเธฒเธฃ", false));
 
         if (doc.ViewedAt == null)
         {
@@ -91,27 +90,23 @@ public class DocumentController(
             await dbContext.SaveChangesAsync(ct);
         }
 
-        return Ok(new ApiResponse<bool>(true, "บันทึกการเปิดอ่านสำเร็จ", true));
+        return Ok(new ApiResponse<bool>(true, "เธเธฑเธเธ—เธถเธเธเธฒเธฃเน€เธเธดเธ”เธญเนเธฒเธเธชเธณเน€เธฃเนเธ", true));
     }
 
-    /// <summary>Create a new document (Receipt, CashBill, DeliveryNote, or Quotation)</summary>
+    /// <summary>Create a new document</summary>
     [HttpPost]
     public async Task<ActionResult<ApiResponse<DocumentResponse>>> Create(
         [FromBody] CreateDocumentRequest request, CancellationToken ct)
     {
         var tenantId = GetTenantId();
 
-        // Tax Invoice should use its dedicated controller
-        if (request.DocumentType == DocumentType.TaxInvoice)
-            return BadRequest(new ApiResponse<DocumentResponse>(false, "กรุณาใช้ /api/tax-invoices สำหรับใบกำกับภาษี", null));
-
-        var docNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, request.DocumentType, ct);
+        var docNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, TargetDocumentType, ct);
 
         var header = new DocumentHeader
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            DocumentType = request.DocumentType,
+            DocumentType = TargetDocumentType,
             DocumentNumber = docNumber,
             DocumentDate = request.DocumentDate,
             DueDate = request.DueDate,
@@ -126,7 +121,7 @@ public class DocumentController(
             WhtRate = request.WhtRate,
             Notes = request.Notes,
             ReferenceDocumentId = request.ReferenceDocumentId,
-            DeliveryStatus = request.DeliveryStatus ?? (request.DocumentType == DocumentType.DeliveryNote ? "รอส่ง" : null),
+            DeliveryStatus = request.DeliveryStatus ?? (TargetDocumentType == DocumentType.DeliveryNote ? "รอส่ง" : null),
             CreatedBy = User.Identity?.Name
         };
 
@@ -151,7 +146,7 @@ public class DocumentController(
 
         CalculateTotals(header);
 
-        if (header.DocumentType == DocumentType.DeliveryNote || header.DocumentType == DocumentType.TaxInvoice)
+        if (TargetDocumentType == DocumentType.DeliveryNote || TargetDocumentType == DocumentType.TaxInvoice)
         {
             await DeductStockAsync(header.Lines, tenantId, ct);
         }
@@ -163,7 +158,7 @@ public class DocumentController(
             new ApiResponse<DocumentResponse>(true, "สร้างเอกสารสำเร็จ", MapToResponse(header)));
     }
 
-    /// <summary>Update delivery status (DeliveryNote only)</summary>
+    /// <summary>Update delivery status</summary>
     [HttpPatch("{id:guid}/delivery-status")]
     public async Task<ActionResult<ApiResponse<DocumentResponse>>> UpdateDeliveryStatus(
         Guid id, [FromBody] string deliveryStatus, CancellationToken ct)
@@ -171,10 +166,10 @@ public class DocumentController(
         var tenantId = GetTenantId();
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Lines)
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.DeliveryNote, ct);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == TargetDocumentType, ct);
 
         if (doc is null)
-            return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบใบส่งของ", null));
+            return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสาร", null));
 
         doc.DeliveryStatus = deliveryStatus;
         doc.UpdatedAt = DateTime.UtcNow;
@@ -191,7 +186,7 @@ public class DocumentController(
         var tenantId = GetTenantId();
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Lines)
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType != DocumentType.TaxInvoice, ct);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == TargetDocumentType, ct);
 
         if (doc is null)
             return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสาร", null));
@@ -249,7 +244,7 @@ public class DocumentController(
         var tenantId = GetTenantId();
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Lines)
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType != DocumentType.TaxInvoice, ct);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == TargetDocumentType, ct);
 
         if (doc is null)
             return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสาร", null));
@@ -266,7 +261,7 @@ public class DocumentController(
         return Ok(new ApiResponse<DocumentResponse>(true, "ยกเลิกเอกสารสำเร็จ", MapToResponse(doc)));
     }
 
-    /// <summary>1-Click Convert: convert a document to another type (e.g., DeliveryNote → TaxInvoice)</summary>
+    /// <summary>1-Click Convert: convert a document to another type</summary>
     [HttpPost("{id:guid}/convert")]
     public async Task<ActionResult<ApiResponse<DocumentResponse>>> ConvertDocument(
         Guid id, [FromBody] ConvertDocumentRequest request, CancellationToken ct)
@@ -274,7 +269,7 @@ public class DocumentController(
         var tenantId = GetTenantId();
         var source = await dbContext.DocumentHeaders
             .Include(d => d.Lines.OrderBy(l => l.SortOrder))
-            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == TargetDocumentType, ct);
 
         if (source is null)
             return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสารต้นทาง", null));
@@ -284,7 +279,7 @@ public class DocumentController(
 
         // Prevent converting to same type
         if (source.DocumentType == request.TargetType)
-            return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถแปลงเป็นประเภทเดียวกัน", null));
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเธฅเธเน€เธเนเธเธเธฃเธฐเน€เธ เธ—เน€เธ”เธตเธขเธงเธเธฑเธ", null));
 
         // Tax Invoice should use its dedicated controller
         if (request.TargetType == DocumentType.TaxInvoice)
@@ -302,7 +297,7 @@ public class DocumentController(
             dbContext.DocumentHeaders.Add(newDoc);
             await dbContext.SaveChangesAsync(ct);
             return CreatedAtAction(nameof(GetById), new { id = newDoc.Id },
-                new ApiResponse<DocumentResponse>(true, "แปลงเอกสารเป็นใบกำกับภาษีสำเร็จ", MapToResponse(newDoc)));
+                new ApiResponse<DocumentResponse>(true, "เนเธเธฅเธเน€เธญเธเธชเธฒเธฃเน€เธเนเธเนเธเธเธณเธเธฑเธเธ เธฒเธฉเธตเธชเธณเน€เธฃเนเธ", MapToResponse(newDoc)));
         }
 
         var targetDocNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, request.TargetType, ct);
@@ -319,7 +314,7 @@ public class DocumentController(
         await dbContext.SaveChangesAsync(ct);
 
         return CreatedAtAction(nameof(GetById), new { id = converted.Id },
-            new ApiResponse<DocumentResponse>(true, "แปลงเอกสารสำเร็จ", MapToResponse(converted)));
+            new ApiResponse<DocumentResponse>(true, "เนเธเธฅเธเน€เธญเธเธชเธฒเธฃเธชเธณเน€เธฃเนเธ", MapToResponse(converted)));
     }
 
     /// <summary>Create a Credit Note or Debit Note referencing a source document</summary>
@@ -330,16 +325,16 @@ public class DocumentController(
         var tenantId = GetTenantId();
 
         if (request.NoteType != DocumentType.CreditNote && request.NoteType != DocumentType.DebitNote)
-            return BadRequest(new ApiResponse<DocumentResponse>(false, "ประเภทเอกสารต้องเป็นใบลดหนี้หรือใบเพิ่มหนี้เท่านั้น", null));
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "เธเธฃเธฐเน€เธ เธ—เน€เธญเธเธชเธฒเธฃเธ•เนเธญเธเน€เธเนเธเนเธเธฅเธ”เธซเธเธตเนเธซเธฃเธทเธญเนเธเน€เธเธดเนเธกเธซเธเธตเนเน€เธ—เนเธฒเธเธฑเนเธ", null));
 
         var sourceDoc = await dbContext.DocumentHeaders
             .FirstOrDefaultAsync(d => d.Id == request.SourceDocumentId && d.TenantId == tenantId, ct);
 
         if (sourceDoc is null)
-            return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบเอกสารต้นทาง", null));
+            return NotFound(new ApiResponse<DocumentResponse>(false, "เนเธกเนเธเธเน€เธญเธเธชเธฒเธฃเธ•เนเธเธ—เธฒเธ", null));
 
         if (sourceDoc.Status == DocumentStatus.Cancelled)
-            return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถออกใบลดหนี้/เพิ่มหนี้จากเอกสารที่ยกเลิกแล้ว", null));
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธญเธญเธเนเธเธฅเธ”เธซเธเธตเน/เน€เธเธดเนเธกเธซเธเธตเนเธเธฒเธเน€เธญเธเธชเธฒเธฃเธ—เธตเนเธขเธเน€เธฅเธดเธเนเธฅเนเธง", null));
 
         var docNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, request.NoteType, ct);
 
@@ -386,14 +381,14 @@ public class DocumentController(
         dbContext.DocumentHeaders.Add(header);
         await dbContext.SaveChangesAsync(ct);
 
-        var noteLabel = request.NoteType == DocumentType.CreditNote ? "ใบลดหนี้" : "ใบเพิ่มหนี้";
+        var noteLabel = request.NoteType == DocumentType.CreditNote ? "เนเธเธฅเธ”เธซเธเธตเน" : "เนเธเน€เธเธดเนเธกเธซเธเธตเน";
         return CreatedAtAction(nameof(GetById), new { id = header.Id },
-            new ApiResponse<DocumentResponse>(true, $"สร้าง{noteLabel}สำเร็จ", MapToResponse(header)));
+            new ApiResponse<DocumentResponse>(true, $"เธชเธฃเนเธฒเธ{noteLabel}เธชเธณเน€เธฃเนเธ", MapToResponse(header)));
     }
 
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
     // Private Helpers
-    // ──────────────────────────────────────────────
+    // โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     private static DocumentHeader CloneToNewDocument(
         DocumentHeader source, DocumentType targetType, string docNumber,
@@ -419,7 +414,7 @@ public class DocumentController(
             Notes = request.Notes ?? source.Notes,
             ReferenceDocumentId = source.ReferenceDocumentId,
             ConvertedFromDocumentId = source.Id,
-            DeliveryStatus = targetType == DocumentType.DeliveryNote ? "รอส่ง" : null
+            DeliveryStatus = targetType == DocumentType.DeliveryNote ? "เธฃเธญเธชเนเธ" : null
         };
 
         int sortOrder = 1;
@@ -461,7 +456,7 @@ public class DocumentController(
             doc.TotalBeforeVat = doc.GrandTotal - doc.VatAmount;
         }
 
-        // ภาษีหัก ณ ที่จ่าย (WHT) — applied against TotalBeforeVat
+        // เธ เธฒเธฉเธตเธซเธฑเธ เธ“ เธ—เธตเนเธเนเธฒเธข (WHT) โ€” applied against TotalBeforeVat
         doc.WhtAmount = doc.WhtRate > 0
             ? Math.Round(doc.TotalBeforeVat * doc.WhtRate / 100m, 2)
             : 0m;

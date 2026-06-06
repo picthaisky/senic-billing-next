@@ -9,6 +9,7 @@ import ProductsPage from './components/products/ProductsPage';
 import SettingsPage from './components/settings/SettingsPage';
 import ProfilePage from './components/profile/ProfilePage';
 import InvoiceForm from './components/forms/InvoiceForm';
+import DocumentsListPage from './components/documents/DocumentsListPage';
 
 import React from 'react';
 
@@ -64,7 +65,8 @@ function App() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="documents/:type" element={<InvoiceFormWrapper />} />
+          <Route path="documents/:type" element={<DocumentsListPage />} />
+          <Route path="documents/:type/create" element={<InvoiceFormWrapper />} />
         </Route>
       </Routes>
     </BrowserRouter>

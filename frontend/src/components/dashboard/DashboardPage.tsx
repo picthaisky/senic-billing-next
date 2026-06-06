@@ -499,7 +499,7 @@ export default function DashboardPage() {
       {/* Analytics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 mb-6">
         {/* Tax Estimator */}
-        <div className="card dashboard-panel-card bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-bg)]">
+        <div className="card dashboard-panel-card p-6 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-bg)] overflow-hidden">
           <div className="dashboard-panel-head">
             <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
               <FileText size={18} className="text-[var(--color-primary)]" />
@@ -510,24 +510,24 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className={`mt-4 grid grid-cols-2 gap-4 ${loading ? 'opacity-50' : ''}`}>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)]">
-              <p className="text-xs text-[var(--color-text-muted)]">ภาษีขาย (Sales VAT)</p>
-              <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(dashboardData.taxData?.totalSalesVat || 0)}</p>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden">
+              <p className="text-xs text-[var(--color-text-muted)] truncate">ภาษีขาย (Sales VAT)</p>
+              <p className="text-lg font-bold text-green-600 mt-1 truncate">{formatCurrency(dashboardData.taxData?.totalSalesVat || 0)}</p>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)]">
-              <p className="text-xs text-[var(--color-text-muted)]">ภาษีซื้อ (Purchase VAT)</p>
-              <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden">
+              <p className="text-xs text-[var(--color-text-muted)] truncate">ภาษีซื้อ (Purchase VAT)</p>
+              <p className="text-lg font-bold text-red-600 mt-1 truncate">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
             </div>
-            <div className="bg-[var(--color-primary)] p-4 rounded-xl shadow-sm col-span-2 text-white">
-              <p className="text-sm opacity-90">ยอดภาษีที่ต้องชำระสุทธิ</p>
-              <p className="text-3xl font-bold mt-1">{formatCurrency(dashboardData.taxData?.estimatedTaxPayable || 0)}</p>
-              <p className="text-xs opacity-80 mt-2">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
+            <div className="bg-[var(--color-primary)] p-5 rounded-xl shadow-sm col-span-2 text-white overflow-hidden">
+              <p className="text-sm opacity-90 truncate">ยอดภาษีที่ต้องชำระสุทธิ</p>
+              <p className="text-3xl font-bold mt-1 truncate">{formatCurrency(dashboardData.taxData?.estimatedTaxPayable || 0)}</p>
+              <p className="text-xs opacity-80 mt-2 truncate">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
             </div>
           </div>
         </div>
 
         {/* A/R Aging Report */}
-        <div className="card dashboard-panel-card">
+        <div className="card dashboard-panel-card p-6">
           <div className="dashboard-panel-head flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">

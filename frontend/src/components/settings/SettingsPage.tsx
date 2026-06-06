@@ -75,28 +75,28 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-      <div className="card form-section-card lg:col-span-2">
-        <h3 className="settings-section-title-lg font-bold text-lg flex items-center gap-2">
-          <Building2 size={20} className="text-[var(--color-primary)]" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
+      <div className="card form-section-card lg:col-span-2 p-6 md:p-8 space-y-6">
+        <h3 className="settings-section-title-lg font-bold text-lg flex items-center gap-2 border-b border-[var(--color-border)] pb-4">
+          <Building2 size={22} className="text-[var(--color-primary)]" />
           ข้อมูลองค์กร (Tenant Settings)
         </h3>
         
         <form onSubmit={handleSave} className="form-stack-md">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2 space-y-1.5">
               <label className="layout-form-label-sm block text-sm font-medium">ชื่อบริษัทจดทะเบียน *</label>
               <input required type="text" className="input-field" value={tenantInfo.companyName} title="ชื่อบริษัทจดทะเบียน" placeholder="กรอกชื่อบริษัทจดทะเบียน"
                 onChange={e => setTenantInfo({...tenantInfo, companyName: e.target.value})} />
             </div>
             
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 space-y-1.5">
               <label className="layout-form-label-sm block text-sm font-medium">เลขประจำตัวผู้เสียภาษี *</label>
               <input required type="text" className="input-field" value={tenantInfo.taxId} title="เลขประจำตัวผู้เสียภาษี" placeholder="กรอกเลขประจำตัวผู้เสียภาษี"
                 onChange={e => setTenantInfo({...tenantInfo, taxId: e.target.value})} />
             </div>
             
-            <div>
+            <div className="space-y-1.5">
               <label className="layout-form-label-sm block text-sm font-medium flex items-center gap-1">
                 <Mail size={14} className="text-[var(--color-text-muted)]" /> อีเมลติดต่อ
               </label>
@@ -104,7 +104,7 @@ export default function SettingsPage() {
                 onChange={e => setTenantInfo({...tenantInfo, email: e.target.value})} />
             </div>
             
-            <div>
+            <div className="space-y-1.5">
               <label className="layout-form-label-sm block text-sm font-medium flex items-center gap-1">
                 <Phone size={14} className="text-[var(--color-text-muted)]" /> เบอร์โทรศัพท์
               </label>
@@ -112,7 +112,7 @@ export default function SettingsPage() {
                 onChange={e => setTenantInfo({...tenantInfo, phone: e.target.value})} />
             </div>
             
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 space-y-1.5">
               <label className="layout-form-label-sm block text-sm font-medium flex items-center gap-1">
                 <MapPin size={14} className="text-[var(--color-text-muted)]" /> ที่อยู่จดทะเบียน *
               </label>
@@ -129,8 +129,8 @@ export default function SettingsPage() {
         </form>
       </div>
       
-      <div className="card form-section-card">
-        <h3 className="settings-section-title-md font-bold text-lg">บัญชีผู้ใช้</h3>
+      <div className="card form-section-card p-6 md:p-8 space-y-6">
+        <h3 className="settings-section-title-md font-bold text-lg border-b border-[var(--color-border)] pb-4">บัญชีผู้ใช้</h3>
         <p className="settings-section-subtitle text-sm text-[var(--color-text-muted)]">
           ข้อมูลผู้ใช้งานระบบที่กำลังล็อกอินอยู่
         </p>
@@ -150,14 +150,16 @@ export default function SettingsPage() {
       </div>
       {/* ── End top row grid ── */}
 
-      <div className="card form-section-card p-5">
-        <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
-          <Languages size={20} className="text-[var(--color-primary)]" />
-          {t('settings.languageTitle')}
-        </h3>
-        <p className="settings-section-subtitle text-sm text-[var(--color-text-muted)]">
-          {t('settings.languageDescription')}
-        </p>
+      <div className="card form-section-card p-6 md:p-8 space-y-6">
+        <div>
+          <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
+            <Languages size={20} className="text-[var(--color-primary)]" />
+            {t('settings.languageTitle')}
+          </h3>
+          <p className="settings-section-subtitle text-sm text-[var(--color-text-muted)] mt-1">
+            {t('settings.languageDescription')}
+          </p>
+        </div>
 
         <div className="p-4 border rounded-xl flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
           <div className="text-sm text-[var(--color-text-secondary)]">
@@ -182,14 +184,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card form-section-card p-5">
-        <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
-          <Bell size={20} className="text-[var(--color-primary)]" />
-          การแจ้งเตือน (Push Notifications)
-        </h3>
-        <p className="settings-section-subtitle text-sm text-[var(--color-text-muted)]">
-          รับการแจ้งเตือนเมื่อมีเอกสารใหม่ หรือการอัปเดตสถานะที่สำคัญ ผ่านเบราว์เซอร์และมือถือ
-        </p>
+      <div className="card form-section-card p-6 md:p-8 space-y-6">
+        <div>
+          <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
+            <Bell size={20} className="text-[var(--color-primary)]" />
+            การแจ้งเตือน (Push Notifications)
+          </h3>
+          <p className="settings-section-subtitle text-sm text-[var(--color-text-muted)] mt-1">
+            รับการแจ้งเตือนเมื่อมีเอกสารใหม่ หรือการอัปเดตสถานะที่สำคัญ ผ่านเบราว์เซอร์และมือถือ
+          </p>
+        </div>
 
         <div className="p-4 border rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
           <div>
