@@ -31,9 +31,7 @@ class SignalRClient {
 
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => token,
-        skipNegotiation: false,
-        transport: signalR.HttpTransportType.WebSockets
+        accessTokenFactory: () => token
       })
       .withAutomaticReconnect([0, 2000, 10000, 30000]) // Retry intervals
       .configureLogging(signalR.LogLevel.Warning)
