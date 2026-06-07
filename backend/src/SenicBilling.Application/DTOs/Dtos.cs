@@ -21,8 +21,13 @@ public record UserInfo(Guid Id, string Username, string DisplayName, string Role
 public record RegisterRequest(string Username, string Password, string DisplayName, string? Email, string Role = "User");
 
 // ──────────────────────────────────────────────
-// User Profile DTOs
 // ──────────────────────────────────────────────
+// User & Tenant Profile DTOs
+// ──────────────────────────────────────────────
+
+public record TenantProfileDto(Guid Id, string CompanyName, string? TaxId, string? Address, string? Phone, string? Email, string? LogoUrl, string? BranchName, string? LineNotifyToken);
+
+public record UpdateTenantProfileRequest(string CompanyName, string? TaxId, string? Address, string? Phone, string? Email, string? LogoUrl, string? BranchName, string? LineNotifyToken);
 
 public record UserProfileDto(Guid Id, string Username, string DisplayName, string? Email, string Role);
 

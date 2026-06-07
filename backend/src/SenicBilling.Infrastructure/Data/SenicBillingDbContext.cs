@@ -23,6 +23,11 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<RecurringInvoice> RecurringInvoices => Set<RecurringInvoice>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
+    public DbSet<BillingInvoice> BillingInvoices => Set<BillingInvoice>();
+    public DbSet<TenantUsageStat> TenantUsageStats => Set<TenantUsageStat>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -348,6 +353,69 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(e => new { e.TenantId, e.IsActive, e.NextRunDate });
+        });
+
+        // ──────────────────────────────────────────────
+        // SaaS Subscription Configurations
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.MonthlyPrice).HasPrecision(18, 4);
+            entity.Property(e => e.YearlyPrice).HasPrecision(18, 4);
+        });
+
+        modelBuilder.Entity<TenantSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BillingCycle).HasMaxLength(50);
+            entity.Property(e => e.Status).HasMaxLength(50);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.Subscriptions)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Plan)
+                .WithMany()
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BillingInvoice>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.InvoiceNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Amount).HasPrecision(18, 4);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.PaymentGatewayRef).HasMaxLength(200);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.BillingInvoices)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TenantUsageStat>(entity =>
+        {
+            entity.HasKey(e => new { e.TenantId, e.YearMonth });
+            entity.Property(e => e.YearMonth).IsRequired().HasMaxLength(20);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.UsageStats)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Add CurrentPlan relationship in Tenant
+        modelBuilder.Entity<Tenant>(entity =>
+        {
+            entity.HasOne(e => e.CurrentPlan)
+                .WithMany()
+                .HasForeignKey(e => e.CurrentPlanId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.Property(e => e.SubscriptionStatus).HasMaxLength(50);
         });
 
         // ──────────────────────────────────────────────

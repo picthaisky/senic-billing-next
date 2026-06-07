@@ -179,6 +179,49 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.BillingInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PaymentGatewayRef")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("BillingInvoices");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -840,6 +883,48 @@ namespace SenicBilling.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.SubscriptionPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Features")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxDocumentsPerMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxUsers")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MonthlyPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("YearlyPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SubscriptionPlans");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -862,12 +947,18 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CurrentPlanId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("LineNotifyToken")
+                        .HasColumnType("text");
 
                     b.Property<string>("LogoUrl")
                         .HasMaxLength(500)
@@ -877,6 +968,14 @@ namespace SenicBilling.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("SubscriptionStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("SubscriptionValidUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("TaxId")
                         .HasMaxLength(13)
                         .HasColumnType("character varying(13)");
@@ -885,6 +984,8 @@ namespace SenicBilling.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CurrentPlanId");
 
                     b.HasIndex("TaxId")
                         .IsUnique()
@@ -899,8 +1000,72 @@ namespace SenicBilling.Infrastructure.Migrations
                             CompanyName = "Senic Corporation",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsActive = true,
+                            SubscriptionStatus = "Trial",
                             TaxId = "0105560000000"
                         });
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BillingCycle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("TenantSubscriptions");
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.TenantUsageStat", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("YearMonth")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("DocumentsCreated")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("StorageUsedBytes")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("TenantId", "YearMonth");
+
+                    b.ToTable("TenantUsageStats");
                 });
 
             modelBuilder.Entity("SenicBilling.Domain.Entities.AppUser", b =>
@@ -929,6 +1094,17 @@ namespace SenicBilling.Infrastructure.Migrations
                 {
                     b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
                         .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.BillingInvoice", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("BillingInvoices")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1080,6 +1256,46 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.Tenant", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.SubscriptionPlan", "CurrentPlan")
+                        .WithMany()
+                        .HasForeignKey("CurrentPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CurrentPlan");
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.SubscriptionPlan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.TenantUsageStat", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("UsageStats")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Customer", b =>
                 {
                     b.Navigation("Documents");
@@ -1094,6 +1310,8 @@ namespace SenicBilling.Infrastructure.Migrations
 
             modelBuilder.Entity("SenicBilling.Domain.Entities.Tenant", b =>
                 {
+                    b.Navigation("BillingInvoices");
+
                     b.Navigation("Customers");
 
                     b.Navigation("Documents");
@@ -1101,6 +1319,10 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Navigation("NumberSequences");
 
                     b.Navigation("Products");
+
+                    b.Navigation("Subscriptions");
+
+                    b.Navigation("UsageStats");
 
                     b.Navigation("Users");
                 });

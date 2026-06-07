@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Infrastructure.Data;
 using System.Security.Claims;
@@ -14,31 +15,23 @@ public class TenantsController(SenicBillingDbContext dbContext) : ControllerBase
 {
     private Guid GetTenantId() => Guid.Parse(User.FindFirst("tenantId")!.Value);
 
-    public record TenantDto(Guid Id, string CompanyName, string? TaxId, string? Email, string? Phone, string? Address, string? BranchName);
-    public record UpdateTenantRequest(string CompanyName, string? TaxId, string? Email, string? Phone, string? Address, string? BranchName);
-
     [HttpGet("current")]
-    public async Task<IActionResult> GetCurrentTenant(CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<TenantProfileDto>>> GetCurrentTenant(CancellationToken ct)
     {
         var tenantId = GetTenantId();
         var tenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
-        if (tenant == null) return NotFound();
+        if (tenant == null) return NotFound(new ApiResponse<TenantProfileDto>(false, "ไม่พบข้อมูลองค์กร", null));
 
-        return Ok(new
-        {
-            success = true,
-            data = new TenantDto(tenant.Id, tenant.CompanyName, tenant.TaxId, tenant.Email, tenant.Phone, tenant.Address, tenant.BranchName)
-        });
+        return Ok(new ApiResponse<TenantProfileDto>(true, "สำเร็จ", 
+            new TenantProfileDto(tenant.Id, tenant.CompanyName, tenant.TaxId, tenant.Address, tenant.Phone, tenant.Email, tenant.LogoUrl, tenant.BranchName, tenant.LineNotifyToken)));
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateTenant(Guid id, [FromBody] UpdateTenantRequest req, CancellationToken ct)
+    [HttpPut("profile")]
+    public async Task<ActionResult<ApiResponse<TenantProfileDto>>> UpdateProfile([FromBody] UpdateTenantProfileRequest req, CancellationToken ct)
     {
         var tenantId = GetTenantId();
-        if (id != tenantId) return Forbid(); // Users can only update their own tenant
-
         var tenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
-        if (tenant == null) return NotFound();
+        if (tenant == null) return NotFound(new ApiResponse<TenantProfileDto>(false, "ไม่พบข้อมูลองค์กร", null));
 
         tenant.CompanyName = req.CompanyName;
         tenant.TaxId = req.TaxId;
@@ -46,10 +39,14 @@ public class TenantsController(SenicBillingDbContext dbContext) : ControllerBase
         tenant.Phone = req.Phone;
         tenant.Address = req.Address;
         tenant.BranchName = req.BranchName;
+        tenant.LineNotifyToken = req.LineNotifyToken;
+        if (req.LogoUrl != null) tenant.LogoUrl = req.LogoUrl;
+        
         tenant.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(ct);
 
-        return Ok(new { success = true, message = "Tenant updated successfully" });
+        return Ok(new ApiResponse<TenantProfileDto>(true, "อัปเดตข้อมูลองค์กรสำเร็จ", 
+            new TenantProfileDto(tenant.Id, tenant.CompanyName, tenant.TaxId, tenant.Address, tenant.Phone, tenant.Email, tenant.LogoUrl, tenant.BranchName, tenant.LineNotifyToken)));
     }
 }
