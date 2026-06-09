@@ -25,6 +25,9 @@ services:
       JwtSettings__Issuer: ${JWT_ISSUER:-SenicBillingNext}
       JwtSettings__Audience: ${JWT_AUDIENCE:-SenicBillingNextClient}
       JwtSettings__ExpiryMinutes: ${JWT_EXPIRY:-480}
+      Vapid__Subject: ${VAPID_SUBJECT:-mailto:admin@senic.co.th}
+      Vapid__PublicKey: ${VAPID_PUBLIC_KEY}
+      Vapid__PrivateKey: ${VAPID_PRIVATE_KEY}
       Gemini__ApiKey: ${GEMINI_API_KEY}
       Omise__PublicKey: ${OMISE_PUBLIC_KEY}
       Omise__SecretKey: ${OMISE_SECRET_KEY}
@@ -47,6 +50,17 @@ services:
     container_name: senic-frontend
     ports:
       - "${FRONTEND_PORT:-8810}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - senic-network
+
+  admin-frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY}-admin-frontend:latest
+    container_name: senic-admin-frontend
+    ports:
+      - "${ADMIN_FRONTEND_PORT:-8811}:80"
     depends_on:
       - backend
     restart: unless-stopped

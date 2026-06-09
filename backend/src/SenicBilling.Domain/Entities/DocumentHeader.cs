@@ -102,4 +102,29 @@ public class DocumentHeader
 
     // Feature 1: Attachments
     public List<Attachment> Attachments { get; set; } = new();
+
+    /// <summary>
+    /// Calculates all financial totals (Subtotal, VAT, WHT, GrandTotal) based on lines and configurations.
+    /// </summary>
+    public void CalculateTotals()
+    {
+        Subtotal = Lines.Sum(l => l.LineTotal);
+        TotalBeforeVat = Subtotal - DiscountAmount;
+
+        if (VatMode == VatCalculationMode.Exclusive)
+        {
+            VatAmount = Math.Round(TotalBeforeVat * VatRate / 100m, 2);
+            GrandTotal = TotalBeforeVat + VatAmount;
+        }
+        else
+        {
+            GrandTotal = TotalBeforeVat;
+            VatAmount = Math.Round(TotalBeforeVat * VatRate / (100m + VatRate), 2);
+            TotalBeforeVat = GrandTotal - VatAmount;
+        }
+
+        WhtAmount = WhtRate > 0
+            ? Math.Round(TotalBeforeVat * WhtRate / 100m, 2)
+            : 0m;
+    }
 }

@@ -29,6 +29,9 @@ public class Tenant
     /// <summary>สาขา (e.g., "สำนักงานใหญ่", "สาขาที่ 1")</summary>
     public string? BranchName { get; set; }
 
+    // Notifications
+    public string? LineNotifyToken { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public bool IsActive { get; set; } = true;
@@ -39,4 +42,18 @@ public class Tenant
     public ICollection<DocumentHeader> Documents { get; set; } = [];
     public ICollection<AppUser> Users { get; set; } = [];
     public ICollection<DocumentNumberSequence> NumberSequences { get; set; } = [];
+
+    // Subscription & Package
+    public Guid? CurrentPlanId { get; set; }
+    public SubscriptionPlan? CurrentPlan { get; set; }
+    
+    /// <summary>สถานะปัจจุบัน (Trial, Active, PastDue, Suspended)</summary>
+    public string SubscriptionStatus { get; set; } = "Trial";
+    
+    /// <summary>วันที่รอบบิลปัจจุบันหมดอายุ</summary>
+    public DateTime? SubscriptionValidUntil { get; set; }
+    
+    public ICollection<TenantSubscription> Subscriptions { get; set; } = [];
+    public ICollection<BillingInvoice> BillingInvoices { get; set; } = [];
+    public ICollection<TenantUsageStat> UsageStats { get; set; } = [];
 }

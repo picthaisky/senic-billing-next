@@ -21,7 +21,9 @@ export default function SettingsPage() {
     email: '',
     phone: '',
     address: '',
-    branchName: ''
+    branchName: '',
+    logoUrl: '',
+    lineNotifyToken: ''
   });
 
   useEffect(() => {
@@ -35,7 +37,9 @@ export default function SettingsPage() {
             email: res.data.data.email || '',
             phone: res.data.data.phone || '',
             address: res.data.data.address || '',
-            branchName: res.data.data.branchName || 'สำนักงานใหญ่'
+            branchName: res.data.data.branchName || 'สำนักงานใหญ่',
+            logoUrl: res.data.data.logoUrl || '',
+            lineNotifyToken: res.data.data.lineNotifyToken || ''
           });
         }
       } catch (error) {
@@ -49,7 +53,7 @@ export default function SettingsPage() {
     e.preventDefault();
     try {
       setIsSaving(true);
-      await apiClient.put(`/tenants/${user?.tenantId}`, tenantInfo);
+      await apiClient.put(`/tenants/profile`, tenantInfo);
       setIsSaving(false);
       alert('บันทึกการตั้งค่าสำเร็จ');
     } catch (error) {
@@ -111,6 +115,13 @@ export default function SettingsPage() {
               <input type="text" className="input-field" value={tenantInfo.phone} title="เบอร์โทรศัพท์" placeholder="02-123-4567"
                 onChange={e => setTenantInfo({...tenantInfo, phone: e.target.value})} />
             </div>
+
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="layout-form-label-sm block text-sm font-medium">URL โลโก้บริษัท</label>
+              <input type="text" className="input-field" value={tenantInfo.logoUrl} title="URL โลโก้" placeholder="https://example.com/logo.png"
+                onChange={e => setTenantInfo({...tenantInfo, logoUrl: e.target.value})} />
+              <p className="text-xs text-[var(--color-text-muted)]">ใส่ลิงก์รูปภาพโลโก้เพื่อแสดงบนเอกสาร PDF</p>
+            </div>
             
             <div className="md:col-span-2 space-y-1.5">
               <label className="layout-form-label-sm block text-sm font-medium flex items-center gap-1">
@@ -118,6 +129,13 @@ export default function SettingsPage() {
               </label>
               <textarea required className="input-field h-24 resize-none" value={tenantInfo.address} title="ที่อยู่จดทะเบียน" placeholder="กรอกที่อยู่จดทะเบียน"
                 onChange={e => setTenantInfo({...tenantInfo, address: e.target.value})} />
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="layout-form-label-sm block text-sm font-medium">LINE Notify Token</label>
+              <input type="text" className="input-field" value={tenantInfo.lineNotifyToken} title="LINE Notify Token" placeholder="กรอก Token สำหรับรับแจ้งเตือน"
+                onChange={e => setTenantInfo({...tenantInfo, lineNotifyToken: e.target.value})} />
+              <p className="text-xs text-[var(--color-text-muted)]">ใช้สำหรับรับการแจ้งเตือนเมื่อลูกค้าชำระเงินเข้ามา หรือเหตุการณ์อื่นๆ (สามารถขอรับได้ที่ notify-bot.line.me)</p>
             </div>
           </div>
           

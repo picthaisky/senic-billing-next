@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient } from '../../services/apiClient';
-import { Plus, Printer, Search, FileText, Edit, Clock } from 'lucide-react';
+import { Plus, Printer, Search, FileText, Edit, Clock, Share2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import DocumentHistoryModal from './DocumentHistoryModal';
+import ShareDocumentModal from './ShareDocumentModal';
 
 interface DocumentLine {
   description: string;
@@ -26,6 +27,7 @@ export default function DocumentsListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [historyDoc, setHistoryDoc] = useState<{ id: string; num: string } | null>(null);
+  const [shareDoc, setShareDoc] = useState<{ id: string; num: string } | null>(null);
   
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
@@ -181,6 +183,13 @@ export default function DocumentsListPage() {
                           </button>
                         )}
                         <button
+                          onClick={() => setShareDoc({ id: doc.id, num: doc.documentNumber })}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                          title="แชร์เอกสาร"
+                        >
+                          <Share2 size={16} />
+                        </button>
+                        <button
                           onClick={() => setHistoryDoc({ id: doc.id, num: doc.documentNumber })}
                           className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
                           title="ประวัติการแก้ไข"
@@ -208,6 +217,13 @@ export default function DocumentsListPage() {
           documentId={historyDoc.id}
           documentNumber={historyDoc.num}
           onClose={() => setHistoryDoc(null)}
+        />
+      )}
+      {shareDoc && (
+        <ShareDocumentModal
+          documentId={shareDoc.id}
+          documentNumber={shareDoc.num}
+          onClose={() => setShareDoc(null)}
         />
       )}
     </div>

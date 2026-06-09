@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "YchRFI1j3hs=",
+  "dgSpecHash": "o2KqRJ4QbaQ=",
   "success": true,
   "projectFilePath": "C:\\Users\\supachai.nil\\Documents\\GitHub\\senic-billing-next\\backend\\src\\SenicBilling.Infrastructure\\SenicBilling.Infrastructure.csproj",
   "expectedPackageFiles": [
@@ -34,6 +34,7 @@
     "C:\\Users\\supachai.nil\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\10.0.0\\npgsql.entityframeworkcore.postgresql.10.0.0.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\omise\\4.3.0\\omise.4.3.0.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\portable.bouncycastle\\1.9.0\\portable.bouncycastle.1.9.0.nupkg.sha512",
+    "C:\\Users\\supachai.nil\\.nuget\\packages\\questpdf\\2026.5.0\\questpdf.2026.5.0.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.0.1\\system.identitymodel.tokens.jwt.8.0.1.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\system.reactive\\6.0.0\\system.reactive.6.0.0.nupkg.sha512",

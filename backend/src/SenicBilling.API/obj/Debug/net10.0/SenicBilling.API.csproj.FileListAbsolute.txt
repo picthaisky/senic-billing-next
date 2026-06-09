@@ -150,3 +150,11 @@ C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilli
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\MailKit.dll
 C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\MimeKit.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\ClosedXML.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\ClosedXML.Parser.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\DocumentFormat.OpenXml.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\ExcelNumberFormat.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\RBush.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\SixLabors.Fonts.dll
+C:\Users\supachai.nil\Documents\GitHub\senic-billing-next\backend\src\SenicBilling.API\bin\Debug\net10.0\System.IO.Packaging.dll

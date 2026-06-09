@@ -11,6 +11,7 @@ import UsersManagementPage from './components/users/UsersManagementPage';
 import ProfilePage from './components/profile/ProfilePage';
 import InvoiceForm from './components/forms/InvoiceForm';
 import DocumentsListPage from './components/documents/DocumentsListPage';
+import StaffManagementPage from './pages/settings/StaffManagementPage';
 
 import React from 'react';
 
@@ -67,6 +68,7 @@ function App() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="users" element={<UsersManagementPage />} />
+          <Route path="staff" element={<StaffManagementPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="documents/:type" element={<DocumentsListPage />} />
           <Route path="documents/:type/create" element={<InvoiceFormWrapper />} />

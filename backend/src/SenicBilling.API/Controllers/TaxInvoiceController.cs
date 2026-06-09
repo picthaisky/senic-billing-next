@@ -6,6 +6,7 @@ using SenicBilling.Domain.Entities;
 using SenicBilling.Domain.Enums;
 using SenicBilling.Domain.Interfaces;
 using SenicBilling.Infrastructure.Data;
+using SenicBilling.Application.Services;
 
 namespace SenicBilling.API.Controllers;
 
@@ -220,6 +221,45 @@ public class TaxInvoiceController(
         await dbContext.SaveChangesAsync(ct);
 
         return Ok(new ApiResponse<DocumentResponse>(true, "ยกเลิกใบกำกับภาษีสำเร็จ", MapToResponse(doc)));
+    }
+
+    /// <summary>Generate e-Tax Invoice XML for this document</summary>
+    [HttpGet("{id:guid}/e-tax-xml")]
+    public async Task<IActionResult> GenerateETaxXml(Guid id, CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Tenant)
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.TaxInvoice, ct);
+
+        if (doc is null)
+            return NotFound(new ApiResponse<object>(false, "ไม่พบใบกำกับภาษี", null));
+
+        if (doc.Status != DocumentStatus.Issued)
+            return BadRequest(new ApiResponse<object>(false, "สามารถออก e-Tax XML ได้เฉพาะเอกสารที่อนุมัติ/ออกแล้วเท่านั้น", null));
+
+        var xmlBytes = ETaxXmlGenerator.GenerateXml(doc, doc.Tenant);
+        return File(xmlBytes, "application/xml", $"{doc.DocumentNumber}_eTax.xml");
+    }
+
+    /// <summary>Generate PDF for this document</summary>
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> GeneratePdf(
+        Guid id, 
+        [FromServices] IPdfService pdfService, 
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Tenant)
+            .Include(d => d.Lines.OrderBy(l => l.SortOrder))
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.TaxInvoice, ct);
+
+        if (doc is null)
+            return NotFound(new ApiResponse<object>(false, "ไม่พบใบกำกับภาษี", null));
+
+        var pdfBytes = pdfService.GenerateDocumentPdf(doc);
+        return File(pdfBytes, "application/pdf", $"{doc.DocumentNumber}.pdf");
     }
 
     // ──────────────────────────────────────────────

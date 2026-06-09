@@ -125,4 +125,57 @@ public class OmisePaymentService : IPaymentService
             return false;
         }
     }
+
+    public async Task<string> CreateCustomerAsync(string email, string description, string cardToken)
+    {
+        try
+        {
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("email", email),
+                new KeyValuePair<string, string>("description", description),
+                new KeyValuePair<string, string>("card", cardToken)
+            });
+
+            var res = await _httpClient.PostAsync("https://api.omise.co/customers", content);
+            res.EnsureSuccessStatusCode();
+
+            var json = await res.Content.ReadAsStringAsync();
+            var data = JsonSerializer.Deserialize<JsonElement>(json);
+            return data.GetProperty("id").GetString() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Omise Customer for email: {Email}", email);
+            throw;
+        }
+    }
+
+    public async Task<string> CreateCardChargeAsync(decimal amount, string customerId, string referenceId)
+    {
+        try
+        {
+            var amountInSubunits = (long)(amount * 100);
+
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("amount", amountInSubunits.ToString()),
+                new KeyValuePair<string, string>("currency", "THB"),
+                new KeyValuePair<string, string>("customer", customerId),
+                new KeyValuePair<string, string>("metadata[ReferenceId]", referenceId)
+            });
+
+            var res = await _httpClient.PostAsync("https://api.omise.co/charges", content);
+            res.EnsureSuccessStatusCode();
+
+            var json = await res.Content.ReadAsStringAsync();
+            var data = JsonSerializer.Deserialize<JsonElement>(json);
+            return data.GetProperty("id").GetString() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Card Charge for customer: {CustomerId}", customerId);
+            throw;
+        }
+    }
 }
