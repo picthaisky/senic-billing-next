@@ -242,6 +242,26 @@ public class TaxInvoiceController(
         return File(xmlBytes, "application/xml", $"{doc.DocumentNumber}_eTax.xml");
     }
 
+    /// <summary>Generate PDF for this document</summary>
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> GeneratePdf(
+        Guid id, 
+        [FromServices] IPdfService pdfService, 
+        CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Tenant)
+            .Include(d => d.Lines.OrderBy(l => l.SortOrder))
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.TaxInvoice, ct);
+
+        if (doc is null)
+            return NotFound(new ApiResponse<object>(false, "ไม่พบใบกำกับภาษี", null));
+
+        var pdfBytes = pdfService.GenerateDocumentPdf(doc);
+        return File(pdfBytes, "application/pdf", $"{doc.DocumentNumber}.pdf");
+    }
+
     // ──────────────────────────────────────────────
     // Private Helpers
     // ──────────────────────────────────────────────

@@ -82,6 +82,7 @@ builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IPaymentService, OmisePaymentService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IAIAssistantService, GeminiAIAssistantService>();
+builder.Services.AddScoped<IPdfService, QuestPdfService>();
 builder.Services.AddScoped<DevelopmentDataSeeder>();
 
 // ──────────────────────────────────────────────
