@@ -7,6 +7,7 @@ using SenicBilling.Domain.Enums;
 using SenicBilling.Domain.Interfaces;
 using SenicBilling.Infrastructure.Data;
 using SenicBilling.Application.Services;
+using SenicBilling.Application.Interfaces;
 
 namespace SenicBilling.API.Controllers;
 
