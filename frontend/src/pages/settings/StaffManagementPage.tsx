@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, UserPlus, Shield, Trash2, X } from 'lucide-react';
+import { UserPlus, Trash2, X } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import { useAuthStore } from '../../store/useAuthStore';
 
