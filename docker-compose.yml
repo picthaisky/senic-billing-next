@@ -37,10 +37,14 @@ services:
       SmtpSettings__Password: ${SMTP_PASSWORD}
       SmtpSettings__FromName: ${SMTP_FROM_NAME:-Senic Billing}
       SmtpSettings__FromEmail: ${SMTP_FROM_EMAIL}
+      Minio__Endpoint: minio:9000
+      Minio__AccessKey: ${MINIO_ROOT_USER:-admin}
+      Minio__SecretKey: ${MINIO_ROOT_PASSWORD:-password123}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       - database
+      - minio
     restart: unless-stopped
     networks:
       - senic-network
@@ -68,12 +72,14 @@ services:
       - senic-network
 
   minio:
-    image: minio/minio:latest
+    # MinIO no longer publishes images to Docker Hub or Quay (minio/minio was removed).
+    # pgsty/minio is a community-maintained build of the same server, a drop-in replacement.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: senic-minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
-    command: server /data --console-address ":9081"
+    command: server /data --console-address ":9001"
     ports:
       - "9080:9000"
       - "9081:9001"
@@ -84,12 +90,20 @@ services:
       - senic-network
 
   minio-create-bucket:
-    image: minio/mc
+    image: pgsty/mc:RELEASE.2026-10-26T00-00-00Z
     container_name: senic-minio-setup
     depends_on:
       - minio
+    restart: "no"
+    # Waits for MinIO to accept connections, then creates the bucket.
+    # (`mc config host` / `mc policy` were removed from newer mc; `alias set` / `anonymous set` replace them.)
     entrypoint: >
-      /bin/sh -c " /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-password123}; /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-senic-billing}; /usr/bin/mc policy set download myminio/${MINIO_BUCKET_NAME:-senic-billing}; exit 0; "
+      /bin/sh -c "
+      until mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-password123}; do echo 'waiting for minio...'; sleep 2; done;
+      mc mb --ignore-existing myminio/${MINIO_BUCKET_NAME:-senic-billing};
+      mc anonymous set download myminio/${MINIO_BUCKET_NAME:-senic-billing};
+      exit 0;
+      "
     networks:
       - senic-network
 
