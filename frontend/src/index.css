@@ -131,6 +131,10 @@
   --doc-delivery-bg:   rgba(147, 51, 234, 0.12);
   --doc-quotation:     #0f766e;
   --doc-quotation-bg:  rgba(15, 118, 110, 0.12);
+  --doc-creditnote:    #dc2626;
+  --doc-creditnote-bg: rgba(220, 38, 38, 0.12);
+  --doc-debitnote:     #7c3aed;
+  --doc-debitnote-bg:  rgba(124, 58, 237, 0.12);
 
   --radius-full: 9999px;
 
@@ -1855,6 +1859,16 @@
 .badge-doc-quotation {
   background: var(--doc-quotation-bg);
   color: var(--doc-quotation);
+}
+
+.badge-doc-creditnote {
+  background: var(--doc-creditnote-bg);
+  color: var(--doc-creditnote);
+}
+
+.badge-doc-debitnote {
+  background: var(--doc-debitnote-bg);
+  color: var(--doc-debitnote);
 }
 
 /* Status dot pulse */

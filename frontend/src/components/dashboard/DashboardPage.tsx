@@ -58,7 +58,7 @@ type TaxEstimatorDto = {
 type RecentActivityDto = {
   id: string;
   documentNumber: string;
-  documentType: 'Receipt' | 'CashBill' | 'DeliveryNote' | 'TaxInvoice' | 'Quotation';
+  documentType: 'Receipt' | 'CashBill' | 'DeliveryNote' | 'TaxInvoice' | 'Quotation' | 'CreditNote' | 'DebitNote';
   customerName: string | null;
   grandTotal: number;
   createdAt: string;
@@ -136,6 +136,10 @@ const getDocumentTypeLabel = (documentType: RecentActivityDto['documentType']) =
       return 'บิลเงินสด';
     case 'DeliveryNote':
       return 'ใบส่งของ';
+    case 'CreditNote':
+      return 'ใบลดหนี้';
+    case 'DebitNote':
+      return 'ใบเพิ่มหนี้';
     default:
       return 'เอกสาร';
   }
@@ -153,6 +157,9 @@ const getDocumentTypeIcon = (documentType: RecentActivityDto['documentType']) =>
       return Banknote;
     case 'DeliveryNote':
       return Truck;
+    case 'CreditNote':
+    case 'DebitNote':
+      return FileText;
     default:
       return FileText;
   }
@@ -184,7 +191,7 @@ const formatRelativeTime = (isoDate: string) => {
   return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(new Date(isoDate));
 };
 
-const formatTooltipCurrency = (value: any) => {
+const formatTooltipCurrency = (value: number | string | readonly (number | string)[] | undefined) => {
   if (Array.isArray(value)) {
     return value.map((v) => formatCurrency(Number(v))).join(', ');
   }
@@ -285,7 +292,10 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    void fetchDashboard();
+    const timer = window.setTimeout(() => {
+      void fetchDashboard();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [fetchDashboard]);
 
   const handleRefresh = async () => {
@@ -500,14 +510,78 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 mb-6">
         {/* Tax Estimator */}
         <div className="card dashboard-panel-card p-6 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-bg)] overflow-hidden">
-          <div className="dashboard-panel-head">
-            <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
-              <FileText size={18} className="text-[var(--color-primary)]" />
-              ประมาณการภาษี (Tax Estimator)
-            </h3>
-            <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
-              ข้อมูลภาษีมูลค่าเพิ่มที่ต้องนำส่งเดือนนี้
-            </p>
+          <div className="dashboard-panel-head flex items-start justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                <FileText size={18} className="text-[var(--color-primary)]" />
+                ประมาณการภาษี (Tax Estimator)
+              </h3>
+              <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
+                ข้อมูลภาษีมูลค่าเพิ่มที่ต้องนำส่งเดือนนี้
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    const y = now.getFullYear();
+                    const m = now.getMonth() + 1;
+                    const res = await apiClient.get(`/reports/tax/export?year=${y}&month=${m}`, {
+                      responseType: 'blob',
+                    });
+                    const blob = new Blob([res.data], {
+                      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `รายงานภาษีขาย_${y}_${String(m).padStart(2, '0')}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch {
+                    alert('ไม่สามารถดาวน์โหลดรายงานภาษีขายได้');
+                  }
+                }}
+                className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                title="ดาวน์โหลดรายงานภาษีขายประจำเดือน (Excel)"
+              >
+                <Download size={14} /> ภาษีขาย (Excel)
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    const y = now.getFullYear();
+                    const m = now.getMonth() + 1;
+                    const res = await apiClient.get(`/reports/input-tax/export?year=${y}&month=${m}`, {
+                      responseType: 'blob',
+                    });
+                    const blob = new Blob([res.data], {
+                      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `รายงานภาษีซื้อ_ภพ30_${y}_${String(m).padStart(2, '0')}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch {
+                    alert('ไม่สามารถดาวน์โหลดรายงานภาษีซื้อได้');
+                  }
+                }}
+                className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                title="ดาวน์โหลดรายงานภาษีซื้อและสรุป ภ.พ.30 (Excel)"
+              >
+                <Download size={14} /> ภาษีซื้อ + ภ.พ.30
+              </button>
+            </div>
           </div>
           <div className={`mt-4 grid grid-cols-2 gap-4 ${loading ? 'opacity-50' : ''}`}>
             <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)]">
@@ -519,8 +593,12 @@ export default function DashboardPage() {
               <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
             </div>
             <div className="bg-[var(--color-primary)] p-5 rounded-xl shadow-sm col-span-2 text-white">
-              <p className="text-sm opacity-90">ยอดภาษีที่ต้องชำระสุทธิ</p>
-              <p className="text-3xl font-bold mt-1">{formatCurrency(dashboardData.taxData?.estimatedTaxPayable || 0)}</p>
+              <p className="text-sm opacity-90">
+                {(dashboardData.taxData?.estimatedTaxPayable || 0) >= 0
+                  ? 'ยอดภาษีมูลค่าเพิ่มที่ต้องชำระสุทธิ (ภ.พ.30)'
+                  : 'ยอดภาษีชำระเกินยกไป (ภ.พ.30)'}
+              </p>
+              <p className="text-3xl font-bold mt-1">{formatCurrency(Math.abs(dashboardData.taxData?.estimatedTaxPayable || 0))}</p>
               <p className="text-xs opacity-80 mt-2">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Plus, Edit2, Trash2, Package, X, Save, Download } from 'lucide-react';
 import { exportToExcel } from '../../utils/exportUtils';
@@ -42,26 +42,39 @@ export default function ProductsPage() {
     return Object.keys(e).length === 0;
   };
 
-  useEffect(() => {
-    fetchProducts();
+  const loadProducts = useCallback(async (): Promise<Product[]> => {
+    const res = await apiClient.get('/products');
+    return res.data?.success && res.data?.data?.items ? (res.data.data.items as Product[]) : [];
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/products');
-      // res.data is ApiResponse<PaginatedResponse<ProductDto>>
-      if (res.data?.success && res.data?.data?.items) {
-        setProducts(res.data.data.items);
-      } else {
-        setProducts([]);
-      }
-      setLoading(false);
+      const items = await loadProducts();
+      setProducts(items);
     } catch (error) {
       console.error('Error fetching products:', error);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [loadProducts]);
+
+  useEffect(() => {
+    let active = true;
+    loadProducts()
+      .then((items) => {
+        if (active) setProducts(items);
+      })
+      .catch((error) => {
+        console.error('Error fetching products:', error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadProducts]);
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -69,7 +82,7 @@ export default function ProductsPage() {
       setFormData(product);
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', sku: '', category: 'สินค้าทั่วไป', unitPrice: 0, unit: 'ชิ้น' });
+      setFormData({ name: '', sku: '', barcode: '', category: 'สินค้าทั่วไป', unitPrice: 0, stockQuantity: null, unit: 'ชิ้น' });
     }
     setErrors({});
     setIsModalOpen(true);
@@ -81,13 +94,14 @@ export default function ProductsPage() {
     try {
       setIsSaving(true);
       const payload = {
-        sku: formData.sku,
-        name: formData.name,
-        category: formData.category,
+        sku: formData.sku?.trim() || null,
+        barcode: formData.barcode?.trim() || null,
+        name: formData.name?.trim(),
+        category: formData.category?.trim(),
         unitPrice: formData.unitPrice,
-        unit: formData.unit,
-        description: formData.name, // using name as description if not separated
-        stockQuantity: 0,
+        unit: formData.unit?.trim(),
+        description: formData.name?.trim(),
+        stockQuantity: formData.stockQuantity !== undefined && formData.stockQuantity !== null ? Number(formData.stockQuantity) : null,
         isActive: true
       };
 
@@ -121,7 +135,8 @@ export default function ProductsPage() {
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.sku.toLowerCase().includes(search.toLowerCase())
+    (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
+    (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()))
   );
 
   const handleExport = () => {
@@ -191,13 +206,13 @@ export default function ProductsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="table-state-cell text-center text-sm text-[var(--color-text-muted)]">
+                <td colSpan={7} className="table-state-cell text-center text-sm text-[var(--color-text-muted)]">
                   กำลังโหลดข้อมูล...
                 </td>
               </tr>
             ) : filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="table-state-cell text-center text-sm text-[var(--color-text-muted)]">
+                <td colSpan={7} className="table-state-cell text-center text-sm text-[var(--color-text-muted)]">
                   ไม่พบข้อมูลสินค้า
                 </td>
               </tr>

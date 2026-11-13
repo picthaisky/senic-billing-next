@@ -1,7 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, PackageOpen, LogOut } from 'lucide-react';
 
-export default function Sidebar() {
+interface SidebarProps {
+  onLogout?: () => void;
+}
+
+export default function Sidebar({ onLogout }: SidebarProps) {
   const menuItems = [
     { icon: LayoutDashboard, label: 'ภาพรวม (Dashboard)', path: '/' },
     { icon: Users, label: 'ผู้ใช้บริการ (Tenants)', path: '/tenants' },
@@ -36,7 +40,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-slate-700/50">
-        <button className="flex items-center gap-3 px-4 py-3 w-full text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+        >
           <LogOut size={20} />
           <span className="font-medium">ออกจากระบบ</span>
         </button>

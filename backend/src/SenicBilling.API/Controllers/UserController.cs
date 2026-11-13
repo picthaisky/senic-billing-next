@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SenicBilling.Application.DTOs;
+using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
 
 namespace SenicBilling.API.Controllers;
@@ -82,15 +83,9 @@ public class UserController(SenicBillingDbContext dbContext) : ControllerBase
         return claim is not null ? Guid.Parse(claim) : throw new UnauthorizedAccessException("User ID claim not found");
     }
 
-    private static string HashPassword(string password)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hash);
-    }
+    private static string HashPassword(string password) =>
+        PasswordHasher.HashPassword(password);
 
-    private static bool VerifyPassword(string password, string storedHash)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hash) == storedHash;
-    }
+    private static bool VerifyPassword(string password, string storedHash) =>
+        PasswordHasher.VerifyPassword(password, storedHash, out _);
 }

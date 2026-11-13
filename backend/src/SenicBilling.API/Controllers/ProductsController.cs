@@ -47,6 +47,21 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
             new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive)));
     }
 
+    [HttpGet("barcode/{code}")]
+    public async Task<ActionResult<ApiResponse<ProductDto>>> GetByBarcode(string code, CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var normalized = code.Trim();
+        var p = await dbContext.Products.FirstOrDefaultAsync(
+            x => x.TenantId == tenantId && x.IsActive &&
+                 ((x.Barcode != null && x.Barcode == normalized) || (x.Sku != null && x.Sku == normalized)),
+            ct);
+        if (p is null) return NotFound(new ApiResponse<ProductDto>(false, "ไม่พบสินค้าตามบาร์โค้ด/รหัสนี้", null));
+
+        return Ok(new ApiResponse<ProductDto>(true, "สำเร็จ",
+            new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive)));
+    }
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Create([FromBody] CreateProductRequest req, CancellationToken ct)
     {

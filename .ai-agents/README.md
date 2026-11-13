@@ -83,6 +83,10 @@ Subagents are intentionally narrow so the orchestrator can request precise, low-
 | --- | --- | --- |
 | VAT Precision Auditor | Any VAT, discount, total, or payment amount change | Formula review, edge cases, rounding risks, test vectors |
 | Document Numbering Sentinel | Any change to document creation or sequence table | Concurrency risk review, uniqueness checks, retry behavior |
+| Inventory & Barcode POS Specialist | Stock quantity, SKU/barcode, stock deduction/restock, POS scan | Stock transition audit, null-stock handling, barcode scan checklist |
+| Thai Tax, e-Tax & Reporting Specialist | e-Tax XML, WHT, Output Tax Excel report, Tax Estimator, A/R Aging | ETDA/Revenue Dept compliance, DTO contract parity, Excel/XML verification |
+| SaaS Multi-Tenant & Super Admin Specialist | Subscription plans, quotas, TenantUsageStat, SuperAdmin APIs, admin-frontend | Quota enforcement rules, SuperAdmin auth checks, SaaS billing flow |
+| AI Assistant, Background Automation & Notification Specialist | Gemini AI chat, Recurring/Overdue workers, SignalR, LINE Notify, Web Push, Email | Tenant-scoped AI prompt check, idempotent worker review, non-blocking notification flow |
 | Tenant Isolation Auditor | Any API/query/entity touching tenant-owned data | Cross-tenant leak analysis, missing filters, authorization risks |
 | Payment & Webhook Specialist | Omise, PromptPay, payment status, webhook changes | Idempotency plan, signature validation, event flow, failure modes |
 | PDF & Print Specialist | A4 templates, export, print view, Thai document layout | Layout constraints, print CSS risks, legal/document formatting checklist |

@@ -16,27 +16,67 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ documentType, title, documentId: propDocumentId }: InvoiceFormProps) {
   const { lines, addLine, appendLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
-  const [customerId, setCustomerId] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerTaxId, setCustomerTaxId] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [customerBranch, setCustomerBranch] = useState('');
-  const [notes, setNotes] = useState('');
+  const draftKey = `senic_draft_${documentType}`;
+  const [initialDraft] = useState<{
+    customerId?: string | null;
+    customerName?: string;
+    customerTaxId?: string;
+    customerAddress?: string;
+    customerBranch?: string;
+    notes?: string;
+    formState?: Parameters<typeof restoreState>[0];
+  } | null>(() => {
+    if (propDocumentId) return null;
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      return savedDraft ? JSON.parse(savedDraft) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [customerId, setCustomerId] = useState<string | null>(() => initialDraft?.customerId ?? null);
+  const [customerName, setCustomerName] = useState(() => initialDraft?.customerName ?? '');
+  const [customerTaxId, setCustomerTaxId] = useState(() => initialDraft?.customerTaxId ?? '');
+  const [customerAddress, setCustomerAddress] = useState(() => initialDraft?.customerAddress ?? '');
+  const [customerBranch, setCustomerBranch] = useState(() => initialDraft?.customerBranch ?? '');
+  const [notes, setNotes] = useState(() => initialDraft?.notes ?? '');
   const [documentId] = useState(() => propDocumentId || crypto.randomUUID());
-  const [attachments, setAttachments] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<Array<{ id: string; fileName: string; fileSize: number; uploadedAt: string }>>([]);
   const [barcodeInput, setBarcodeInput] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [catalogProducts, setCatalogProducts] = useState<
+    Array<{ id: string; sku?: string; code?: string; barcode?: string; name: string; unitPrice: number; unit: string; stockQuantity?: number | null }>
+  >([]);
+  const [savedDocMeta, setSavedDocMeta] = useState<{ id: string; documentNumber: string } | null>(
+    propDocumentId ? { id: propDocumentId, documentNumber: '' } : null
+  );
+  const [recurringFrequency, setRecurringFrequency] = useState<'' | 'Weekly' | 'Monthly' | 'Yearly'>('');
 
-  const draftKey = `senic_draft_${documentType}`;
+  useEffect(() => {
+    apiClient
+      .get('/products?pageSize=200')
+      .then((res) => {
+        const raw = res.data?.data;
+        const list = Array.isArray(raw) ? raw : raw?.items || [];
+        if (Array.isArray(list)) {
+          setCatalogProducts(list);
+        }
+      })
+      .catch(() => {
+        // Ignore catalog load failure gracefully
+      });
+  }, []);
+
   const isInitialMount = useRef(true);
 
-  // Load draft on mount
+  // Load edit document OR restore line items from initial draft asynchronously
   useEffect(() => {
     if (propDocumentId) {
-      // Fetch document for editing
       apiClient.get(`/documents/${propDocumentId}`).then(res => {
         if (res.data?.success) {
           const doc = res.data.data;
+          setSavedDocMeta({ id: doc.id || propDocumentId, documentNumber: doc.documentNumber || '' });
           setCustomerId(doc.customerId || null);
           setCustomerName(doc.customerName || '');
           setCustomerTaxId(doc.customerTaxId || '');
@@ -56,25 +96,17 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       return;
     }
 
-    const savedDraft = localStorage.getItem(draftKey);
-    if (savedDraft) {
-      try {
-        const draft = JSON.parse(savedDraft);
-        if (draft.customerId) setCustomerId(draft.customerId);
-        if (draft.customerName) setCustomerName(draft.customerName);
-        if (draft.customerTaxId) setCustomerTaxId(draft.customerTaxId);
-        if (draft.customerAddress) setCustomerAddress(draft.customerAddress);
-        if (draft.customerBranch) setCustomerBranch(draft.customerBranch);
-        if (draft.notes) setNotes(draft.notes);
-        restoreState(draft.formState);
-      } catch (e) {
-        console.error('Failed to load draft', e);
-      }
+    if (initialDraft?.formState) {
+      const timer = window.setTimeout(() => {
+        restoreState(initialDraft.formState);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
-  }, [documentId, documentType, draftKey, restoreState]);
+  }, [propDocumentId, initialDraft, restoreState]);
 
-  // Save draft on change
+  // Save draft on change (new document mode only)
   useEffect(() => {
+    if (propDocumentId) return;
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -89,7 +121,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       formState: { lines, vatMode, discountAmount, whtRate }
     };
     localStorage.setItem(draftKey, JSON.stringify(draft));
-  }, [customerId, customerName, customerTaxId, customerAddress, customerBranch, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
+  }, [propDocumentId, customerId, customerName, customerTaxId, customerAddress, customerBranch, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
 
   const config = getDocumentTypeMeta(documentType);
   const accentClasses: Record<string, { bar: string; text: string }> = {
@@ -98,6 +130,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     delivery: { bar: 'bg-[var(--doc-delivery)]', text: 'text-[var(--doc-delivery)]' },
     quotation: { bar: 'bg-[var(--doc-quotation)]', text: 'text-[var(--doc-quotation)]' },
     taxinvoice: { bar: 'bg-[var(--doc-taxinvoice)]', text: 'text-[var(--doc-taxinvoice)]' },
+    creditnote: { bar: 'bg-[var(--doc-creditnote)]', text: 'text-[var(--doc-creditnote)]' },
+    debitnote: { bar: 'bg-[var(--doc-debitnote)]', text: 'text-[var(--doc-debitnote)]' },
   };
   const accent = accentClasses[documentType] ?? { bar: 'bg-[var(--color-primary)]', text: 'text-[var(--color-primary)]' };
   const [isSaving, setIsSaving] = useState(false);
@@ -105,8 +139,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
   const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
   const [errors, setErrors] = useState<{ customerName?: string; customerTaxId?: string; lines?: string }>({});
 
-  const clearError = (key: keyof typeof errors) =>
-    setErrors(prev => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  const clearError = useCallback((key: keyof typeof errors) =>
+    setErrors(prev => (prev[key] ? { ...prev, [key]: undefined } : prev)), []);
 
   const validate = () => {
     const e: typeof errors = {};
@@ -132,6 +166,37 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     }
   }, [addLine]);
 
+  const addOrIncrementProduct = useCallback(
+    (product: { id: string; name: string; unitPrice: number; unit: string }) => {
+      const existingLineIndex = lines.findIndex((l) => l.productId === product.id);
+      if (existingLineIndex >= 0) {
+        const existingLine = lines[existingLineIndex];
+        updateLine(existingLine.id, { quantity: existingLine.quantity + 1 });
+      } else {
+        const firstEmptyLine = lines.find((l) => !l.productId && !l.description);
+        if (firstEmptyLine && lines.length === 1) {
+          updateLine(firstEmptyLine.id, {
+            productId: product.id,
+            description: product.name,
+            unitPrice: product.unitPrice,
+            unit: product.unit || 'ชิ้น',
+            quantity: 1,
+          });
+        } else {
+          appendLine({
+            productId: product.id,
+            description: product.name,
+            unitPrice: product.unitPrice,
+            unit: product.unit || 'ชิ้น',
+            quantity: 1,
+          });
+        }
+      }
+      clearError('lines');
+    },
+    [lines, updateLine, appendLine, clearError]
+  );
+
   // Barcode scanning logic
   const handleBarcodeSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -140,40 +205,27 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       if (!code) return;
 
       try {
-        const res = await apiClient.get(`/products?search=${encodeURIComponent(code)}`);
-        if (res.data?.success && res.data?.data?.items) {
-          // Exact match on SKU or Barcode first
-          const products = res.data.data.items;
-          const exactMatch = products.find((p: any) => p.sku === code || p.barcode === code) || products[0];
-          
-          if (exactMatch) {
-            // Check if product already in lines
-            const existingLineIndex = lines.findIndex(l => l.productId === exactMatch.id);
-            if (existingLineIndex >= 0) {
-              const existingLine = lines[existingLineIndex];
-              updateLine(existingLine.id, { quantity: existingLine.quantity + 1 });
-            } else {
-              // Replace the first empty line if it exists
-              const firstEmptyLine = lines.find(l => !l.productId && !l.description);
-              if (firstEmptyLine && lines.length === 1) {
-                updateLine(firstEmptyLine.id, {
-                  productId: exactMatch.id,
-                  description: exactMatch.name,
-                  unitPrice: exactMatch.unitPrice,
-                  unit: exactMatch.unit,
-                  quantity: 1
-                });
-              } else {
-                appendLine({
-                  productId: exactMatch.id,
-                  description: exactMatch.name,
-                  unitPrice: exactMatch.unitPrice,
-                  unit: exactMatch.unit,
-                  quantity: 1
-                });
-              }
-            }
+        type ScannedProduct = { id: string; sku?: string; code?: string; barcode?: string; name: string; unitPrice: number; unit: string };
+        let matchedProduct: ScannedProduct | null = null;
+        try {
+          const barcodeRes = await apiClient.get(`/products/barcode/${encodeURIComponent(code)}`);
+          if (barcodeRes.data?.success && barcodeRes.data?.data) {
+            matchedProduct = barcodeRes.data.data as ScannedProduct;
           }
+        } catch {
+          // Fallback to catalog search by SKU/Code or Barcode
+          const res = await apiClient.get('/products?pageSize=200');
+          const list: ScannedProduct[] = Array.isArray(res.data?.data) ? res.data.data : res.data?.data?.items || [];
+          matchedProduct = list.find(
+            (p) =>
+              p.barcode?.toLowerCase() === code.toLowerCase() ||
+              p.sku?.toLowerCase() === code.toLowerCase() ||
+              p.code?.toLowerCase() === code.toLowerCase()
+          ) ?? null;
+        }
+
+        if (matchedProduct) {
+          addOrIncrementProduct(matchedProduct);
         }
       } catch (err) {
         console.error('Barcode scan error:', err);
@@ -182,8 +234,18 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     }
   };
 
-  const handleSave = async () => {
-    if (!validate()) return;
+  const computeNextRunDateIso = (freq: 'Weekly' | 'Monthly' | 'Yearly') => {
+    const next = new Date();
+    if (freq === 'Weekly') next.setDate(next.getDate() + 7);
+    else if (freq === 'Yearly') next.setFullYear(next.getFullYear() + 1);
+    else next.setMonth(next.getMonth() + 1);
+    return next.toISOString();
+  };
+
+  const saveDocument = async (options?: { resetAfter?: boolean; silent?: boolean }): Promise<{ id: string; documentNumber: string } | null> => {
+    const resetAfter = options?.resetAfter ?? true;
+    const silent = options?.silent ?? false;
+    if (!validate()) return null;
 
     try {
       setIsSaving(true);
@@ -193,7 +255,9 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           'cashbill': 'CashBill',
           'delivery': 'DeliveryNote',
           'quotation': 'Quotation',
-          'taxinvoice': 'TaxInvoice'
+          'taxinvoice': 'TaxInvoice',
+          'creditnote': 'CreditNote',
+          'debitnote': 'DebitNote',
         };
         return map[t] || t;
       };
@@ -213,7 +277,15 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
         whtRate,
         lines: lines
           .filter(l => l.description.trim() !== '')
-          .map(({ id, ...rest }) => rest), // Strip frontend-only ID which breaks C# Guid parsing
+          .map(({ productId, description, quantity, unit, unitPrice, discountAmount: lineDiscount, lineTotal }) => ({
+            productId,
+            description,
+            quantity,
+            unit,
+            unitPrice,
+            discountAmount: lineDiscount,
+            lineTotal,
+          })),
         ...totals,
       };
 
@@ -224,33 +296,98 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           case 'delivery': return '/deliveries';
           case 'quotation': return '/quotations';
           case 'taxinvoice': return '/tax-invoices';
+          case 'creditnote': return '/credit-notes';
+          case 'debitnote': return '/debit-notes';
           default: return '/documents';
         }
       };
 
-      // API call to create or update document
-      if (propDocumentId) {
-        await apiClient.put(`${getEndpoint(documentType)}/${propDocumentId}`, payload);
-        alert('อัปเดตเอกสารสำเร็จ');
-      } else {
-        await apiClient.post(getEndpoint(documentType), payload);
-        alert('บันทึกเอกสารสำเร็จ');
+      const targetId = propDocumentId || savedDocMeta?.id;
+      const res = targetId
+        ? await apiClient.put(`${getEndpoint(documentType)}/${targetId}`, payload)
+        : await apiClient.post(getEndpoint(documentType), payload);
+
+      const savedData = res.data?.data as { id?: string; documentNumber?: string } | undefined;
+      const savedMeta = {
+        id: savedData?.id || targetId || '',
+        documentNumber: savedData?.documentNumber || savedDocMeta?.documentNumber || '',
+      };
+
+      if (recurringFrequency && savedMeta.id) {
+        try {
+          await apiClient.post('/RecurringInvoice', {
+            sourceDocumentId: savedMeta.id,
+            frequency: recurringFrequency,
+            nextRunDate: computeNextRunDateIso(recurringFrequency),
+            maxOccurrences: null,
+          });
+        } catch (recErr) {
+          console.error('Failed to create recurring schedule:', recErr);
+        }
       }
-      localStorage.removeItem(draftKey);
-      resetForm();
-      setCustomerId(null);
-      setCustomerName('');
-      setCustomerTaxId('');
-      setCustomerAddress('');
-      setCustomerBranch('');
-      setNotes('');
+
+      if (!silent) {
+        alert(targetId
+          ? `อัปเดตเอกสาร ${savedMeta.documentNumber} สำเร็จ`
+          : `บันทึกเอกสาร ${savedMeta.documentNumber} สำเร็จ`);
+      }
+
+      if (resetAfter && !propDocumentId) {
+        localStorage.removeItem(draftKey);
+        resetForm();
+        setCustomerId(null);
+        setCustomerName('');
+        setCustomerTaxId('');
+        setCustomerAddress('');
+        setCustomerBranch('');
+        setNotes('');
+        setSavedDocMeta(null);
+        setRecurringFrequency('');
+      } else if (savedMeta.id) {
+        localStorage.removeItem(draftKey);
+        setSavedDocMeta(savedMeta);
+        setRecurringFrequency('');
+      }
+
+      return savedMeta.id ? savedMeta : null;
     } catch (error) {
       console.error('Failed to save document:', error);
       alert('เกิดข้อผิดพลาดในการบันทึกเอกสาร');
+      return null;
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleSave = () => void saveDocument({ resetAfter: true, silent: false });
+
+  const handlePrintClick = async () => {
+    const existingId = propDocumentId || savedDocMeta?.id;
+    if (existingId) {
+      window.open(`/print/${existingId}`, '_blank');
+      return;
+    }
+    const saved = await saveDocument({ resetAfter: false, silent: true });
+    if (saved?.id) {
+      window.open(`/print/${saved.id}`, '_blank');
+    }
+  };
+
+  const handlePaymentClick = async () => {
+    const existingId = propDocumentId || savedDocMeta?.id;
+    if (existingId) {
+      setPaymentModalOpen(true);
+      return;
+    }
+    const saved = await saveDocument({ resetAfter: false, silent: true });
+    if (saved?.id) {
+      setPaymentModalOpen(true);
+    }
+  };
+
+  const previewAutoNumber = `${config.prefix}-${new Date().toISOString().slice(0, 7).replace('-', '')}-AUTO`;
+  const effectiveDocId = propDocumentId || savedDocMeta?.id || documentId;
+  const effectiveDocNumber = savedDocMeta?.documentNumber || previewAutoNumber;
 
   return (
     <div className="document-form-stack">
@@ -265,7 +402,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             </h2>
             <p className="invoice-page-subtitle text-sm text-[var(--color-text-muted)]">
               เลขที่เอกสาร: <span className={`font-mono font-semibold ${accent.text}`}>
-                {config.prefix}-{new Date().toISOString().slice(0, 7).replace('-', '')}-AUTO
+                {effectiveDocNumber}
               </span>
             </p>
           </div>
@@ -273,20 +410,21 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
         {/* Document actions */}
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
+          <button type="button" onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
             <RotateCcw size={15} /> ล้างข้อมูล
           </button>
-          <button className="btn btn-secondary" onClick={() => window.open('/print/draft', '_blank')} disabled={isSaving}>
+          <button type="button" className="btn btn-secondary" onClick={() => void handlePrintClick()} disabled={isSaving}>
             <Printer size={15} /> พิมพ์
           </button>
           <button
-            onClick={() => setPaymentModalOpen(true)}
+            type="button"
+            onClick={() => void handlePaymentClick()}
             className="btn btn-secondary border !border-[rgba(37,99,235,0.28)] bg-[var(--color-info-bg)] text-[var(--color-info)]"
             disabled={isSaving}
           >
             <CreditCard size={15} /> ชำระเงินออนไลน์
           </button>
-          <button onClick={handleSave} className="btn btn-primary" disabled={isSaving}>
+          <button type="button" onClick={handleSave} className="btn btn-primary" disabled={isSaving}>
             <Save size={15} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
           </button>
         </div>
@@ -359,18 +497,15 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               <p className="text-xs text-orange-700 leading-normal">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
             </div>
             <select
+              aria-label="ตั้งค่าออกเอกสารซ้ำอัตโนมัติ"
               className="input-field w-full sm:w-[250px] border-orange-300 bg-white"
-              value={''} // Default off
-              onChange={async (e) => {
-                if (e.target.value) {
-                  alert('จะสามารถตั้งค่า Recurring ได้หลังจากบันทึกเอกสารแล้ว (หรือไปที่หน้าตั้งค่า)');
-                }
-              }}
+              value={recurringFrequency}
+              onChange={(e) => setRecurringFrequency(e.target.value as '' | 'Weekly' | 'Monthly' | 'Yearly')}
             >
               <option value="">ไม่ทำซ้ำ</option>
-              <option value="weekly">ทุกสัปดาห์</option>
-              <option value="monthly">ทุกเดือน</option>
-              <option value="yearly">ทุกปี</option>
+              <option value="Weekly">ทุกสัปดาห์</option>
+              <option value="Monthly">ทุกเดือน</option>
+              <option value="Yearly">ทุกปี</option>
             </select>
           </div>
         </div>
@@ -382,7 +517,28 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
             รายการสินค้า / บริการ
           </h3>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            {catalogProducts.length > 0 && (
+              <select
+                aria-label="เลือกสินค้าจากคลัง"
+                className="input-field !py-1.5 text-sm w-full sm:w-56"
+                value=""
+                onChange={(e) => {
+                  const selected = catalogProducts.find((p) => p.id === e.target.value);
+                  if (selected) {
+                    addOrIncrementProduct(selected);
+                  }
+                }}
+              >
+                <option value="">+ เลือกสินค้า/บริการจากคลัง...</option>
+                {catalogProducts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {(p.sku || p.code) ? `[${p.sku || p.code}] ` : ''}
+                    {p.name} (฿{formatNumber(p.unitPrice)})
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="relative flex-1 sm:w-64">
               <ScanLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
@@ -612,7 +768,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
       {/* ── Attachments ── */}
       <AttachmentUpload
-        documentId={documentId}
+        documentId={effectiveDocId}
         attachments={attachments}
         onAttachmentAdded={(att) => setAttachments(prev => [...prev, att])}
       />
@@ -728,12 +884,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
-        documentId={documentId}
-        documentNumber={`${config.prefix}-202606-AUTO`}
+        documentId={effectiveDocId}
+        documentNumber={effectiveDocNumber}
         amount={totals.grandTotal}
         onSuccess={() => {
           setPaymentModalOpen(false);
-          // Optional: trigger refresh if needed
         }}
       />
 

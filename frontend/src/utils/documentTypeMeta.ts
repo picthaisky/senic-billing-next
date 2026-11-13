@@ -1,9 +1,9 @@
-export type DocumentTypeId = 'taxinvoice' | 'receipt' | 'cashbill' | 'delivery' | 'quotation';
+export type DocumentTypeId = 'taxinvoice' | 'receipt' | 'cashbill' | 'delivery' | 'quotation' | 'creditnote' | 'debitnote';
 
 export interface DocumentTypeMeta {
   id: DocumentTypeId;
   label: string;
-  prefix: 'INV' | 'RCP' | 'CSB' | 'DLV' | 'QUO';
+  prefix: 'INV' | 'RCP' | 'CSB' | 'DLV' | 'QUO' | 'CN' | 'DN';
   color: string;
   badgeClass: string;
 }
@@ -44,6 +44,20 @@ export const DOCUMENT_TYPE_META: Record<DocumentTypeId, DocumentTypeMeta> = {
     color: 'var(--doc-quotation)',
     badgeClass: 'badge-doc-quotation',
   },
+  creditnote: {
+    id: 'creditnote',
+    label: 'ใบลดหนี้',
+    prefix: 'CN',
+    color: 'var(--doc-creditnote)',
+    badgeClass: 'badge-doc-creditnote',
+  },
+  debitnote: {
+    id: 'debitnote',
+    label: 'ใบเพิ่มหนี้',
+    prefix: 'DN',
+    color: 'var(--doc-debitnote)',
+    badgeClass: 'badge-doc-debitnote',
+  },
 };
 
 const PREFIX_TO_TYPE: Record<string, DocumentTypeId> = {
@@ -52,6 +66,8 @@ const PREFIX_TO_TYPE: Record<string, DocumentTypeId> = {
   CSB: 'cashbill',
   DLV: 'delivery',
   QUO: 'quotation',
+  CN: 'creditnote',
+  DN: 'debitnote',
 };
 
 export function getDocumentTypeMeta(type?: string): DocumentTypeMeta {

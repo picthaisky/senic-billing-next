@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 /**
  * Helper function to export data to Excel with Thai column headers
  */
-export function exportToExcel(data: any[], filename: string, columnMapping: Record<string, string>) {
+export function exportToExcel<T extends object>(data: T[], filename: string, columnMapping: Record<string, string>) {
   if (!data || data.length === 0) {
     alert('ไม่มีข้อมูลให้ส่งออก');
     return;
@@ -11,8 +11,8 @@ export function exportToExcel(data: any[], filename: string, columnMapping: Reco
 
   // Transform data keys to Thai headers based on columnMapping
   const formattedData = data.map(item => {
-    const formattedItem: any = {};
-    for (const [key, value] of Object.entries(item)) {
+    const formattedItem: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(item as Record<string, unknown>)) {
       if (columnMapping[key]) {
         formattedItem[columnMapping[key]] = value;
       }
@@ -34,12 +34,12 @@ export function exportToExcel(data: any[], filename: string, columnMapping: Reco
 /**
  * Helper function to export data to CSV with BOM (for correct Thai encoding in Excel)
  */
-export function exportToCSV(data: any[], filename: string, columnMapping: Record<string, string>) {
+export function exportToCSV<T extends object>(data: T[], filename: string, columnMapping: Record<string, string>) {
   if (!data || data.length === 0) return;
 
   const formattedData = data.map(item => {
-    const formattedItem: any = {};
-    for (const [key, value] of Object.entries(item)) {
+    const formattedItem: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(item as Record<string, unknown>)) {
       if (columnMapping[key]) {
         formattedItem[columnMapping[key]] = value;
       }

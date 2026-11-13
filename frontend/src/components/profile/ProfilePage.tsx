@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { apiClient } from '../../services/apiClient';
 import { User, Lock, Mail, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -13,26 +13,21 @@ export default function ProfilePage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // General Form
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
+  // General Form overrides (falls back cleanly to store user values without setState in effect)
+  const [displayNameDraft, setDisplayNameDraft] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+
+  const defaultDisplayName = user
+    ? (user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || '')
+    : '';
+  const defaultEmail = user ? (user.email || user.username || '') : '';
+  const displayName = displayNameDraft ?? defaultDisplayName;
+  const email = emailDraft ?? defaultEmail;
 
   // Security Form
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  useEffect(() => {
-    if (user) {
-      setDisplayName(
-        user.displayName ||
-        [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
-        user.username ||
-        ''
-      );
-      setEmail(user.email || user.username || '');
-    }
-  }, [user]);
 
   const showMessage = (msg: string, isError = false) => {
     if (isError) {
@@ -200,7 +195,7 @@ export default function ProfilePage() {
                       type="text" 
                       className="input-field profile-input-with-icon" 
                       value={displayName}
-                      onChange={e => setDisplayName(e.target.value)}
+                      onChange={e => setDisplayNameDraft(e.target.value)}
                       required
                       title="ชื่อที่แสดง"
                     />
@@ -217,7 +212,7 @@ export default function ProfilePage() {
                       type="email" 
                       className="input-field profile-input-with-icon" 
                       value={email}
-                      onChange={e => setEmail(e.target.value)}
+                      onChange={e => setEmailDraft(e.target.value)}
                       title="อีเมล"
                     />
                   </div>

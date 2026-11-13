@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Receipt, Users, Package, Menu,
-  Settings, Sun, Moon, LogOut, X, Banknote, Truck, FileText, FileCheck
+  Settings, Sun, Moon, LogOut, X, Banknote, Truck, FileText, FileCheck, Wallet,
+  ShoppingBag, Warehouse, BookOpen, FileMinus2, FilePlus2
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
@@ -29,6 +30,12 @@ export default function BottomNav() {
     { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
     { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
     { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
+    { id: 'creditnote', path: '/documents/creditnote', label: 'ใบลดหนี้ (CN)', icon: FileMinus2 },
+    { id: 'debitnote', path: '/documents/debitnote', label: 'ใบเพิ่มหนี้ (DN)', icon: FilePlus2 },
+    { id: 'expenses', path: '/expenses', label: 'ค่าใช้จ่าย / ภาษีซื้อ', icon: Wallet },
+    { id: 'purchase-orders', path: '/purchase-orders', label: 'ใบสั่งซื้อ (PO)', icon: ShoppingBag },
+    { id: 'warehouses', path: '/warehouses', label: 'คลังสินค้า', icon: Warehouse },
+    { id: 'accounting', path: '/accounting', label: 'บัญชีอัตโนมัติ', icon: BookOpen },
     { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
     ...(isAdmin ? [{ id: 'users', path: '/users', label: 'จัดการผู้ใช้งาน', icon: Users }] : []),
   ];

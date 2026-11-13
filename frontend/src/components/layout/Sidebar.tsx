@@ -1,6 +1,7 @@
 import {
-  LayoutDashboard, Receipt, Banknote, Truck, FileText, FileCheck,
-  Users, Package, Settings, ChevronLeft, ChevronRight, User
+  LayoutDashboard, Receipt, Banknote, Truck, FileText, FileCheck, FileMinus2, FilePlus2,
+  Users, Package, Settings, ChevronLeft, ChevronRight, User, Wallet,
+  ShoppingBag, Warehouse, BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -25,9 +26,15 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
     { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
     { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
+    { id: 'creditnote', path: '/documents/creditnote', label: 'ใบลดหนี้ (CN)', icon: FileMinus2 },
+    { id: 'debitnote', path: '/documents/debitnote', label: 'ใบเพิ่มหนี้ (DN)', icon: FilePlus2 },
+    { id: 'expenses', path: '/expenses', label: 'ค่าใช้จ่าย / ภาษีซื้อ', icon: Wallet },
+    { id: 'purchase-orders', path: '/purchase-orders', label: 'ใบสั่งซื้อ (PO)', icon: ShoppingBag },
+    { id: 'accounting', path: '/accounting', label: 'บัญชีอัตโนมัติ', icon: BookOpen },
     { id: 'divider-2', divider: true, label: t('nav.masters') },
     { id: 'customers', path: '/customers', label: t('nav.customers'), icon: Users },
     { id: 'products', path: '/products', label: t('nav.products'), icon: Package },
+    { id: 'warehouses', path: '/warehouses', label: 'คลังสินค้า', icon: Warehouse },
     { id: 'divider-3', divider: true, label: t('nav.system') },
     { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
   ];

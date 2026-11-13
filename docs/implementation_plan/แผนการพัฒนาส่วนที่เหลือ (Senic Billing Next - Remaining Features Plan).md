@@ -1,67 +1,114 @@
-# แผนการพัฒนาส่วนที่เหลือ (Senic Billing Next - Remaining Features Plan)
+# แผนการพัฒนาส่วนที่เหลือฉบับสมบูรณ์ (Senic Billing Next — Master Remaining Features Plan)
 
-จากการตรวจสอบระบบที่เราได้สร้างขึ้นในปัจจุบัน (เฟส 1-4) เราได้วางรากฐานทางสถาปัตยกรรม (Backend & Database) สร้างหน้าตา UI (Frontend Dashboard & Forms) รวมถึง CI/CD Pipeline ไปเรียบร้อยแล้ว 
-
-อย่างไรก็ตาม เพื่อให้ระบบสามารถ **"ใช้งานได้จริงอย่างสมบูรณ์แบบ"** (Production-Ready) เรายังขาดฟีเจอร์ด้านการเชื่อมต่อข้อมูล และการจัดการข้อมูลพื้นฐานบางส่วน ซึ่งผมได้สรุปออกมาเป็นแผนการพัฒนาในเฟสที่ 5 และ 6 ดังนี้ครับ:
-
-## User Review Required
-
-> [!IMPORTANT]
-> กรุณาตรวจสอบแผนการพัฒนานี้ว่าตรงกับสิ่งที่คุณต้องการในลำดับถัดไปหรือไม่ หากคุณอนุมัติ ผมจะเริ่มดำเนินการเขียนโค้ดตามแผนนี้ทีละส่วนครับ
+> **อัปเดตล่าสุด:** 13 พฤศจิกายน 2026  
+> **สถานะปัจจุบัน:** ✅ **ดำเนินการพัฒนาครบถ้วน 100% ทั้ง 4 Sprints เรียบร้อยแล้ว** (ผ่านการ Build และ Automated Unit Tests ครบทุกส่วน: `backend`, `frontend`, `admin-frontend`, และ `SenicBilling.Tests`)
 
 ---
 
-## 🛠️ Phase 5: Authentication & API Integration (การเชื่อมต่อระบบ API)
+## 🤖 ทีมผู้เชี่ยวชาญ AI (AI Specialists) ที่จัดตั้งเพิ่มเติมสำหรับแผนนี้
 
-ปัจจุบันหน้าต่างของ Frontend ยังเป็นการใช้ข้อมูลจำลอง (Mock Data) เราต้องเปลี่ยนให้ดึงข้อมูลจริงจาก Backend .NET 10 API 
+เพื่อให้การพัฒนาส่วนที่เหลือมีความแม่นยำสูงสุด ระบบได้เพิ่มผู้เชี่ยวชาญเฉพาะทางอีก **4 บทบาท** (พร้อม Playbooks ใน `.ai-agents/skills/` และ Skills ใน `.github/skills/`):
 
-### 1. ระบบรักษาความปลอดภัย (Authentication Flow)
-- สร้างหน้า **Login / Register** สำหรับผู้ใช้งาน
-- เขียน API Client Service (เช่น Axios interceptors) เพื่อจัดการ JWT Token
-- ดึงข้อมูล `TenantId` และตั้งค่า Authorization Bearer Token ทุกครั้งที่มีการเรียก API
-- การจัดการสิทธิ์ (Role-based access) สำหรับเมนูตั้งค่า
-
-### 2. การเชื่อมต่อหน้า Dashboard (Dashboard Integration)
-- เปลี่ยนข้อมูล KPI 4 ตัว, กราฟยอดขาย (Bar Chart), สัดส่วนสินค้า (Doughnut Chart) และตารางเอกสารล่าสุด ให้ดึงจาก Endpoint `/api/dashboard/summary` 
-
-### 3. การบันทึกและพิมพ์เอกสาร (Document Flow)
-- นำข้อมูลจากฟอร์ม `InvoiceForm` (เช่น ชื่อลูกค้า, รายการสินค้า, ภาษี) ส่ง POST ไปยัง `/api/taxinvoice` หรือ `/api/document`
-- ระบบแจ้งเตือนสำเร็จ (Toast Notification) 
-- สร้างปุ่ม **"พิมพ์ (Print)"** เพื่อเรียก API ออกเป็นไฟล์ PDF (ผ่านไลบรารี QuestPDF ฝั่ง Backend)
+1. ✅ **`senic-inventory-pos-specialist` (Inventory, Stock & Barcode POS Specialist)**  
+   ดูแลการแยก SKU/Barcode, การบันทึกจำนวนสต็อก, การตัดสต็อกอัตโนมัติ (`CashBill`, `DeliveryNote`, `TaxInvoice`), และการคืนสต็อก (`Restock`) เมื่อแก้ไข/ยกเลิกเอกสาร
+2. ✅ **`senic-etax-report-specialist` (Thai Tax Compliance, e-Tax XML & Reporting Specialist)**  
+   ดูแลความถูกต้องตามหลักกรมสรรพากร, ไฟล์ e-Tax Invoice XML (ETDA), ภาษีหัก ณ ที่จ่าย (WHT), รายงานภาษีขาย Excel (`ClosedXML`), และความตรงกันของ DTO ในหน้า Dashboard Analytics
+3. ✅ **`senic-saas-portal-specialist` (SaaS Multi-Tenant Subscription, Quota & Super Admin Specialist)**  
+   ดูแลระบบแพ็กเกจ (`SubscriptionPlan`), การจำกัดโควต้า (`MaxUsers`, `MaxDocumentsPerMonth`, `TenantUsageStat`), ความปลอดภัยของ `/api/superadmin/*`, และระบบ `admin-frontend`
+4. ✅ **`senic-ai-automation-specialist` (AI Assistant, Background Workers & Notification Specialist)**  
+   ดูแล `GeminiAIAssistantService`, Background Jobs (`RecurringInvoiceWorker`, `OverdueMonitorWorker`), และระบบแจ้งเตือนผ่าน SignalR, LINE Notify, Web Push, และ SMTP Email
 
 ---
 
-## 👥 Phase 6: Master Data Management (ระบบจัดการข้อมูลหลัก)
+## 📋 สรุปผลการพัฒนาตามลำดับ (Sequential Implementation Status — 100% Completed)
 
-สำหรับเมนูอื่นๆ ใน Sidebar ที่ปัจจุบันยังแสดงเป็นหน้า "พร้อมเชื่อมต่อ API (Placeholder)" จะต้องถูกพัฒนาให้เป็นหน้าระบบจัดการข้อมูลแบบสมบูรณ์ (CRUD - Create, Read, Update, Delete)
+### ✅ ลำดับที่ 1 (Sprint 1): แก้ไข Bug วิกฤตและปรับ Contract ข้อมูลให้ตรงกัน (Critical Fixes & API Parity) — **เสร็จสมบูรณ์**
 
-### 1. ระบบจัดการลูกค้า (Customers Management)
-- หน้าแสดงตารางรายชื่อลูกค้าทั้งหมด ค้นหาได้
-- ฟอร์มเพิ่ม/แก้ไขลูกค้า (ชื่อบริษัท, สาขา, เลขผู้เสียภาษี 13 หลัก, ที่อยู่, เบอร์ติดต่อ)
-- เชื่อมต่อ API `GET/POST/PUT/DELETE /api/customers`
+#### 1.1 ระบบจัดการสต็อกและบาร์โค้ด (`senic-inventory-pos-specialist`)
+- [x] **[MODIFY] `frontend/src/components/products/ProductsPage.tsx`**
+  - แก้ไข `handleSave` ให้ส่ง `stockQuantity: formData.stockQuantity ?? null` และ `barcode: formData.barcode?.trim() || null` พร้อมรองรับการค้นหาด้วย Barcode
+  - แก้ไข `colSpan={6}` ในแถว Loading/Empty ของตารางสินค้าเป็น `colSpan={7}` ให้ตรงกับจำนวนคอลัมน์จริง
+- [x] **[MODIFY] `backend/src/SenicBilling.API/Controllers/TaxInvoiceController.cs` & `DocumentControllerBase.cs`**
+  - เพิ่มการตัดสต็อก (`DeductStockAsync`) เมื่อสร้างใบกำกับภาษี (`TaxInvoice`)
+  - เพิ่มลอจิก **คืนสต็อก (Restock)** (`RestoreStockAsync`) เมื่อทำการยกเลิกเอกสาร (`Cancel`) หรือปรับปรุงจำนวนสินค้าเมื่อแก้ไขเอกสาร (`Update`) สำหรับเอกสารประเภท `CashBill`, `DeliveryNote`, `Receipt`, และ `TaxInvoice`
 
-### 2. ระบบจัดการสินค้าและบริการ (Products Management)
-- หน้าแสดงตารางสินค้า/บริการ
-- ฟอร์มเพิ่ม/แก้ไขสินค้า (ชื่อ, รหัส SKU, หมวดหมู่, ราคาต่อหน่วย, หน่วยนับ)
-- เชื่อมต่อ API `GET/POST/PUT/DELETE /api/products`
+#### 1.2 ปรับจูน API Contract ของหน้า Dashboard (`senic-etax-report-specialist`)
+- [x] **[MODIFY] `backend/src/SenicBilling.API/Controllers/DashboardController.cs` & `frontend/src/components/dashboard/DashboardPage.tsx`**
+  - **`GET /api/dashboard/tax-estimator`**: ตั้งค่า Default ของพารามิเตอร์ `year` และ `month` ให้เป็นปี/เดือนปัจจุบันเมื่อ Frontend ไม่ได้ส่งค่ามา และปรับโครงสร้างข้อมูลให้รองรับ `totalSalesVat`, `totalPurchaseVat`, `estimatedTaxPayable`, และ `whtDeducted` ตรงกันทั้งสองฝั่ง
+  - **`GET /api/dashboard/aging-report`**: ปรับให้คืนค่า `AgingSummaryDto` (`current`, `overdue1_30`, `overdue31_60`, `overdue61_90`, `overdue90Plus`, `totalOverdue`, `customers`) ตรงกันระหว่าง Backend และ `DashboardPage.tsx`
 
-### 3. ประวัติเอกสาร (Document History)
-- สร้างเมนูใหม่ หรือ หน้าต่างสำหรับ "ค้นหาเอกสารย้อนหลัง"
-- ระบบ Filter ค้นหาตามช่วงวันที่, ประเภทเอกสาร, ลูกค้า หรือสถานะ (รอชำระ, ชำระแล้ว, ยกเลิก)
-
-### 4. ระบบตั้งค่า (Settings & Tenant Setup)
-- อัปเดตข้อมูลองค์กรของตนเอง (โลโก้, ชื่อบริษัทบนหัวบิล, ที่อยู่จดทะเบียน, ลายเซ็น)
-
----
-
-## Verification Plan
-
-เพื่อตรวจสอบให้มั่นใจว่าฟีเจอร์เหล่านี้เสร็จสมบูรณ์:
-1. การสร้างเอกสาร: ผู้ใช้จะต้องสามารถเปิดบิลใหม่ > ดึงข้อมูลลูกค้าจากฐานข้อมูล > เลือกสินค้าจากฐานข้อมูล > บันทึก > ปริ้นต์ PDF ได้
-2. การคำนวณเงิน: ตรวจสอบความถูกต้องของ VAT, ส่วนลด ในขั้นตอนส่งเข้า API เทียบกับที่ฝั่ง Frontend คำนวณ (Precision check)
-3. สิทธิ์การเข้าถึง: ทดสอบ Login ข้าม Tenant ต้องไม่สามารถมองเห็นลูกค้า หรือ บิลของ Tenant อื่นได้ (Row-level security test)
+#### 1.3 แก้ไขการแปลงเอกสารและ Encoding ภาษาไทย (`senic-ledger` & `senic-sage`)
+- [x] **[MODIFY] `backend/src/SenicBilling.API/Controllers/SharedDocumentController.cs` & `frontend/src/pages/DocumentPrintView.tsx`**
+  - เพิ่ม `POST /api/documents/{id}/convert` และแก้ไขปุ่ม "แปลงเป็นใบกำกับภาษี" ให้เรียก Endpoint ที่ถูกต้องพร้อมตัดสต็อกอัตโนมัติเมื่อแปลงจากใบเสนอราคาเป็นใบกำกับภาษี
+- [x] **[MODIFY] `backend/src/SenicBilling.API/Controllers/DocumentControllerBase.cs`**
+  - แก้ไขข้อความภาษาไทยที่แสดงผลเพี้ยน (Mojibake) ใน Response Message ทั้งหมดให้เป็นภาษาไทยที่ถูกต้อง
 
 ---
 
-## Open Questions
-- คุณต้องการให้ผมเริ่มจากการสร้าง **หน้า Login/Auth** และตั้งค่า API Client ก่อน หรือให้เริ่มทำ **หน้าจัดการลูกค้า/สินค้า (Customers & Products)** ให้เสร็จก่อนดีครับ?
+### ✅ ลำดับที่ 2 (Sprint 2): เชื่อมต่อฟีเจอร์ระดับพรีเมียมให้ครบวงจร (End-to-End Premium Features Integration) — **เสร็จสมบูรณ์**
+
+#### 2.1 ปุ่มดาวน์โหลดรายงานภาษีขาย Excel, e-Tax XML และ Server PDF (`senic-etax-report-specialist` & `senic-nova`)
+- [x] **[MODIFY] `frontend/src/components/documents/DocumentsListPage.tsx`, `DashboardPage.tsx` & `frontend/src/pages/DocumentPrintView.tsx`**
+  - เพิ่มปุ่มดาวน์โหลด **e-Tax Invoice XML** (`GET /api/tax-invoices/{id}/e-tax-xml`) สำหรับใบกำกับภาษีที่ออกแล้ว
+  - เพิ่มปุ่มดาวน์โหลด **ไฟล์ PDF มาตรฐานจาก Server (QuestPDF)** (`GET /api/documents/{id}/pdf`)
+  - เพิ่มปุ่มดาวน์โหลด **รายงานภาษีขายประจำเดือน (Excel `.xlsx`)** (`GET /api/reports/tax/export?year=...&month=...`) พร้อมตัวเลือกเดือน/ปี
+
+#### 2.2 ระบบ Public Shared Link สำหรับลูกค้าปลายทาง (`senic-aegis` & `senic-nova`)
+- [x] **[MODIFY] `backend/src/SenicBilling.API/Controllers/SharedDocumentController.cs`, `PaymentsController.cs` & `frontend/src/App.tsx`**
+  - สร้าง `GET /api/documents/{id}/public` สำหรับดูข้อมูลเอกสารที่แชร์โดยไม่ต้องใช้ Token ของพนักงานภายใน
+  - ปรับ `/print/:id` ให้ลูกค้าเปิดจากลิงก์ที่แชร์ผ่าน LINE ได้ทันที บันทึกสถานะ `ViewedAt` อัตโนมัติ และกดสแกนจ่าย PromptPay QR ได้ทันที
+
+#### 2.3 ระบบแจ้งเตือน LINE Notify อัตโนมัติฝั่ง Backend (`senic-ai-automation-specialist`)
+- [x] **[NEW] `backend/src/SenicBilling.Application/Interfaces/ILineNotifyService.cs` & `Infrastructure/Services/LineNotifyService.cs`**
+  - เชื่อมต่อ `https://notify-api.line.me/api/notify` โดยใช้ `Tenant.LineNotifyToken`
+  - เรียกใช้งานอัตโนมัติใน `PaymentsController.OmiseWebhook` เมื่อลูกค้าชำระเงินสำเร็จ และเมื่อมีการออกเอกสารใหม่ พร้อมปุ่มทดสอบ `POST /api/tenants/test-line-notify` ในหน้า `SettingsPage.tsx`
+
+#### 2.4 ตัวเลือกสินค้าจากฐานข้อมูลในหน้าออกบิล (`senic-inventory-pos-specialist` & `senic-milo`)
+- [x] **[MODIFY] `frontend/src/components/forms/InvoiceForm.tsx`**
+  - เพิ่มตัวเลือกสินค้าจากฐานข้อมูล (`catalogProducts`) ในตารางรายการสินค้า (Line Items) เพื่อให้ผูก `productId`, ราคา, และหน่วยนับได้อย่างแม่นยำควบคู่กับการสแกนบาร์โค้ด (`/api/products/barcode/{code}`)
+
+---
+
+### ✅ ลำดับที่ 3 (Sprint 3): ยกระดับระบบ SaaS Multi-Tenant, Quota Enforcement และ Super Admin Portal — **เสร็จสมบูรณ์**
+
+#### 3.1 ความปลอดภัยและการเชื่อมต่อ Super Admin Portal (`senic-saas-portal-specialist` & `senic-aegis`)
+- [x] **[MODIFY] `SaTenantsController.cs`, `SaPlansController.cs` & `[NEW] SaBillingController.cs`**
+  - เปิดใช้งาน `[Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]` และ Seed แพ็กเกจเริ่มต้น 4 ระดับใน `DevelopmentDataSeeder.cs`
+  - สร้าง `SaBillingController` (`GET /api/superadmin/billing/stats`, `GET /api/superadmin/billing/invoices`) เพื่อดึงข้อมูล KPI จริง (จำนวน Tenants, Users, MRR, ประวัติการสมัครแพ็กเกจ)
+- [x] **[MODIFY] `admin-frontend/` & `backend/src/SenicBilling.API/Program.cs`**
+  - เพิ่ม CORS origin สำหรับ `admin-frontend` (`http://localhost:5174`, `http://localhost:8811`)
+  - เพิ่มหน้า Login, `saApiClient` พร้อม JWT Interceptor, เชื่อมต่อข้อมูลจริงใน `Dashboard.tsx`, ค้นหาและเปลี่ยนแพ็กเกจใน `TenantsList.tsx`, และเพิ่ม Modal สร้าง/แก้ไขแพ็กเกจใน `PackagesList.tsx`
+
+#### 3.2 ระบบบังคับใช้โควต้า (Quota Enforcement) และหน้าแพ็กเกจฝั่ง SME (`senic-saas-portal-specialist`)
+- [x] **[MODIFY] `TenantSubscriptionController.cs`, `DocumentControllerBase.cs`, `TaxInvoiceController.cs`, `TenantUsersController.cs`, `AdminUsersController.cs`**
+  - เพิ่ม `GET /api/subscriptions/current` และ `GET /api/subscriptions/plans` เพื่อดึงข้อมูลแพ็กเกจปัจจุบันและโควต้าที่ใช้ไป
+  - ตรวจสอบสถานะองค์กร (`IsActive` / `SubscriptionStatus != "Suspended"`) และโควต้า `MaxDocumentsPerMonth` / `MaxUsers` ก่อนอนุญาตให้สร้างเอกสารหรือเพิ่มพนักงาน พร้อมบันทึก `TenantUsageStat`
+- [x] **[MODIFY] `frontend/src/components/settings/SettingsPage.tsx` & `UsersManagementPage.tsx`**
+  - เพิ่มส่วนแสดงแพ็กเกจปัจจุบัน โควต้าการใช้งาน และปุ่มอัปเกรดแพ็กเกจใน `SettingsPage.tsx`
+  - รวมความสามารถการเปลี่ยนสิทธิ์ (Role) และการระงับ/ลบผู้ใช้งานเข้าไว้ใน `UsersManagementPage.tsx`
+
+---
+
+### ✅ ลำดับที่ 4 (Sprint 4): ความมั่นคงปลอดภัย การทดสอบอัตโนมัติ และความพร้อมระดับ Production — **เสร็จสมบูรณ์**
+
+#### 4.1 Security & Dependency Hardening (`senic-aegis` & `senic-hermes`)
+- [x] อัปเกรดแพ็กเกจ `System.Security.Cryptography.Pkcs` และกำหนด `Directory.Build.props`
+- [x] ยกระดับการ Hash รหัสผ่านจาก Unsalted SHA-256 เป็น Salted Password Hashing (`PBKDF2-SHA256` 100,000 รอบใน `PasswordHasher.cs`) พร้อม Auto-migration สำหรับผู้ใช้เดิมตอนล็อกอิน
+
+#### 4.2 Automated Unit & Integration Tests (`senic-argus`)
+- [x] **[NEW] `backend/tests/SenicBilling.Tests/`**
+  - สร้างชุดทดสอบอัตโนมัติใน `BillingDomainAndSecurityTests.cs` ครอบคลุม:
+    1. Salted PBKDF2 Password Hashing และการรองรับ SHA-256 เดิม (`NeedsUpgrade`)
+    2. การสร้างไฟล์มาตรฐาน ETDA e-Tax Invoice XML (`ETaxXmlGenerator`)
+    3. สูตรคำนวณ VAT 7% (Inclusive/Exclusive), หัก ณ ที่จ่าย (WHT), และการตัด/คืนสต็อกเมื่อสร้าง/แก้ไข/ยกเลิกเอกสาร
+    4. การแปลงเอกสาร 1-Click (`Quotation` -> `TaxInvoice`) พร้อมตัดสต็อก และการกั้นข้อมูลข้ามบริษัท (Tenant Isolation)
+    5. การบังคับใช้โควต้าจำนวนเอกสารรายเดือน (`MaxDocumentsPerMonth`)
+
+---
+
+## ✅ ผลการตรวจสอบความสมบูรณ์ (Verification Results)
+
+- [x] `cd backend && dotnet build SenicBilling.slnx` — **ผ่านสมบูรณ์ (`0 Error`, `0 Warning`)**
+- [x] `cd backend && dotnet test SenicBilling.slnx` — **ผ่านสมบูรณ์ (`Passed: 6/6, Failed: 0`)**
+- [x] `cd frontend && npm run build` — **ผ่านสมบูรณ์ (`built in ~900ms`)**
+- [x] `cd admin-frontend && npm run build` — **ผ่านสมบูรณ์ (`built in ~400ms`)**

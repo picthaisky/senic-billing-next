@@ -12,6 +12,10 @@ import ProfilePage from './components/profile/ProfilePage';
 import InvoiceForm from './components/forms/InvoiceForm';
 import DocumentsListPage from './components/documents/DocumentsListPage';
 import StaffManagementPage from './pages/settings/StaffManagementPage';
+import ExpensesPage from './components/expenses/ExpensesPage';
+import PurchaseOrdersPage from './components/purchasing/PurchaseOrdersPage';
+import WarehousesPage from './components/warehouses/WarehousesPage';
+import AccountingPage from './components/accounting/AccountingPage';
 
 import React from 'react';
 
@@ -24,6 +28,8 @@ function InvoiceFormWrapper() {
     cashbill: 'บิลเงินสด',
     delivery: 'ใบส่งของ',
     quotation: 'ใบเสนอราคา',
+    creditnote: 'ใบลดหนี้',
+    debitnote: 'ใบเพิ่มหนี้',
   };
   const baseTitle = titles[type || ''] || 'เอกสาร';
   const title = id ? `แก้ไข${baseTitle}` : `สร้าง${baseTitle}`;
@@ -46,14 +52,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route 
-          path="/print/:id" 
-          element={
-            <ProtectedRoute>
-              <DocumentPrintView />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/print/:id" element={<DocumentPrintView />} />
         <Route
           path="/"
           element={
@@ -66,6 +65,10 @@ function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="products" element={<ProductsPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="warehouses" element={<WarehousesPage />} />
+          <Route path="accounting" element={<AccountingPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="users" element={<UsersManagementPage />} />
           <Route path="staff" element={<StaffManagementPage />} />

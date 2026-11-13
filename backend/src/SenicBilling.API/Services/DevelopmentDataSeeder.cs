@@ -25,6 +25,7 @@ public sealed class DevelopmentDataSeeder(
             return;
         }
 
+        await EnsureSubscriptionPlansAsync(ct);
         var customers = await EnsureCustomersAsync(ct);
         var products = await EnsureProductsAsync(ct);
 
@@ -198,6 +199,86 @@ public sealed class DevelopmentDataSeeder(
             customers.Count,
             products.Count,
             docs.Count);
+    }
+
+    private async Task EnsureSubscriptionPlansAsync(CancellationToken ct)
+    {
+        var proPlanId = Guid.Parse("30000000-0000-0000-0000-000000000003");
+
+        if (!await dbContext.SubscriptionPlans.AnyAsync(ct))
+        {
+            var plans = new List<SubscriptionPlan>
+            {
+                new()
+                {
+                    Id = Guid.Parse("30000000-0000-0000-0000-000000000001"),
+                    Name = "Free (ทดลองใช้งาน)",
+                    MonthlyPrice = 0m,
+                    YearlyPrice = 0m,
+                    MaxUsers = 2,
+                    MaxDocumentsPerMonth = 30,
+                    Features = "[\"ออกเอกสารพื้นฐาน\", \"ลูกค้าและสินค้าไม่จำกัด\", \"ส่งออก PDF\"]",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new()
+                {
+                    Id = Guid.Parse("30000000-0000-0000-0000-000000000002"),
+                    Name = "Starter SME",
+                    MonthlyPrice = 390m,
+                    YearlyPrice = 3900m,
+                    MaxUsers = 5,
+                    MaxDocumentsPerMonth = 300,
+                    Features = "[\"ออกเอกสารครบทุกประเภท\", \"PromptPay QR รับชำระเงิน\", \"รายงานภาษีขาย Excel\", \"ตัดสต็อกสินค้าอัตโนมัติ\"]",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new()
+                {
+                    Id = proPlanId,
+                    Name = "Pro Business",
+                    MonthlyPrice = 890m,
+                    YearlyPrice = 8900m,
+                    MaxUsers = 20,
+                    MaxDocumentsPerMonth = 2000,
+                    Features = "[\"ETDA e-Tax Invoice XML\", \"AI ผู้ช่วยวิเคราะห์ธุรกิจ (Gemini)\", \"ระบบวางบิลอัตโนมัติ (Recurring)\", \"แจ้งเตือนผ่าน LINE Notify\"]",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new()
+                {
+                    Id = Guid.Parse("30000000-0000-0000-0000-000000000004"),
+                    Name = "Enterprise",
+                    MonthlyPrice = 2490m,
+                    YearlyPrice = 24900m,
+                    MaxUsers = 100,
+                    MaxDocumentsPerMonth = 50000,
+                    Features = "[\"ไม่จำกัดฟีเจอร์ทั้งหมด\", \"Multi-Branch รองรับหลายสาขา\", \"Audit Log ครบวงจร\", \"Dedicated Support\"]",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                }
+            };
+
+            dbContext.SubscriptionPlans.AddRange(plans);
+            await dbContext.SaveChangesAsync(ct);
+        }
+
+        var defaultTenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == DefaultTenantId, ct);
+        if (defaultTenant != null && defaultTenant.CurrentPlanId == null)
+        {
+            var defaultPlan = await dbContext.SubscriptionPlans
+                .OrderByDescending(p => p.MonthlyPrice)
+                .FirstOrDefaultAsync(p => p.Id == proPlanId, ct)
+                ?? await dbContext.SubscriptionPlans.FirstOrDefaultAsync(ct);
+
+            if (defaultPlan != null)
+            {
+                defaultTenant.CurrentPlanId = defaultPlan.Id;
+                defaultTenant.SubscriptionStatus = "Active";
+                defaultTenant.SubscriptionValidUntil ??= DateTime.UtcNow.AddMonths(12);
+                await dbContext.SaveChangesAsync(ct);
+            }
+        }
     }
 
     private async Task<List<Customer>> EnsureCustomersAsync(CancellationToken ct)

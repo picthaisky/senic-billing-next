@@ -17,10 +17,15 @@ public class RecurringInvoiceController(SenicBillingDbContext dbContext) : Contr
     {
         var tenantId = GetTenantId();
         var items = await dbContext.RecurringInvoices
+            .Include(r => r.SourceDocument)
             .Where(r => r.TenantId == tenantId)
+            .OrderBy(r => r.NextRunDate)
             .Select(r => new RecurringInvoiceDto(
                 r.Id, r.SourceDocumentId, r.Frequency, r.NextRunDate,
-                r.IsActive, r.MaxOccurrences, r.CurrentOccurrence))
+                r.IsActive, r.MaxOccurrences, r.CurrentOccurrence,
+                r.SourceDocument != null ? r.SourceDocument.DocumentNumber : null,
+                r.SourceDocument != null ? r.SourceDocument.CustomerName : null,
+                r.SourceDocument != null ? r.SourceDocument.DocumentType.ToString() : null))
             .ToListAsync(ct);
 
         return Ok(new ApiResponse<List<RecurringInvoiceDto>>(true, "สำเร็จ", items));
@@ -52,7 +57,8 @@ public class RecurringInvoiceController(SenicBillingDbContext dbContext) : Contr
 
         var dto = new RecurringInvoiceDto(
             recurring.Id, recurring.SourceDocumentId, recurring.Frequency,
-            recurring.NextRunDate, recurring.IsActive, recurring.MaxOccurrences, recurring.CurrentOccurrence);
+            recurring.NextRunDate, recurring.IsActive, recurring.MaxOccurrences, recurring.CurrentOccurrence,
+            source.DocumentNumber, source.CustomerName, source.DocumentType.ToString());
 
         return Ok(new ApiResponse<RecurringInvoiceDto>(true, "สร้างกำหนดการออกเอกสารอัตโนมัติสำเร็จ", dto));
     }
@@ -61,7 +67,9 @@ public class RecurringInvoiceController(SenicBillingDbContext dbContext) : Contr
     public async Task<ActionResult<ApiResponse<RecurringInvoiceDto>>> Update(Guid id, [FromBody] UpdateRecurringInvoiceRequest req, CancellationToken ct)
     {
         var tenantId = GetTenantId();
-        var recurring = await dbContext.RecurringInvoices.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
+        var recurring = await dbContext.RecurringInvoices
+            .Include(r => r.SourceDocument)
+            .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
 
         if (recurring == null)
             return NotFound(new ApiResponse<RecurringInvoiceDto>(false, "ไม่พบกำหนดการ", null));
@@ -76,7 +84,10 @@ public class RecurringInvoiceController(SenicBillingDbContext dbContext) : Contr
 
         var dto = new RecurringInvoiceDto(
             recurring.Id, recurring.SourceDocumentId, recurring.Frequency,
-            recurring.NextRunDate, recurring.IsActive, recurring.MaxOccurrences, recurring.CurrentOccurrence);
+            recurring.NextRunDate, recurring.IsActive, recurring.MaxOccurrences, recurring.CurrentOccurrence,
+            recurring.SourceDocument?.DocumentNumber,
+            recurring.SourceDocument?.CustomerName,
+            recurring.SourceDocument?.DocumentType.ToString());
 
         return Ok(new ApiResponse<RecurringInvoiceDto>(true, "อัปเดตกำหนดการสำเร็จ", dto));
     }

@@ -52,9 +52,11 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
 
   // Create Charge when modal opens
   useEffect(() => {
-    if (isOpen && documentId && !qrCodeUrl && !isPaid) {
-      createCharge();
-    }
+    if (!isOpen || !documentId || qrCodeUrl || isPaid) return;
+    const timer = window.setTimeout(() => {
+      void createCharge();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [isOpen, documentId, qrCodeUrl, isPaid, createCharge]);
 
   // Listen to SignalR Event for Payment Success

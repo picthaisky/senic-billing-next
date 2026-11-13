@@ -21,24 +21,29 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
         var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var startOfLastMonth = startOfMonth.AddMonths(-1);
 
-        var allDocs = dbContext.DocumentHeaders
+        var activeDocs = dbContext.DocumentHeaders
             .Where(d =>
                 d.TenantId == tenantId &&
-                d.Status == DocumentStatus.Issued &&
+                d.Status != DocumentStatus.Draft &&
+                d.Status != DocumentStatus.Cancelled &&
                 d.DocumentType != DocumentType.Quotation);
 
-        var totalRevenue = await allDocs.SumAsync(d => (decimal?)d.GrandTotal, ct) ?? 0;
-        var documentsIssued = await allDocs.CountAsync(ct);
+        var revenueDocs = activeDocs
+            .Where(d => d.DocumentType != DocumentType.DeliveryNote);
+
+        var totalRevenue = await revenueDocs
+            .SumAsync(d => (decimal?)(d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal), ct) ?? 0;
+        var documentsIssued = await activeDocs.CountAsync(ct);
         var pendingDocs = await dbContext.DocumentHeaders
             .CountAsync(d => d.TenantId == tenantId && d.Status == DocumentStatus.Draft, ct);
 
         // Monthly growth calculation
-        var thisMonthRevenue = await allDocs
+        var thisMonthRevenue = await revenueDocs
             .Where(d => d.DocumentDate >= startOfMonth)
-            .SumAsync(d => (decimal?)d.GrandTotal, ct) ?? 0;
-        var lastMonthRevenue = await allDocs
+            .SumAsync(d => (decimal?)(d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal), ct) ?? 0;
+        var lastMonthRevenue = await revenueDocs
             .Where(d => d.DocumentDate >= startOfLastMonth && d.DocumentDate < startOfMonth)
-            .SumAsync(d => (decimal?)d.GrandTotal, ct) ?? 0;
+            .SumAsync(d => (decimal?)(d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal), ct) ?? 0;
 
         var growthPercent = lastMonthRevenue > 0
             ? Math.Round((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100, 1)
@@ -58,16 +63,18 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
         var monthlyRows = await dbContext.DocumentHeaders
             .Where(d =>
                 d.TenantId == tenantId &&
-                d.Status == DocumentStatus.Issued &&
+                d.Status != DocumentStatus.Draft &&
+                d.Status != DocumentStatus.Cancelled &&
                 d.DocumentType != DocumentType.Quotation &&
+                d.DocumentType != DocumentType.DeliveryNote &&
                 d.DocumentDate >= sixMonthsAgo)
             .GroupBy(d => new { d.DocumentDate.Year, d.DocumentDate.Month })
             .Select(g => new
             {
                 g.Key.Year,
                 g.Key.Month,
-                GoodsValue = g.Sum(d => d.TotalBeforeVat),
-                VatAmount = g.Sum(d => d.VatAmount)
+                GoodsValue = g.Sum(d => d.DocumentType == DocumentType.CreditNote ? -d.TotalBeforeVat : d.TotalBeforeVat),
+                VatAmount = g.Sum(d => d.DocumentType == DocumentType.CreditNote ? -d.VatAmount : d.VatAmount)
             })
             .OrderBy(d => d.Year)
             .ThenBy(d => d.Month)
@@ -94,8 +101,11 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
         var topProductRows = await dbContext.DocumentLines
             .Where(l =>
                 l.DocumentHeader.TenantId == tenantId &&
-                l.DocumentHeader.Status == DocumentStatus.Issued &&
-                l.DocumentHeader.DocumentType != DocumentType.Quotation)
+                l.DocumentHeader.Status != DocumentStatus.Draft &&
+                l.DocumentHeader.Status != DocumentStatus.Cancelled &&
+                l.DocumentHeader.DocumentType != DocumentType.Quotation &&
+                l.DocumentHeader.DocumentType != DocumentType.DeliveryNote &&
+                l.DocumentHeader.DocumentType != DocumentType.CreditNote)
             .GroupBy(l => l.Description)
             .Select(g => new
             {
@@ -128,7 +138,8 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
         var data = await dbContext.DocumentHeaders
             .Where(d =>
                 d.TenantId == tenantId &&
-                d.Status == DocumentStatus.Issued &&
+                d.Status != DocumentStatus.Draft &&
+                d.Status != DocumentStatus.Cancelled &&
                 d.DocumentType != DocumentType.Quotation)
             .OrderByDescending(d => d.CreatedAt)
             .Take(count)
@@ -141,34 +152,23 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
         return Ok(new ApiResponse<List<RecentDocumentActivity>>(true, "สำเร็จ", data));
     }
 
-    /// <summary>Tax Estimator API — monthly VAT output summary</summary>
+    /// <summary>Tax Estimator API — monthly VAT output & WHT summary</summary>
     [HttpGet("tax-estimator")]
     public async Task<ActionResult<ApiResponse<TaxEstimatorDto>>> GetTaxEstimator(
-        [FromQuery] int year, [FromQuery] int month, CancellationToken ct = default)
+        [FromQuery] int? year = null, [FromQuery] int? month = null, CancellationToken ct = default)
     {
         var tenantId = GetTenantId();
-        
-        // This is a simplified estimator. In reality, you'd calculate Input VAT from expenses.
-        var docs = await dbContext.DocumentHeaders
-            .Where(d =>
-                d.TenantId == tenantId &&
-                d.DocumentType == DocumentType.TaxInvoice &&
-                d.Status != DocumentStatus.Cancelled &&
-                d.DocumentDate.Year == year &&
-                d.DocumentDate.Month == month)
-            .ToListAsync(ct);
+        var now = DateTime.UtcNow;
+        var targetYear = year is > 0 ? year.Value : now.Year;
+        var targetMonth = month is >= 1 and <= 12 ? month.Value : now.Month;
 
-        var totalSales = docs.Sum(d => d.TotalBeforeVat);
-        var totalVatCollected = docs.Sum(d => d.VatAmount);
-        
-        // For demonstration, input VAT is 0.
-        var dto = new TaxEstimatorDto(year, month, totalSales, totalVatCollected, 0, 0, totalVatCollected);
+        var dto = await SenicBilling.API.Services.TaxSummaryQuery.ComputeAsync(dbContext, tenantId, targetYear, targetMonth, ct);
         return Ok(new ApiResponse<TaxEstimatorDto>(true, "สำเร็จ", dto));
     }
 
     /// <summary>A/R Aging Report API — overdue bucketing</summary>
     [HttpGet("aging-report")]
-    public async Task<ActionResult<ApiResponse<List<AgingReportDto>>>> GetAgingReport(CancellationToken ct = default)
+    public async Task<ActionResult<ApiResponse<AgingSummaryDto>>> GetAgingReport(CancellationToken ct = default)
     {
         var tenantId = GetTenantId();
         var now = DateTime.UtcNow.Date;
@@ -180,7 +180,8 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
                 d.DocumentType != DocumentType.Quotation &&
                 d.DocumentType != DocumentType.DeliveryNote &&
                 d.DocumentType != DocumentType.Receipt &&
-                d.CustomerId != null)
+                d.DocumentType != DocumentType.CashBill &&
+                d.DocumentType != DocumentType.CreditNote)
             .Select(d => new
             {
                 d.CustomerId,
@@ -191,7 +192,7 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
             .ToListAsync(ct);
 
         var report = overdueDocs
-            .GroupBy(d => new { d.CustomerId, d.CustomerName })
+            .GroupBy(d => new { d.CustomerId, CustomerName = d.CustomerName ?? "ทั่วไป" })
             .Select(g =>
             {
                 var current = g.Where(d => d.DueDate == null || d.DueDate >= now).Sum(d => d.GrandTotal);
@@ -202,7 +203,7 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
                 
                 return new AgingReportDto(
                     g.Key.CustomerId ?? Guid.Empty,
-                    g.Key.CustomerName ?? "Unknown",
+                    g.Key.CustomerName,
                     current,
                     over1to30,
                     over31to60,
@@ -215,7 +216,17 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
             .OrderByDescending(r => r.TotalOverdue)
             .ToList();
 
-        return Ok(new ApiResponse<List<AgingReportDto>>(true, "สำเร็จ", report));
+        var summary = new AgingSummaryDto(
+            Current: report.Sum(r => r.Current),
+            Overdue1_30: report.Sum(r => r.Overdue1To30Days),
+            Overdue31_60: report.Sum(r => r.Overdue31To60Days),
+            Overdue61_90: report.Sum(r => r.Overdue61To90Days),
+            Overdue90Plus: report.Sum(r => r.OverdueOver90Days),
+            TotalOverdue: report.Sum(r => r.TotalOverdue),
+            Customers: report
+        );
+
+        return Ok(new ApiResponse<AgingSummaryDto>(true, "สำเร็จ", summary));
     }
 
     /// <summary>Top Spenders API — customer ranking by revenue</summary>
@@ -231,6 +242,7 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
                 d.Status != DocumentStatus.Cancelled &&
                 d.Status != DocumentStatus.Draft &&
                 d.DocumentType != DocumentType.Quotation &&
+                d.DocumentType != DocumentType.DeliveryNote &&
                 d.CustomerId != null)
             .GroupBy(d => new { d.CustomerId, d.CustomerName })
             .Select(g => new
@@ -238,7 +250,7 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
                 CustomerId = g.Key.CustomerId,
                 CustomerName = g.Key.CustomerName,
                 TotalOrders = g.Count(),
-                TotalSpent = g.Sum(d => d.GrandTotal),
+                TotalSpent = g.Sum(d => d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal),
                 LastPurchaseDate = g.Max(d => d.DocumentDate)
             })
             .OrderByDescending(x => x.TotalSpent)

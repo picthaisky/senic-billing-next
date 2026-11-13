@@ -108,12 +108,13 @@ public class CustomersController(SenicBillingDbContext dbContext) : ControllerBa
                 d.CustomerId == id &&
                 d.Status != DocumentStatus.Cancelled &&
                 d.Status != DocumentStatus.Draft &&
-                d.DocumentType != DocumentType.Quotation)
+                d.DocumentType != DocumentType.Quotation &&
+                d.DocumentType != DocumentType.DeliveryNote)
             .OrderByDescending(d => d.DocumentDate)
             .ToListAsync(ct);
 
         var totalOrders = docs.Count;
-        var totalSpent = docs.Sum(d => d.GrandTotal);
+        var totalSpent = docs.Sum(d => d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal);
         var lastPurchaseDate = docs.FirstOrDefault()?.DocumentDate;
 
         var recentDocs = docs.Take(recentDocsCount).Select(d => new DocumentResponse(

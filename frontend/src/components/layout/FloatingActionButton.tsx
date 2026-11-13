@@ -17,6 +17,8 @@ const actionColorClass: Record<DocumentTypeId, string> = {
   delivery: 'layout-fab-action-btn--delivery',
   quotation: 'layout-fab-action-btn--quotation',
   taxinvoice: 'layout-fab-action-btn--taxinvoice',
+  creditnote: 'layout-fab-action-btn--taxinvoice',
+  debitnote: 'layout-fab-action-btn--delivery',
 };
 
 export default function FloatingActionButton() {
