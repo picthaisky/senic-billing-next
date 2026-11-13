@@ -1,4 +1,4 @@
-version: 1
+version: 2
 orchestrator: senic-maestro
 
 intake_required_fields:
@@ -16,6 +16,14 @@ routing_rules:
     delegate: [senic-atlas, senic-sage]
   - when: request_changes_vat_money_documents_or_payment
     delegate: [senic-ledger, senic-argus]
+  - when: request_changes_inventory_stock_or_barcode_pos
+    delegate: [senic-inventory-pos-specialist, senic-ledger, senic-sage, senic-nova]
+  - when: request_changes_etax_xml_wht_tax_reports_or_dashboard_analytics
+    delegate: [senic-etax-report-specialist, senic-ledger, senic-sage, senic-nova]
+  - when: request_changes_saas_subscriptions_quotas_or_superadmin_portal
+    delegate: [senic-saas-portal-specialist, senic-atlas, senic-aegis, senic-nova]
+  - when: request_changes_ai_assistant_background_workers_or_notifications
+    delegate: [senic-ai-automation-specialist, senic-sage, senic-aegis]
   - when: request_changes_react_ui_theme_mobile_or_forms
     delegate: [senic-nova, senic-milo]
   - when: request_touches_auth_tenant_isolation_webhook_uploads_or_secrets
@@ -36,12 +44,12 @@ quality_gates:
     pass_condition: Boundaries, contracts, and data ownership are explicit.
   billing_gate:
     owner: senic-ledger
-    required_for: [money_change, vat_change, payment_change, document_lifecycle_change]
-    pass_condition: Financial invariants and edge cases are documented.
+    required_for: [money_change, vat_change, payment_change, document_lifecycle_change, stock_change, tax_report_change]
+    pass_condition: Financial and stock invariants and edge cases are documented.
   security_gate:
     owner: senic-aegis
-    required_for: [auth_change, tenant_data_change, webhook_change, upload_change, secret_change]
-    pass_condition: Tenant isolation, auth, and secret handling risks are addressed.
+    required_for: [auth_change, tenant_data_change, superadmin_change, webhook_change, upload_change, secret_change]
+    pass_condition: Tenant isolation, RBAC/SuperAdmin auth, and secret handling risks are addressed.
   design_gate:
     owner: senic-milo
     required_for: [visible_ui_change, mobile_change, theme_change]
@@ -63,6 +71,7 @@ validation_commands:
   backend_build: "cd backend; dotnet build SenicBilling.slnx"
   frontend_build: "cd frontend; npm run build"
   frontend_lint: "cd frontend; npm run lint"
+  admin_frontend_build: "cd admin-frontend; npm run build"
   whitespace_check: "git diff --check"
 
 coordination_loop:

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Plus, Edit2, Trash2, MapPin, Phone, X, Save, Download } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, MapPin, Phone, X, Save, Download, History, Printer } from 'lucide-react';
 import { exportToExcel } from '../../utils/exportUtils';
 
 // First meaningful character for the avatar tile (strips common Thai prefixes)
@@ -17,12 +17,30 @@ interface Customer {
   phone: string;
 }
 
+interface PurchaseHistoryDto {
+  customerId: string;
+  customerName: string;
+  totalOrders: number;
+  totalSpent: number;
+  lastPurchaseDate: string | null;
+  recentDocuments: Array<{
+    id: string;
+    documentNumber: string;
+    documentType: string;
+    documentDate: string;
+    grandTotal: number;
+    status: string;
+  }>;
+}
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [historyData, setHistoryData] = useState<PurchaseHistoryDto | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState<Partial<Customer>>({});
@@ -47,25 +65,39 @@ export default function CustomersPage() {
     return Object.keys(e).length === 0;
   };
 
-  useEffect(() => {
-    fetchCustomers();
+  const loadCustomers = useCallback(async (): Promise<Customer[]> => {
+    const res = await apiClient.get('/customers');
+    return res.data?.success && res.data?.data?.items ? (res.data.data.items as Customer[]) : [];
   }, []);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/customers');
-      if (res.data?.success && res.data?.data?.items) {
-        setCustomers(res.data.data.items);
-      } else {
-        setCustomers([]);
-      }
-      setLoading(false);
+      const items = await loadCustomers();
+      setCustomers(items);
     } catch (error) {
       console.error('Error fetching customers:', error);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [loadCustomers]);
+
+  useEffect(() => {
+    let active = true;
+    loadCustomers()
+      .then((items) => {
+        if (active) setCustomers(items);
+      })
+      .catch((error) => {
+        console.error('Error fetching customers:', error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadCustomers]);
 
   const handleOpenModal = (customer?: Customer) => {
     if (customer) {
@@ -211,6 +243,38 @@ export default function CustomersPage() {
                   </td>
                   <td data-label="จัดการ">
                     <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoadingHistory(true);
+                          setHistoryData({
+                            customerId: customer.id,
+                            customerName: customer.name,
+                            totalOrders: 0,
+                            totalSpent: 0,
+                            lastPurchaseDate: null,
+                            recentDocuments: [],
+                          });
+                          apiClient
+                            .get(`/customers/${customer.id}/purchase-history?recentDocsCount=10`)
+                            .then((res) => {
+                              if (res.data?.success && res.data?.data) {
+                                setHistoryData(res.data.data as PurchaseHistoryDto);
+                              }
+                            })
+                            .catch((err) => {
+                              console.error('Failed to load purchase history', err);
+                            })
+                            .finally(() => {
+                              setLoadingHistory(false);
+                            });
+                        }}
+                        className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-indigo-600 transition-colors"
+                        title="ประวัติการซื้อ"
+                        aria-label={`ประวัติการซื้อ ${customer.name}`}
+                      >
+                        <History size={16} />
+                      </button>
                       <button type="button" onClick={() => handleOpenModal(customer)} className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)] transition-colors" title="แก้ไข" aria-label={`แก้ไข ${customer.name}`}>
                         <Edit2 size={16} />
                       </button>
@@ -283,6 +347,85 @@ export default function CustomersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {historyData && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="rounded-2xl shadow-xl w-full max-w-2xl border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)]">
+            <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
+              <div>
+                <h3 className="font-bold text-lg">ประวัติการซื้อของลูกค้า</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">{historyData.customerName}</p>
+              </div>
+              <button type="button" onClick={() => setHistoryData(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label="ปิดหน้าต่าง">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="form-modal-content form-stack-md">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)]">
+                  <p className="text-xs text-[var(--color-text-muted)]">จำนวนบิลรวม</p>
+                  <p className="text-lg font-bold mt-1">{loadingHistory ? '...' : `${historyData.totalOrders} ฉบับ`}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)]">
+                  <p className="text-xs text-[var(--color-text-muted)]">ยอดซื้อสะสมสุทธิ</p>
+                  <p className="text-lg font-bold text-[var(--color-primary)] mt-1">
+                    {loadingHistory ? '...' : `฿${historyData.totalSpent.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)]">
+                  <p className="text-xs text-[var(--color-text-muted)]">ซื้อล่าสุด</p>
+                  <p className="text-sm font-semibold mt-1">
+                    {loadingHistory ? '...' : historyData.lastPurchaseDate ? new Date(historyData.lastPurchaseDate).toLocaleDateString('th-TH') : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
+                <table className="data-table w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th>วันที่</th>
+                      <th>เลขที่เอกสาร</th>
+                      <th>ประเภท</th>
+                      <th className="text-right">ยอดสุทธิ</th>
+                      <th className="text-right">พิมพ์</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingHistory ? (
+                      <tr><td colSpan={5} className="text-center py-6 text-[var(--color-text-muted)]">กำลังโหลดประวัติ...</td></tr>
+                    ) : historyData.recentDocuments.length === 0 ? (
+                      <tr><td colSpan={5} className="text-center py-6 text-[var(--color-text-muted)]">ยังไม่มีประวัติการซื้อ</td></tr>
+                    ) : (
+                      historyData.recentDocuments.map((doc) => (
+                        <tr key={doc.id}>
+                          <td>{new Date(doc.documentDate).toLocaleDateString('th-TH')}</td>
+                          <td className="font-mono font-semibold text-[var(--color-primary)]">{doc.documentNumber}</td>
+                          <td>{doc.documentType}</td>
+                          <td className="text-right tabular-nums font-medium">
+                            {doc.documentType === 'CreditNote' ? '-' : ''}฿{doc.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="text-right">
+                            <button
+                              type="button"
+                              onClick={() => window.open(`/print/${doc.id}`, '_blank')}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md"
+                              title="ดู/พิมพ์เอกสาร"
+                            >
+                              <Printer size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>,
         document.body

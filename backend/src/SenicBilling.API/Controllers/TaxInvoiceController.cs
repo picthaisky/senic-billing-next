@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Domain.Enums;
@@ -13,8 +14,8 @@ namespace SenicBilling.API.Controllers;
 
 /// <summary>
 /// RESTful API Controller for Tax Invoice (ใบกำกับภาษี) management.
-/// Enforces strict data integrity: only Draft documents can be edited,
-/// cancellation requires a reason (Credit Note reference).
+/// Enforces strict data integrity: Tax ID validation, stock deduction/restoration,
+/// e-Tax XML generation, and PDF export.
 /// </summary>
 [ApiController]
 [Route("api/tax-invoices")]
@@ -80,6 +81,34 @@ public class TaxInvoiceController(
     {
         var tenantId = GetTenantId();
 
+        var tenant = await dbContext.Tenants
+            .Include(t => t.CurrentPlan)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+        if (tenant != null)
+        {
+            if (!tenant.IsActive || tenant.SubscriptionStatus == "Suspended")
+                return BadRequest(new ApiResponse<DocumentResponse>(false, "บัญชีองค์กรถูกระงับการใช้งานชั่วคราว กรุณาติดต่อผู้ดูแลระบบ", null));
+
+            if (tenant.CurrentPlan != null && tenant.CurrentPlan.MaxDocumentsPerMonth > 0)
+            {
+                var now = DateTime.UtcNow;
+                var monthlyDocs = await dbContext.DocumentHeaders.CountAsync(
+                    d => d.TenantId == tenantId &&
+                         d.Status != DocumentStatus.Cancelled &&
+                         d.CreatedAt.Year == now.Year &&
+                         d.CreatedAt.Month == now.Month, ct);
+
+                if (monthlyDocs >= tenant.CurrentPlan.MaxDocumentsPerMonth)
+                {
+                    return BadRequest(new ApiResponse<DocumentResponse>(
+                        false,
+                        $"จำนวนเอกสารเดือนนี้ครบโควต้าของแพ็กเกจ {tenant.CurrentPlan.Name} ({tenant.CurrentPlan.MaxDocumentsPerMonth} ฉบับ/เดือน) กรุณาอัปเกรดแพ็กเกจ",
+                        null));
+                }
+            }
+        }
+
         // Validate Tax ID for Tax Invoice
         if (!string.IsNullOrEmpty(request.CustomerTaxId) && request.CustomerTaxId.Length != 13)
         {
@@ -101,11 +130,13 @@ public class TaxInvoiceController(
             CustomerId = request.CustomerId,
             CustomerName = request.CustomerName,
             CustomerAddress = request.CustomerAddress,
+            CustomerBranch = request.CustomerBranch,
             CustomerTaxId = request.CustomerTaxId,
             Status = DocumentStatus.Issued,
             VatMode = request.VatMode,
             VatRate = request.VatRate,
             DiscountAmount = request.DiscountAmount,
+            WhtRate = request.WhtRate,
             Notes = request.Notes,
             ReferenceDocumentId = request.ReferenceDocumentId,
             CreatedBy = User.Identity?.Name
@@ -134,14 +165,86 @@ public class TaxInvoiceController(
         // Calculate totals
         CalculateTotals(header);
 
+        // Deduct stock for TaxInvoice
+        await DeductStockAsync(header.Lines, tenantId, ct, header.DocumentNumber);
+
         dbContext.DocumentHeaders.Add(header);
+
+        var yearMonth = DateTime.UtcNow.ToString("yyyy-MM");
+        var usageStat = await dbContext.TenantUsageStats
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.YearMonth == yearMonth, ct);
+        if (usageStat == null)
+        {
+            dbContext.TenantUsageStats.Add(new TenantUsageStat
+            {
+                TenantId = tenantId,
+                YearMonth = yearMonth,
+                DocumentsCreated = 1
+            });
+        }
+        else
+        {
+            usageStat.DocumentsCreated += 1;
+        }
+
         await dbContext.SaveChangesAsync(ct);
+
+        var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accounting is not null)
+        {
+            await accounting.PostSalesDocumentAsync(header, header.CreatedBy, ct);
+        }
+
+        if (tenant != null && tenant.HasAnyLineChannel())
+        {
+            var lineService = HttpContext?.RequestServices.GetService<ILineNotifyService>();
+            if (lineService != null)
+            {
+                _ = lineService.NotifyTenantAsync(
+                    tenant,
+                    $"\nออกใบกำกับภาษีใหม่: {header.DocumentNumber}\nลูกค้า: {header.CustomerName}\nยอดสุทธิ: {header.GrandTotal:N2} บาท");
+            }
+        }
 
         return CreatedAtAction(nameof(GetById), new { id = header.Id },
             new ApiResponse<DocumentResponse>(true, "สร้างใบกำกับภาษีสำเร็จ", MapToResponse(header)));
     }
 
-    /// <summary>Update a draft tax invoice</summary>
+    /// <summary>Mark an issued tax invoice as paid manually and settle AR into Cash</summary>
+    [HttpPatch("{id:guid}/mark-paid")]
+    public async Task<ActionResult<ApiResponse<DocumentResponse>>> MarkAsPaid(Guid id, CancellationToken ct)
+    {
+        var tenantId = GetTenantId();
+        var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Lines)
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.TaxInvoice, ct);
+
+        if (doc is null)
+            return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบใบกำกับภาษี", null));
+
+        if (doc.Status == DocumentStatus.Cancelled)
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถชำระเงินเอกสารที่ยกเลิกแล้ว", null));
+
+        if (doc.Status == DocumentStatus.Draft)
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "กรุณาออกใบกำกับภาษีก่อนบันทึกการรับชำระเงิน", null));
+
+        if (doc.Status == DocumentStatus.Paid)
+            return Ok(new ApiResponse<DocumentResponse>(true, "ใบกำกับภาษีถูกบันทึกชำระแล้ว", MapToResponse(doc)));
+
+        doc.Status = DocumentStatus.Paid;
+        doc.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(ct);
+
+        var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accounting is not null)
+        {
+            await accounting.PostPaymentAsync(doc, doc.GrandTotal, User?.Identity?.Name, ct);
+        }
+
+        return Ok(new ApiResponse<DocumentResponse>(true, "บันทึกการชำระเงินสำเร็จ", MapToResponse(doc)));
+    }
+
+    /// <summary>Update a tax invoice (reconciles stock)</summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ApiResponse<DocumentResponse>>> Update(
         Guid id, [FromBody] UpdateDocumentRequest request, CancellationToken ct)
@@ -154,8 +257,16 @@ public class TaxInvoiceController(
         if (doc is null)
             return NotFound(new ApiResponse<DocumentResponse>(false, "ไม่พบใบกำกับภาษี", null));
 
-        if (doc.Status != DocumentStatus.Draft)
+        var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+        bool isAdmin = userRole == "Admin" || userRole == "SystemAdmin";
+
+        if (!isAdmin && doc.Status != DocumentStatus.Draft)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "แก้ไขได้เฉพาะเอกสารสถานะ 'ร่าง' เท่านั้น", null));
+
+        if (doc.Status != DocumentStatus.Cancelled)
+        {
+            await RestoreStockAsync(doc.Lines, tenantId, ct, doc.DocumentNumber);
+        }
 
         // Update header
         doc.DocumentDate = request.DocumentDate;
@@ -163,10 +274,12 @@ public class TaxInvoiceController(
         doc.CustomerId = request.CustomerId;
         doc.CustomerName = request.CustomerName;
         doc.CustomerAddress = request.CustomerAddress;
+        doc.CustomerBranch = request.CustomerBranch;
         doc.CustomerTaxId = request.CustomerTaxId;
         doc.VatMode = request.VatMode;
         doc.VatRate = request.VatRate;
         doc.DiscountAmount = request.DiscountAmount;
+        doc.WhtRate = request.WhtRate;
         doc.Notes = request.Notes;
         doc.UpdatedAt = DateTime.UtcNow;
 
@@ -178,7 +291,7 @@ public class TaxInvoiceController(
         foreach (var lineDto in request.Lines)
         {
             var lineTotal = (lineDto.Quantity * lineDto.UnitPrice) - lineDto.DiscountAmount;
-            doc.Lines.Add(new DocumentLine
+            var newLine = new DocumentLine
             {
                 Id = Guid.NewGuid(),
                 DocumentHeaderId = doc.Id,
@@ -190,16 +303,30 @@ public class TaxInvoiceController(
                 UnitPrice = lineDto.UnitPrice,
                 DiscountAmount = lineDto.DiscountAmount,
                 LineTotal = lineTotal
-            });
+            };
+            dbContext.DocumentLines.Add(newLine);
+        }
+
+        if (doc.Status != DocumentStatus.Cancelled)
+        {
+            await DeductStockAsync(doc.Lines, tenantId, ct, doc.DocumentNumber);
         }
 
         CalculateTotals(doc);
         await dbContext.SaveChangesAsync(ct);
 
+        var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accounting is not null && doc.Status != DocumentStatus.Draft && doc.Status != DocumentStatus.Cancelled)
+        {
+            var username = User?.Identity?.Name;
+            await accounting.ReverseSourceEntriesAsync(tenantId, JournalSourceType.SalesDocument, doc.Id, $"ปรับปรุงเอกสาร {doc.DocumentNumber}", username, ct);
+            await accounting.PostSalesDocumentAsync(doc, username, ct);
+        }
+
         return Ok(new ApiResponse<DocumentResponse>(true, "อัปเดตใบกำกับภาษีสำเร็จ", MapToResponse(doc)));
     }
 
-    /// <summary>Cancel a tax invoice (requires reason — acts as Credit Note reference)</summary>
+    /// <summary>Cancel a tax invoice and restore stock (requires reason — acts as Credit Note reference)</summary>
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult<ApiResponse<DocumentResponse>>> Cancel(
         Guid id, [FromBody] CancelDocumentRequest request, CancellationToken ct)
@@ -215,11 +342,21 @@ public class TaxInvoiceController(
         if (doc.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "เอกสารนี้ถูกยกเลิกไปแล้ว", null));
 
+        await RestoreStockAsync(doc.Lines, tenantId, ct, doc.DocumentNumber);
+
         doc.Status = DocumentStatus.Cancelled;
         doc.CancellationReason = request.Reason;
         doc.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(ct);
+
+        var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accounting is not null)
+        {
+            var username = User.Identity?.Name;
+            await accounting.ReverseSourceEntriesAsync(tenantId, JournalSourceType.SalesDocument, doc.Id, request.Reason, username, ct);
+            await accounting.ReverseSourceEntriesAsync(tenantId, JournalSourceType.Payment, doc.Id, request.Reason, username, ct);
+        }
 
         return Ok(new ApiResponse<DocumentResponse>(true, "ยกเลิกใบกำกับภาษีสำเร็จ", MapToResponse(doc)));
     }
@@ -231,12 +368,13 @@ public class TaxInvoiceController(
         var tenantId = GetTenantId();
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Tenant)
+            .Include(d => d.Lines.OrderBy(l => l.SortOrder))
             .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.TaxInvoice, ct);
 
         if (doc is null)
             return NotFound(new ApiResponse<object>(false, "ไม่พบใบกำกับภาษี", null));
 
-        if (doc.Status != DocumentStatus.Issued)
+        if (doc.Status == DocumentStatus.Draft || doc.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<object>(false, "สามารถออก e-Tax XML ได้เฉพาะเอกสารที่อนุมัติ/ออกแล้วเท่านั้น", null));
 
         var xmlBytes = ETaxXmlGenerator.GenerateXml(doc, doc.Tenant);
@@ -266,6 +404,91 @@ public class TaxInvoiceController(
     // ──────────────────────────────────────────────
     // Private Helpers
     // ──────────────────────────────────────────────
+
+    private async Task DeductStockAsync(
+        ICollection<DocumentLine> lines,
+        Guid tenantId,
+        CancellationToken ct,
+        string? documentNumber = null)
+    {
+        await AdjustDocumentStockAsync(
+            lines,
+            tenantId,
+            StockMovementType.SaleOut,
+            multiplier: -1m,
+            documentNumber: documentNumber,
+            notesPrefix: "ตัดสต็อกจากเอกสาร",
+            ct: ct);
+    }
+
+    private async Task RestoreStockAsync(
+        ICollection<DocumentLine> lines,
+        Guid tenantId,
+        CancellationToken ct,
+        string? documentNumber = null)
+    {
+        await AdjustDocumentStockAsync(
+            lines,
+            tenantId,
+            StockMovementType.SaleRestock,
+            multiplier: 1m,
+            documentNumber: documentNumber,
+            notesPrefix: "คืนสต็อกจากเอกสาร",
+            ct: ct);
+    }
+
+    private async Task AdjustDocumentStockAsync(
+        ICollection<DocumentLine> lines,
+        Guid tenantId,
+        StockMovementType movementType,
+        decimal multiplier,
+        string? documentNumber,
+        string notesPrefix,
+        CancellationToken ct)
+    {
+        var groupedQty = lines
+            .Where(l => l.ProductId.HasValue)
+            .GroupBy(l => l.ProductId!.Value)
+            .Select(g => new { ProductId = g.Key, Quantity = g.Sum(x => x.Quantity) })
+            .Where(g => g.Quantity != 0m)
+            .ToList();
+        if (groupedQty.Count == 0) return;
+
+        var productIds = groupedQty.Select(g => g.ProductId).ToList();
+        var products = await dbContext.Products
+            .Where(p => p.TenantId == tenantId && productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, ct);
+
+        var inventoryService = HttpContext?.RequestServices?.GetService<IInventoryService>();
+        var createdBy = User?.Identity?.Name;
+        var notes = string.IsNullOrWhiteSpace(documentNumber) ? notesPrefix : $"{notesPrefix} {documentNumber}";
+
+        foreach (var item in groupedQty)
+        {
+            if (products.TryGetValue(item.ProductId, out var product) && product.StockQuantity.HasValue)
+            {
+                var delta = item.Quantity * multiplier;
+                if (inventoryService is not null)
+                {
+                    await inventoryService.AdjustWarehouseStockAsync(
+                        tenantId,
+                        product.Id,
+                        warehouseId: null,
+                        quantityDelta: delta,
+                        movementType: movementType,
+                        referenceNumber: documentNumber,
+                        notes: notes,
+                        createdBy: createdBy,
+                        ct: ct,
+                        saveChanges: false);
+                }
+                else
+                {
+                    product.StockQuantity += delta;
+                }
+            }
+        }
+    }
 
     private static void CalculateTotals(DocumentHeader doc)
     {

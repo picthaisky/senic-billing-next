@@ -1,0 +1,50 @@
+using SenicBilling.Domain.Enums;
+
+namespace SenicBilling.Domain.Entities;
+
+/// <summary>ผังบัญชี (Chart of Accounts)</summary>
+public class ChartOfAccount
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public AccountType AccountType { get; set; }
+    public bool IsSystem { get; set; }
+    public bool IsActive { get; set; } = true;
+
+    public Tenant Tenant { get; set; } = null!;
+}
+
+/// <summary>สมุดรายวันทั่วไป (Journal Entry — JV-YYYYMM-XXXX)</summary>
+public class JournalEntry
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public string JournalNumber { get; set; } = string.Empty;
+    public DateTime EntryDate { get; set; } = DateTime.UtcNow;
+    public string Description { get; set; } = string.Empty;
+    public JournalSourceType SourceType { get; set; } = JournalSourceType.Manual;
+    public Guid? SourceId { get; set; }
+    public string? SourceNumber { get; set; }
+    public bool IsPosted { get; set; } = true;
+    public string? CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Tenant Tenant { get; set; } = null!;
+    public ICollection<JournalEntryLine> Lines { get; set; } = [];
+}
+
+public class JournalEntryLine
+{
+    public Guid Id { get; set; }
+    public Guid JournalEntryId { get; set; }
+    public Guid AccountId { get; set; }
+    public decimal Debit { get; set; }
+    public decimal Credit { get; set; }
+    public string? Memo { get; set; }
+
+    public JournalEntry JournalEntry { get; set; } = null!;
+    public ChartOfAccount Account { get; set; } = null!;
+}
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, X, MapPin } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
@@ -23,27 +23,28 @@ export default function CustomerSelectModal({ isOpen, onClose, onSelect }: Custo
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchCustomers();
-    }
-  }, [isOpen]);
+  const loadCustomers = useCallback(async () => {
+    const res = await apiClient.get('/customers');
+    return res.data?.success && res.data?.data?.items ? (res.data.data.items as Customer[]) : [];
+  }, []);
 
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      const res = await apiClient.get('/customers');
-      if (res.data?.success && res.data?.data?.items) {
-        setCustomers(res.data.data.items);
-      } else {
-        setCustomers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    loadCustomers()
+      .then((items) => {
+        if (active) setCustomers(items);
+      })
+      .catch((error) => {
+        console.error('Error fetching customers:', error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOpen, loadCustomers]);
 
   const filteredCustomers = customers.filter(c =>
     (c.name || '').toLowerCase().includes(search.toLowerCase()) ||

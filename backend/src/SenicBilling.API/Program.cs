@@ -83,6 +83,9 @@ builder.Services.AddScoped<IPaymentService, OmisePaymentService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IAIAssistantService, GeminiAIAssistantService>();
 builder.Services.AddScoped<IPdfService, QuestPdfService>();
+builder.Services.AddHttpClient<ILineNotifyService, LineNotifyService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IAccountingService, AccountingService>();
 builder.Services.AddScoped<DevelopmentDataSeeder>();
 
 // ──────────────────────────────────────────────
@@ -127,7 +130,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:3000",
+                "http://localhost:8810",
+                "http://localhost:8811")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

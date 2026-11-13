@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
+using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
 
 namespace SenicBilling.API.Controllers;
@@ -23,7 +24,7 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
             .OrderByDescending(u => u.CreatedAt)
             .ToListAsync(ct);
 
-        var dtos = users.Select(u => new UserProfileDto(u.Id, u.Username, u.DisplayName, u.Email, u.Role)).ToList();
+        var dtos = users.Select(u => new UserProfileDto(u.Id, u.Username, u.DisplayName, u.Email, u.Role, u.IsActive)).ToList();
         
         return Ok(new ApiResponse<List<UserProfileDto>>(true, "สำเร็จ", dtos));
     }
@@ -32,6 +33,24 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
     public async Task<ActionResult<ApiResponse<UserProfileDto>>> CreateUser([FromBody] CreateUserRequest request, CancellationToken ct)
     {
         var tenantId = GetTenantId();
+
+        var tenant = await dbContext.Tenants
+            .Include(t => t.CurrentPlan)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+        if (tenant?.CurrentPlan != null && tenant.CurrentPlan.MaxUsers > 0)
+        {
+            var activeUsersCount = await dbContext.AppUsers
+                .CountAsync(u => u.TenantId == tenantId && u.IsActive, ct);
+
+            if (activeUsersCount >= tenant.CurrentPlan.MaxUsers)
+            {
+                return BadRequest(new ApiResponse<UserProfileDto>(
+                    false,
+                    $"จำนวนผู้ใช้งานครบโควต้าของแพ็กเกจ {tenant.CurrentPlan.Name} ({tenant.CurrentPlan.MaxUsers} บัญชี) กรุณาอัปเกรดแพ็กเกจ",
+                    null));
+            }
+        }
 
         if (await dbContext.AppUsers.AnyAsync(u => u.TenantId == tenantId && u.Username == request.Username, ct))
         {
@@ -54,7 +73,7 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
         dbContext.AppUsers.Add(user);
         await dbContext.SaveChangesAsync(ct);
 
-        var dto = new UserProfileDto(user.Id, user.Username, user.DisplayName, user.Email, user.Role);
+        var dto = new UserProfileDto(user.Id, user.Username, user.DisplayName, user.Email, user.Role, user.IsActive);
         return Ok(new ApiResponse<UserProfileDto>(true, "สร้างผู้ใช้งานสำเร็จ", dto));
     }
 
@@ -81,7 +100,7 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
 
         await dbContext.SaveChangesAsync(ct);
 
-        var dto = new UserProfileDto(user.Id, user.Username, user.DisplayName, user.Email, user.Role);
+        var dto = new UserProfileDto(user.Id, user.Username, user.DisplayName, user.Email, user.Role, user.IsActive);
         return Ok(new ApiResponse<UserProfileDto>(true, "อัปเดตผู้ใช้งานสำเร็จ", dto));
     }
 
@@ -119,11 +138,8 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
         return claim is not null ? Guid.Parse(claim) : Guid.Empty;
     }
 
-    private static string HashPassword(string password)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hash);
-    }
+    private static string HashPassword(string password) =>
+        PasswordHasher.HashPassword(password);
 }
 
 public record CreateUserRequest(string Username, string? DisplayName, string? Email, string Password, string Role);

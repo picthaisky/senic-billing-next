@@ -26,7 +26,7 @@ function convertToThaiText(numberStr: string): string {
   if (numberStr === '0' || numberStr === '00') return '';
 
   let result = '';
-  let length = numberStr.length;
+  const length = numberStr.length;
 
   for (let i = 0; i < length; i++) {
     const digit = parseInt(numberStr.charAt(i), 10);

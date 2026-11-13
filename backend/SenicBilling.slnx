@@ -5,4 +5,7 @@
     <Project Path="src/SenicBilling.Domain/SenicBilling.Domain.csproj" />
     <Project Path="src/SenicBilling.Infrastructure/SenicBilling.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SenicBilling.Tests/SenicBilling.Tests.csproj" />
+  </Folder>
 </Solution>

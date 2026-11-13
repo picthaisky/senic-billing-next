@@ -27,6 +27,16 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
     public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
     public DbSet<BillingInvoice> BillingInvoices => Set<BillingInvoice>();
     public DbSet<TenantUsageStat> TenantUsageStats => Set<TenantUsageStat>();
+    public DbSet<ExpenseRecord> ExpenseRecords => Set<ExpenseRecord>();
+    public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<ProductWarehouseStock> ProductWarehouseStocks => Set<ProductWarehouseStock>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<ChartOfAccount> ChartOfAccounts => Set<ChartOfAccount>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -416,6 +426,179 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
                 .HasForeignKey(e => e.CurrentPlanId)
                 .OnDelete(DeleteBehavior.SetNull);
             entity.Property(e => e.SubscriptionStatus).HasMaxLength(50);
+            entity.Property(e => e.LineChannelAccessToken).HasMaxLength(500);
+            entity.Property(e => e.LineChannelSecret).HasMaxLength(200);
+            entity.Property(e => e.LineDefaultTargetId).HasMaxLength(100);
+        });
+
+        // ──────────────────────────────────────────────
+        // ExpenseRecord (ใบสำคัญจ่าย / ภาษีซื้อ / หัก ณ ที่จ่าย)
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<ExpenseRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.VoucherNumber).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.TaxInvoiceNumber).HasMaxLength(50);
+            entity.Property(e => e.VendorName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.VendorTaxId).HasMaxLength(13);
+            entity.Property(e => e.VendorBranch).HasMaxLength(50);
+            entity.Property(e => e.VendorAddress).HasMaxLength(500);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.IncomeTypeDescription).HasMaxLength(200);
+            entity.Property(e => e.AttachmentUrl).HasMaxLength(1000);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.CancellationReason).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100);
+
+            entity.Property(e => e.Subtotal).HasPrecision(18, 4);
+            entity.Property(e => e.DiscountAmount).HasPrecision(18, 4);
+            entity.Property(e => e.TotalBeforeVat).HasPrecision(18, 4);
+            entity.Property(e => e.VatAmount).HasPrecision(18, 4);
+            entity.Property(e => e.GrandTotal).HasPrecision(18, 4);
+            entity.Property(e => e.WhtAmount).HasPrecision(18, 4);
+            entity.Property(e => e.NetPaidAmount).HasPrecision(18, 4);
+            entity.Property(e => e.VatRate).HasPrecision(5, 2);
+            entity.Property(e => e.WhtRate).HasPrecision(5, 2);
+
+            entity.Property(e => e.Category).HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.PndType).HasConversion<string>().HasMaxLength(10);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.VatMode).HasConversion<string>().HasMaxLength(20);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.TenantId, e.VoucherNumber }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.ExpenseDate });
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+        });
+
+        // ──────────────────────────────────────────────
+        // Phase 10: Vendor, PurchaseOrder, Warehouse & Accounting
+        // ──────────────────────────────────────────────
+        modelBuilder.Entity<Vendor>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.TaxId).HasMaxLength(13);
+            entity.Property(e => e.Branch).HasMaxLength(50);
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.ContactPerson).HasMaxLength(200);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.DefaultWhtRate).HasPrecision(5, 2);
+            entity.Property(e => e.DefaultPndType).HasConversion<string>().HasMaxLength(10);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.Name });
+        });
+
+        modelBuilder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PoNumber).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.VendorName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.VendorTaxId).HasMaxLength(13);
+            entity.Property(e => e.VendorBranch).HasMaxLength(50);
+            entity.Property(e => e.VendorAddress).HasMaxLength(500);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.CancellationReason).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100);
+            entity.Property(e => e.Subtotal).HasPrecision(18, 4);
+            entity.Property(e => e.DiscountAmount).HasPrecision(18, 4);
+            entity.Property(e => e.TotalBeforeVat).HasPrecision(18, 4);
+            entity.Property(e => e.VatAmount).HasPrecision(18, 4);
+            entity.Property(e => e.GrandTotal).HasPrecision(18, 4);
+            entity.Property(e => e.VatRate).HasPrecision(5, 2);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.VatMode).HasConversion<string>().HasMaxLength(20);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Vendor).WithMany().HasForeignKey(e => e.VendorId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Warehouse).WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => new { e.TenantId, e.PoNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<PurchaseOrderLine>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Unit).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Quantity).HasPrecision(18, 4);
+            entity.Property(e => e.ReceivedQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.UnitPrice).HasPrecision(18, 4);
+            entity.Property(e => e.DiscountAmount).HasPrecision(18, 4);
+            entity.Property(e => e.LineTotal).HasPrecision(18, 4);
+            entity.HasOne(e => e.PurchaseOrder).WithMany(p => p.Lines).HasForeignKey(e => e.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Warehouse>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductWarehouseStock>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasPrecision(18, 4);
+            entity.Property(e => e.ReorderLevel).HasPrecision(18, 4);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Warehouse).WithMany(w => w.Stocks).HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.TenantId, e.ProductId, e.WarehouseId }).IsUnique();
+        });
+
+        modelBuilder.Entity<StockMovement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.MovementType).HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.QuantityDelta).HasPrecision(18, 4);
+            entity.Property(e => e.BalanceAfter).HasPrecision(18, 4);
+            entity.Property(e => e.ReferenceNumber).HasMaxLength(50);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100);
+            entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Warehouse).WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<ChartOfAccount>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AccountType).HasConversion<string>().HasMaxLength(20);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+        });
+
+        modelBuilder.Entity<JournalEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.JournalNumber).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.SourceType).HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.SourceNumber).HasMaxLength(50);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.JournalNumber }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.EntryDate });
+        });
+
+        modelBuilder.Entity<JournalEntryLine>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Debit).HasPrecision(18, 4);
+            entity.Property(e => e.Credit).HasPrecision(18, 4);
+            entity.Property(e => e.Memo).HasMaxLength(300);
+            entity.HasOne(e => e.JournalEntry).WithMany(j => j.Lines).HasForeignKey(e => e.JournalEntryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Account).WithMany().HasForeignKey(e => e.AccountId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ──────────────────────────────────────────────

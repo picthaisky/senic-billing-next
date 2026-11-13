@@ -8,7 +8,7 @@ namespace SenicBilling.API.Controllers.SuperAdmin;
 
 [ApiController]
 [Route("api/superadmin/plans")]
-// [Authorize(Roles = "SuperAdmin")] // Uncomment when SuperAdmin role is implemented securely
+[Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
 public class SaPlansController(SenicBillingDbContext dbContext) : ControllerBase
 {
     [HttpGet]

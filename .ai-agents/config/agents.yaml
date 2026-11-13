@@ -1,4 +1,4 @@
-version: 1
+version: 2
 project: senic-billing-next
 instruction_file: .github/copilot-instructions.md
 knowledge_root: .ai-agents/knowledge
@@ -18,6 +18,10 @@ orchestrator:
     - senic-aegis
     - senic-hermes
     - senic-mnemosyne
+    - senic-inventory-pos-specialist
+    - senic-etax-report-specialist
+    - senic-saas-portal-specialist
+    - senic-ai-automation-specialist
 
 agents:
   - id: senic-athena
@@ -33,33 +37,35 @@ agents:
     triggers: [architecture, API contract, data model, CQRS, Clean Architecture, ADR]
     owns: [system design, API boundaries, database design, integration boundaries]
     validates: [layer boundaries, scalability, maintainability]
+    subagents: [senic-saas-portal-specialist]
 
   - id: senic-ledger
     name: Ledger
     role: Billing domain specialist
-    triggers: [VAT, tax invoice, receipt, cash bill, delivery note, payment, document number]
+    triggers: [VAT, tax invoice, receipt, cash bill, delivery note, quotation, credit note, debit note, payment, document number]
     owns: [financial invariants, document lifecycle, VAT correctness, numbering behavior]
     validates: [decimal precision, rounding, lifecycle state transitions]
-    subagents: [vat-precision-auditor, document-numbering-sentinel, payment-webhook-specialist]
+    subagents: [vat-precision-auditor, document-numbering-sentinel, payment-webhook-specialist, senic-inventory-pos-specialist, senic-etax-report-specialist]
 
   - id: senic-sage
     name: Sage
     role: Backend engineer
-    triggers: [.NET, EF Core, controller, service, SignalR, MinIO, JWT, PostgreSQL]
+    triggers: [.NET, EF Core, controller, service, SignalR, MinIO, JWT, PostgreSQL, QuestPDF, ClosedXML]
     owns: [backend implementation, migrations, API endpoints, server-side integration]
     validates: [dotnet build, API contract compatibility]
+    subagents: [senic-ai-automation-specialist]
 
   - id: senic-nova
     name: Nova
     role: Frontend engineer
-    triggers: [React, TypeScript, Vite, Zustand, component, hook, API client, PWA]
+    triggers: [React, TypeScript, Vite, Zustand, component, hook, API client, PWA, admin-frontend]
     owns: [frontend implementation, state, routes, forms, client integration]
     validates: [npm build, lint, browser behavior]
 
   - id: senic-milo
     name: Milo
     role: UX/UI design system specialist
-    triggers: [UI, UX, theme, Thai copy, glassmorphism, mobile, accessibility]
+    triggers: [UI, UX, theme, Thai copy, glassmorphism, mobile, accessibility, i18n]
     owns: [visual consistency, interaction design, responsive behavior, accessibility]
     validates: [design token usage, Thai-first copy, Lucide icons, mobile layout]
     subagents: [design-system-guardian, pwa-mobile-interaction-reviewer, pdf-print-specialist]
@@ -75,7 +81,7 @@ agents:
   - id: senic-aegis
     name: Aegis
     role: Security and compliance reviewer
-    triggers: [security, auth, JWT, tenant isolation, OWASP, secret, webhook, upload]
+    triggers: [security, auth, JWT, RBAC, tenant isolation, OWASP, secret, webhook, upload, SuperAdmin]
     owns: [threat review, authorization, data isolation, secret handling]
     validates: [tenant boundary safety, webhook validation, upload safety]
     subagents: [tenant-isolation-auditor]
@@ -95,6 +101,34 @@ agents:
     owns: [knowledge base, patterns, decisions, feedback, skill evolution]
     validates: [evidence quality, staleness, no secrets]
 
+  - id: senic-inventory-pos-specialist
+    name: Inventory & Barcode POS Specialist
+    role: Inventory stock deduction, restocking, SKU/Barcode separation, and POS scanning specialist
+    triggers: [inventory, stock, barcode, SKU, DeductStockAsync, restock, ProductsPage, POS scan]
+    owns: [stock deduction/restoration logic, barcode scanner integration, product stock invariants]
+    validates: [stock accuracy across create/update/cancel/convert, null stock handling]
+
+  - id: senic-etax-report-specialist
+    name: Thai Tax, e-Tax & Reporting Specialist
+    role: Thai Revenue Department compliance, ETDA e-Tax XML, WHT, Excel Output Tax Report, and financial analytics specialist
+    triggers: [e-Tax, XML, WHT, withholding tax, tax report, ClosedXML, Excel export, tax estimator, aging report]
+    owns: [ETaxXmlGenerator, ReportsController, Dashboard tax/aging DTO parity, Thai tax compliance]
+    validates: [13-digit Tax ID, branch rules, cancelled invoice reporting, VAT/WHT accuracy]
+
+  - id: senic-saas-portal-specialist
+    name: SaaS Multi-Tenant & Super Admin Specialist
+    role: SaaS subscription plans, tenant quotas, Omise recurring billing, and Super Admin Portal specialist
+    triggers: [SaaS, subscription, plan, quota, TenantUsageStat, SuperAdmin, admin-frontend, SaTenants, SaPlans]
+    owns: [SubscriptionPlan, TenantSubscription, quota enforcement, SuperAdmin APIs, admin-frontend]
+    validates: [SuperAdmin role security, tenant suspension enforcement, quota limits]
+
+  - id: senic-ai-automation-specialist
+    name: AI Assistant, Background Automation & Notification Specialist
+    role: Gemini AI Assistant, background workers, SignalR, LINE Notify, Web Push, and Email specialist
+    triggers: [AI assistant, Gemini, FloatingAIChat, recurring invoice, overdue worker, LINE Notify, Web Push, SignalR, SMTP]
+    owns: [GeminiAIAssistantService, RecurringInvoiceWorker, OverdueMonitorWorker, notification channels]
+    validates: [tenant-scoped AI context, idempotent background jobs, non-blocking notifications]
+
 subagents:
   - id: vat-precision-auditor
     parent: senic-ledger
@@ -105,6 +139,18 @@ subagents:
   - id: payment-webhook-specialist
     parent: senic-ledger
     output: payment lifecycle, webhook idempotency, and failure-mode review.
+  - id: senic-inventory-pos-specialist
+    parent: senic-ledger
+    output: stock deduction/restoration rules, SKU/barcode behavior, and POS scan verification.
+  - id: senic-etax-report-specialist
+    parent: senic-ledger
+    output: e-Tax XML compliance, WHT/VAT reporting, Excel export, and dashboard analytics parity.
+  - id: senic-saas-portal-specialist
+    parent: senic-atlas
+    output: SaaS subscription lifecycle, quota enforcement, and Super Admin Portal readiness.
+  - id: senic-ai-automation-specialist
+    parent: senic-sage
+    output: AI assistant tenant scoping, background worker reliability, and notification delivery.
   - id: tenant-isolation-auditor
     parent: senic-aegis
     output: cross-tenant data leak analysis and authorization risks.

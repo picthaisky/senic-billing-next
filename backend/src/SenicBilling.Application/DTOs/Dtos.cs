@@ -25,11 +25,13 @@ public record RegisterRequest(string Username, string Password, string DisplayNa
 // User & Tenant Profile DTOs
 // ──────────────────────────────────────────────
 
-public record TenantProfileDto(Guid Id, string CompanyName, string? TaxId, string? Address, string? Phone, string? Email, string? LogoUrl, string? BranchName, string? LineNotifyToken);
+public record TenantProfileDto(Guid Id, string CompanyName, string? TaxId, string? Address, string? Phone, string? Email, string? LogoUrl, string? BranchName, string? LineNotifyToken,
+    string? LineDefaultTargetId = null, bool HasLineChannelAccessToken = false, bool HasLineChannelSecret = false);
 
-public record UpdateTenantProfileRequest(string CompanyName, string? TaxId, string? Address, string? Phone, string? Email, string? LogoUrl, string? BranchName, string? LineNotifyToken);
+public record UpdateTenantProfileRequest(string CompanyName, string? TaxId, string? Address, string? Phone, string? Email, string? LogoUrl, string? BranchName, string? LineNotifyToken,
+    string? LineChannelAccessToken = null, string? LineChannelSecret = null, string? LineDefaultTargetId = null);
 
-public record UserProfileDto(Guid Id, string Username, string DisplayName, string? Email, string Role);
+public record UserProfileDto(Guid Id, string Username, string DisplayName, string? Email, string Role, bool IsActive = true);
 
 public record UpdateProfileRequest(string DisplayName, string? Email);
 
@@ -218,7 +220,11 @@ public record TaxEstimatorDto(
     decimal TotalVatCollected,
     decimal TotalPurchases,
     decimal TotalVatPaid,
-    decimal NetVatPayable
+    decimal NetVatPayable,
+    decimal TotalSalesVat,
+    decimal TotalPurchaseVat,
+    decimal EstimatedTaxPayable,
+    decimal WhtDeducted
 );
 
 public record AgingReportDto(
@@ -230,6 +236,16 @@ public record AgingReportDto(
     decimal Overdue61To90Days,
     decimal OverdueOver90Days,
     decimal TotalOverdue
+);
+
+public record AgingSummaryDto(
+    decimal Current,
+    decimal Overdue1_30,
+    decimal Overdue31_60,
+    decimal Overdue61_90,
+    decimal Overdue90Plus,
+    decimal TotalOverdue,
+    List<AgingReportDto> Customers
 );
 
 public record CustomerPurchaseHistoryDto(
@@ -251,7 +267,10 @@ public record RecurringInvoiceDto(
     DateTime NextRunDate,
     bool IsActive,
     int? MaxOccurrences,
-    int CurrentOccurrence
+    int CurrentOccurrence,
+    string? SourceDocumentNumber = null,
+    string? CustomerName = null,
+    string? DocumentType = null
 );
 
 public record CreateRecurringInvoiceRequest(

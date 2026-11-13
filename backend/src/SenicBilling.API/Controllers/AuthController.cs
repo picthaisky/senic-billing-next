@@ -24,9 +24,14 @@ public class AuthController(SenicBillingDbContext dbContext, JwtTokenService jwt
             .Include(u => u.Tenant)
             .FirstOrDefaultAsync(u => u.Username == request.Username && u.IsActive, ct);
 
-        if (user is null || !VerifyPassword(request.Password, user.PasswordHash))
+        if (user is null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash, out var needsUpgrade))
         {
             return Unauthorized(new ApiResponse<LoginResponse>(false, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", null));
+        }
+
+        if (needsUpgrade)
+        {
+            user.PasswordHash = PasswordHasher.HashPassword(request.Password);
         }
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -43,6 +48,30 @@ public class AuthController(SenicBillingDbContext dbContext, JwtTokenService jwt
         );
 
         return Ok(new ApiResponse<LoginResponse>(true, "เข้าสู่ระบบสำเร็จ", response));
+    }
+
+    [HttpPost("demo-login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<LoginResponse>>> DemoLogin(CancellationToken ct)
+    {
+        var user = await dbContext.AppUsers
+            .Include(u => u.Tenant)
+            .FirstOrDefaultAsync(u => u.IsActive && (u.Role == "Admin" || u.Role == "SystemAdmin"), ct);
+
+        if (user is null)
+            return NotFound(new ApiResponse<LoginResponse>(false, "ไม่พบบัญชีตัวอย่างในระบบ", null));
+
+        var token = jwtTokenService.GenerateToken(user, user.Tenant.CompanyName);
+        var refreshToken = jwtTokenService.GenerateRefreshToken();
+
+        var response = new LoginResponse(
+            Token: token,
+            RefreshToken: refreshToken,
+            ExpiresAt: DateTime.UtcNow.AddHours(8),
+            User: new UserInfo(user.Id, user.Username, user.DisplayName, user.Role, user.TenantId, user.Tenant.CompanyName)
+        );
+
+        return Ok(new ApiResponse<LoginResponse>(true, "เข้าสู่ระบบตัวอย่างสำเร็จ", response));
     }
 
     /// <summary>Register a new user (Admin only)</summary>
@@ -87,15 +116,6 @@ public class AuthController(SenicBillingDbContext dbContext, JwtTokenService jwt
         return claim is not null ? Guid.Parse(claim) : throw new UnauthorizedAccessException("Tenant claim not found");
     }
 
-    private static string HashPassword(string password)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hash);
-    }
-
-    private static bool VerifyPassword(string password, string storedHash)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hash) == storedHash;
-    }
+    private static string HashPassword(string password) =>
+        PasswordHasher.HashPassword(password);
 }

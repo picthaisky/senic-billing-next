@@ -33,6 +33,81 @@ public class TenantSubscriptionController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("plans")]
+    [Authorize]
+    public async Task<IActionResult> GetAvailablePlans(CancellationToken ct)
+    {
+        var plans = await _dbContext.SubscriptionPlans
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.MonthlyPrice)
+            .ToListAsync(ct);
+
+        return Ok(new { success = true, data = plans });
+    }
+
+    [HttpGet("current")]
+    [Authorize]
+    public async Task<IActionResult> GetCurrentSubscription(CancellationToken ct)
+    {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out var tenantId))
+            return Unauthorized();
+
+        var tenant = await _dbContext.Tenants
+            .Include(t => t.CurrentPlan)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+        if (tenant == null) return NotFound("Tenant not found");
+
+        var now = DateTime.UtcNow;
+        var currentMonthDocuments = await _dbContext.DocumentHeaders
+            .CountAsync(d =>
+                d.TenantId == tenantId &&
+                d.Status != DocumentStatus.Cancelled &&
+                d.CreatedAt.Year == now.Year &&
+                d.CreatedAt.Month == now.Month, ct);
+
+        var currentUsers = await _dbContext.AppUsers
+            .CountAsync(u => u.TenantId == tenantId && u.IsActive, ct);
+
+        var availablePlans = await _dbContext.SubscriptionPlans
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.MonthlyPrice)
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                tenantId = tenant.Id,
+                companyName = tenant.CompanyName,
+                subscriptionStatus = tenant.SubscriptionStatus,
+                subscriptionValidUntil = tenant.SubscriptionValidUntil,
+                currentPlan = tenant.CurrentPlan != null
+                    ? new
+                    {
+                        tenant.CurrentPlan.Id,
+                        tenant.CurrentPlan.Name,
+                        tenant.CurrentPlan.MonthlyPrice,
+                        tenant.CurrentPlan.YearlyPrice,
+                        tenant.CurrentPlan.MaxUsers,
+                        tenant.CurrentPlan.MaxDocumentsPerMonth,
+                        tenant.CurrentPlan.Features
+                    }
+                    : null,
+                usage = new
+                {
+                    currentMonthDocuments,
+                    maxDocumentsPerMonth = tenant.CurrentPlan?.MaxDocumentsPerMonth ?? 2000,
+                    currentUsers,
+                    maxUsers = tenant.CurrentPlan?.MaxUsers ?? 20
+                },
+                availablePlans
+            }
+        });
+    }
+
     [HttpPost("checkout")]
     [Authorize]
     public async Task<IActionResult> Checkout([FromBody] CheckoutRequest req, CancellationToken ct)
@@ -49,13 +124,21 @@ public class TenantSubscriptionController : ControllerBase
 
         try
         {
-            // 1. Create Customer in Omise if not exists (For simplicity, we create a new customer each time here, but ideally we'd store OmiseCustomerId in Tenant table)
-            var customerId = await _paymentService.CreateCustomerAsync(tenant.Email ?? "no-email@example.com", $"Tenant: {tenant.CompanyName}", req.CardToken);
+            string chargeId = "FREE_OR_DIRECT_" + Guid.NewGuid().ToString("N")[..8];
 
-            // 2. Charge the customer for the plan amount
-            var chargeId = await _paymentService.CreateCardChargeAsync(plan.MonthlyPrice, customerId, tenant.Id.ToString());
+            if (plan.MonthlyPrice > 0 && !string.IsNullOrWhiteSpace(req.CardToken))
+            {
+                var customerId = await _paymentService.CreateCustomerAsync(
+                    tenant.Email ?? "no-email@example.com",
+                    $"Tenant: {tenant.CompanyName}",
+                    req.CardToken);
 
-            // 3. Record Subscription History
+                chargeId = await _paymentService.CreateCardChargeAsync(
+                    plan.MonthlyPrice,
+                    customerId,
+                    tenant.Id.ToString());
+            }
+
             var subscription = new TenantSubscription
             {
                 Id = Guid.NewGuid(),
@@ -69,15 +152,21 @@ public class TenantSubscriptionController : ControllerBase
 
             _dbContext.TenantSubscriptions.Add(subscription);
 
-            // 4. Update Tenant Status
             tenant.SubscriptionStatus = "Active";
+            tenant.IsActive = true;
             tenant.CurrentPlanId = plan.Id;
             tenant.SubscriptionValidUntil = subscription.EndDate;
             tenant.UpdatedAt = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync(ct);
 
-            return Ok(new { success = true, chargeId, validUntil = tenant.SubscriptionValidUntil });
+            return Ok(new
+            {
+                success = true,
+                chargeId,
+                planName = plan.Name,
+                validUntil = tenant.SubscriptionValidUntil
+            });
         }
         catch (Exception ex)
         {

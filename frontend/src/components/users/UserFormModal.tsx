@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Save, Eye, EyeOff, Shield } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
+import { getApiErrorMessage } from '../../utils/errorUtils';
 
 interface User {
   id: string;
@@ -32,17 +33,20 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
   const isEditing = !!user;
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        username: user.username,
-        displayName: user.displayName || '',
-        email: user.email || '',
-        role: user.role || 'User',
-        password: '', // Blank when editing unless they want to change
-      });
-    } else if (roles.length > 0 && !roles.includes('User')) {
-      setFormData(prev => ({ ...prev, role: roles[0] }));
-    }
+    const timer = window.setTimeout(() => {
+      if (user) {
+        setFormData({
+          username: user.username,
+          displayName: user.displayName || '',
+          email: user.email || '',
+          role: user.role || 'User',
+          password: '', // Blank when editing unless they want to change
+        });
+      } else if (roles.length > 0 && !roles.includes('User')) {
+        setFormData(prev => ({ ...prev, role: roles[0] }));
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [user, roles]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -72,9 +76,9 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
         await apiClient.post('/admin/users', formData);
       }
       onSaved();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to save user', error);
-      alert(error.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้งาน');
+      alert(getApiErrorMessage(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้งาน'));
     } finally {
       setIsSaving(false);
     }

@@ -18,15 +18,14 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export function usePushNotifications() {
-  const [isSupported, setIsSupported] = useState(false);
+  const isSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [permission, setPermission] = useState<NotificationPermission>(() =>
+    isSupported ? Notification.permission : 'default'
+  );
 
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true);
-      setPermission(Notification.permission);
-      
+    if (isSupported) {
       // Register service worker if not already registered
       navigator.serviceWorker.register('/sw.js')
         .then(registration => {
@@ -40,7 +39,7 @@ export function usePushNotifications() {
           console.error('Service Worker registration failed:', error);
         });
     }
-  }, []);
+  }, [isSupported]);
 
   const subscribe = useCallback(async () => {
     if (!isSupported) return false;

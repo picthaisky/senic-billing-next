@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\SenicBilling.Domain\SenicBilling.Domain.csproj" />
@@ -13,6 +13,7 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="Omise" Version="4.3.0" />
     <PackageReference Include="QuestPDF" Version="2026.5.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.8" />
     <PackageReference Include="WebPush" Version="1.0.13" />
   </ItemGroup>
 

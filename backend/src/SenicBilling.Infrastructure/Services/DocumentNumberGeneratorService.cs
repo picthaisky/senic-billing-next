@@ -22,7 +22,12 @@ public class DocumentNumberGeneratorService(SenicBillingDbContext dbContext) : I
         [DocumentType.CashBill] = "CSB",
         [DocumentType.DeliveryNote] = "DLV",
         [DocumentType.TaxInvoice] = "INV",
-        [DocumentType.Quotation] = "QUO"
+        [DocumentType.Quotation] = "QUO",
+        [DocumentType.CreditNote] = "CN",
+        [DocumentType.DebitNote] = "DN",
+        [DocumentType.ExpenseVoucher] = "EXP",
+        [DocumentType.PurchaseOrder] = "PO",
+        [DocumentType.JournalVoucher] = "JV"
     };
 
     public async Task<string> GenerateNextNumberAsync(

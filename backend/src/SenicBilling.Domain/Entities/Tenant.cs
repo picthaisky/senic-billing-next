@@ -32,6 +32,15 @@ public class Tenant
     // Notifications
     public string? LineNotifyToken { get; set; }
 
+    /// <summary>LINE Messaging API — Channel Access Token (Long-lived)</summary>
+    public string? LineChannelAccessToken { get; set; }
+
+    /// <summary>LINE Messaging API — Channel Secret (ใช้ตรวจสอบ X-Line-Signature)</summary>
+    public string? LineChannelSecret { get; set; }
+
+    /// <summary>LINE userId / groupId ปลายทางสำหรับ Push Message แจ้งเตือน</summary>
+    public string? LineDefaultTargetId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public bool IsActive { get; set; } = true;

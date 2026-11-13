@@ -33,7 +33,10 @@ export default function StaffManagementPage() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    const timer = window.setTimeout(() => {
+      void fetchUsers();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [fetchUsers]);
 
   const handleInvite = async (e: React.FormEvent) => {

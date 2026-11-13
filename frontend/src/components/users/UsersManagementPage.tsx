@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Shield, Users, UserPlus, Key, Edit } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Shield, Users, UserPlus, Key, Edit, UserCheck, UserX } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import UserFormModal from './UserFormModal';
 
@@ -38,30 +38,19 @@ export default function UsersManagementPage() {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    if (activeTab === 'users') {
-      fetchUsers();
-    } else {
-      fetchRolesAndPermissions();
-    }
-  }, [activeTab]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoadingUsers(true);
       const res = await apiClient.get('/admin/users');
-      // Assume API returns ApiResponse<List<UserProfileDto>> but we added isActive? Wait, UserProfileDto does not have IsActive.
-      // We will just show them. If we need IsActive, we might need to add it to DTO. For now we assume they are active or we fetch it.
-      // Wait, AdminUsersController returns UserProfileDto which doesn't have IsActive. Let's just use what we have.
       setUsers(res.data?.data || []);
     } catch (error) {
       console.error('Failed to fetch users', error);
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, []);
 
-  const fetchRolesAndPermissions = async () => {
+  const fetchRolesAndPermissions = useCallback(async () => {
     try {
       setLoadingRoles(true);
       const [permRes, roleRes] = await Promise.all([
@@ -70,15 +59,54 @@ export default function UsersManagementPage() {
       ]);
       setPermissions(permRes.data?.data || []);
       
-      const rolesData = roleRes.data?.data || [];
+      const rolesData = (roleRes.data?.data || []) as RoleWithPermissions[];
       setRoles(rolesData);
-      if (rolesData.length > 0 && !selectedRole) {
-        setSelectedRole(rolesData[0]);
+      if (rolesData.length > 0) {
+        setSelectedRole((prev) => prev ?? rolesData[0]);
       }
     } catch (error) {
       console.error('Failed to fetch roles and permissions', error);
     } finally {
       setLoadingRoles(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (activeTab === 'users') {
+        void fetchUsers();
+        if (roles.length === 0) {
+          void fetchRolesAndPermissions();
+        }
+      } else {
+        void fetchRolesAndPermissions();
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, fetchUsers, fetchRolesAndPermissions, roles.length]);
+
+  const handleToggleUserStatus = async (user: User) => {
+    const nextActive = !user.isActive;
+    const actionLabel = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
+    if (!window.confirm(`ยืนยันการ${actionLabel}ผู้ใช้งาน "${user.username}" หรือไม่?`)) return;
+    try {
+      await apiClient.put(`/admin/users/${user.id}/status`, { isActive: nextActive });
+      void fetchUsers();
+    } catch (error: unknown) {
+      const msg =
+        typeof error === 'object' && error !== null && 'response' in error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      alert(msg || `ไม่สามารถ${actionLabel}ผู้ใช้งานได้`);
+    }
+  };
+
+  const handleQuickRoleChange = async (userId: string, newRole: string) => {
+    try {
+      await apiClient.put(`/tenant-users/${userId}/role`, { role: newRole });
+      void fetchUsers();
+    } catch {
+      alert('ไม่สามารถเปลี่ยนสิทธิ์การใช้งานได้');
     }
   };
 
@@ -160,27 +188,38 @@ export default function UsersManagementPage() {
                   <th className="p-4 font-semibold text-[var(--color-text-muted)]">ชื่อที่แสดง</th>
                   <th className="p-4 font-semibold text-[var(--color-text-muted)]">อีเมล</th>
                   <th className="p-4 font-semibold text-[var(--color-text-muted)] text-center">สิทธิ์ (Role)</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-center">สถานะ</th>
                   <th className="p-4 font-semibold text-[var(--color-text-muted)] text-right">จัดการ</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingUsers ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-[var(--color-text-muted)]">กำลังโหลดข้อมูล...</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">กำลังโหลดข้อมูล...</td></tr>
                 ) : users.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-[var(--color-text-muted)]">ไม่พบข้อมูลผู้ใช้งาน</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">ไม่พบข้อมูลผู้ใช้งาน</td></tr>
                 ) : (
                   users.map(user => (
-                    <tr key={user.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]">
+                    <tr key={user.id} className={`border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)] ${user.isActive === false ? 'opacity-60' : ''}`}>
                       <td className="p-4 font-medium text-[var(--color-text)]">{user.username}</td>
                       <td className="p-4 text-[var(--color-text)]">{user.displayName || '-'}</td>
                       <td className="p-4 text-[var(--color-text)]">{user.email || '-'}</td>
                       <td className="p-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'Admin' ? 'bg-purple-100 text-purple-800' : 
-                          user.role === 'SystemAdmin' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {user.role}
+                        <select
+                          aria-label={`สิทธิ์ของ ${user.username}`}
+                          value={user.role}
+                          onChange={(e) => handleQuickRoleChange(user.id, e.target.value)}
+                          className="input-field py-1 px-2.5 text-xs font-medium max-w-[140px] mx-auto"
+                        >
+                          {Array.from(new Set(['Admin', 'Accountant', 'Sales', 'User', ...roles.map(r => r.roleName), user.role])).map((roleOpt) => (
+                            <option key={roleOpt} value={roleOpt}>
+                              {roleOpt}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`badge text-xs ${user.isActive !== false ? 'badge-success' : 'badge-danger'}`}>
+                          {user.isActive !== false ? 'ใช้งาน' : 'ระงับใช้งาน'}
                         </span>
                       </td>
                       <td className="p-4 text-right">
@@ -191,6 +230,13 @@ export default function UsersManagementPage() {
                             title="แก้ไขข้อมูล"
                           >
                             <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => void handleToggleUserStatus(user)}
+                            className={`p-1.5 rounded-md ${user.isActive !== false ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                            title={user.isActive !== false ? 'ระงับการใช้งาน' : 'เปิดใช้งานอีกครั้ง'}
+                          >
+                            {user.isActive !== false ? <UserX size={16} /> : <UserCheck size={16} />}
                           </button>
                         </div>
                       </td>

@@ -13,27 +13,34 @@ export interface DocumentLineItem {
 
 export type VatMode = 'exclusive' | 'inclusive';
 
+export interface SavedDocumentFormState {
+  lines?: DocumentLineItem[];
+  vatMode?: VatMode;
+  discountAmount?: number;
+  whtRate?: number;
+}
+
+function createEmptyLine(): DocumentLineItem {
+  return {
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10),
+    description: '',
+    quantity: 1,
+    unit: 'ชิ้น',
+    unitPrice: 0,
+    discountAmount: 0,
+    lineTotal: 0,
+  };
+}
+
 export function useDocumentForm(vatRate: number = 7) {
   const [lines, setLines] = useState<DocumentLineItem[]>([createEmptyLine()]);
   const [vatMode, setVatMode] = useState<VatMode>('exclusive');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [whtRate, setWhtRate] = useState(0); // 0, 1, 3, 5
 
-  function createEmptyLine(): DocumentLineItem {
-    return {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10),
-      description: '',
-      quantity: 1,
-      unit: 'ชิ้น',
-      unitPrice: 0,
-      discountAmount: 0,
-      lineTotal: 0,
-    };
-  }
-
   const addLine = useCallback(() => {
     setLines((prev) => [...prev, createEmptyLine()]);
-  }, []);
+  }, [setLines]);
 
   const appendLine = useCallback((item: Partial<DocumentLineItem>) => {
     setLines((prev) => {
@@ -41,11 +48,11 @@ export function useDocumentForm(vatRate: number = 7) {
       newLine.lineTotal = (newLine.quantity * newLine.unitPrice) - newLine.discountAmount;
       return [...prev, newLine];
     });
-  }, []);
+  }, [setLines]);
 
   const removeLine = useCallback((id: string) => {
     setLines((prev) => prev.length > 1 ? prev.filter((l) => l.id !== id) : prev);
-  }, []);
+  }, [setLines]);
 
   const updateLine = useCallback((id: string, updates: Partial<DocumentLineItem>) => {
     setLines((prev) =>
@@ -56,7 +63,7 @@ export function useDocumentForm(vatRate: number = 7) {
         return updated;
       })
     );
-  }, []);
+  }, [setLines]);
 
   const totals = useMemo(() => {
     const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
@@ -90,14 +97,15 @@ export function useDocumentForm(vatRate: number = 7) {
     setDiscountAmount(0);
     setVatMode('exclusive');
     setWhtRate(0);
-  }, []);
+  }, [setLines, setDiscountAmount, setVatMode, setWhtRate]);
 
-  const restoreState = useCallback((savedState: any) => {
+  const restoreState = useCallback((savedState?: SavedDocumentFormState | null) => {
+    if (!savedState) return;
     if (savedState.lines && Array.isArray(savedState.lines)) setLines(savedState.lines);
     if (savedState.vatMode) setVatMode(savedState.vatMode);
     if (savedState.discountAmount !== undefined) setDiscountAmount(savedState.discountAmount);
     if (savedState.whtRate !== undefined) setWhtRate(savedState.whtRate);
-  }, []);
+  }, [setLines, setVatMode, setDiscountAmount, setWhtRate]);
 
   return {
     lines, addLine, appendLine, removeLine, updateLine,

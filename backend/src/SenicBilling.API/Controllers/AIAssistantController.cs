@@ -65,4 +65,17 @@ public class AIAssistantController(
 
         return Ok(new ApiResponse<ChatResponse>(true, "สำเร็จ", new ChatResponse(reply)));
     }
+
+    /// <summary>AI Smart Receipt Parser — สกัดข้อมูลใบเสร็จ/ใบกำกับภาษีซื้อเพื่อกรอกฟอร์มค่าใช้จ่าย</summary>
+    [HttpPost("parse-expense")]
+    public async Task<ActionResult<ApiResponse<ParsedExpenseDto>>> ParseExpense([FromBody] ParseExpenseRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Text))
+            return BadRequest(new ApiResponse<ParsedExpenseDto>(false, "กรุณาวางข้อความจากใบเสร็จ", null));
+        if (req.Text.Length > 10_000)
+            return BadRequest(new ApiResponse<ParsedExpenseDto>(false, "ข้อความยาวเกินไป (สูงสุด 10,000 ตัวอักษร)", null));
+
+        var parsed = await aiService.ParseExpenseAsync(req.Text, ct);
+        return Ok(new ApiResponse<ParsedExpenseDto>(true, parsed.UsedAi ? "วิเคราะห์ด้วย AI สำเร็จ" : "วิเคราะห์ข้อความสำเร็จ (โหมดออฟไลน์)", parsed));
+    }
 }
