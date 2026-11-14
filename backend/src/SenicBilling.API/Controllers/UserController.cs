@@ -1,8 +1,7 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SenicBilling.API.Extensions;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
@@ -19,7 +18,9 @@ public class UserController(SenicBillingDbContext dbContext) : ControllerBase
     public async Task<ActionResult<ApiResponse<UserProfileDto>>> GetProfile(CancellationToken ct)
     {
         var userId = GetUserId();
-        var user = await dbContext.AppUsers.FindAsync([userId], ct);
+        var tenantId = GetTenantId();
+        var user = await dbContext.AppUsers
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId, ct);
         
         if (user is null || !user.IsActive)
         {
@@ -36,7 +37,9 @@ public class UserController(SenicBillingDbContext dbContext) : ControllerBase
         [FromBody] UpdateProfileRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
-        var user = await dbContext.AppUsers.FindAsync([userId], ct);
+        var tenantId = GetTenantId();
+        var user = await dbContext.AppUsers
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId, ct);
         
         if (user is null || !user.IsActive)
         {
@@ -58,7 +61,9 @@ public class UserController(SenicBillingDbContext dbContext) : ControllerBase
         [FromBody] ChangePasswordRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
-        var user = await dbContext.AppUsers.FindAsync([userId], ct);
+        var tenantId = GetTenantId();
+        var user = await dbContext.AppUsers
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId, ct);
         
         if (user is null || !user.IsActive)
         {
@@ -77,11 +82,9 @@ public class UserController(SenicBillingDbContext dbContext) : ControllerBase
         return Ok(new ApiResponse<string>(true, "เปลี่ยนรหัสผ่านสำเร็จ", null));
     }
 
-    private Guid GetUserId()
-    {
-        var claim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        return claim is not null ? Guid.Parse(claim) : throw new UnauthorizedAccessException("User ID claim not found");
-    }
+    private Guid GetUserId() => User.GetUserId();
+
+    private Guid GetTenantId() => User.GetTenantId();
 
     private static string HashPassword(string password) =>
         PasswordHasher.HashPassword(password);

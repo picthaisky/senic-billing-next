@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SenicBilling.API.Extensions;
 using SenicBilling.Application.Interfaces;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Domain.Enums;
 using SenicBilling.Infrastructure.Data;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace SenicBilling.API.Controllers;
@@ -49,8 +51,7 @@ public class TenantSubscriptionController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetCurrentSubscription(CancellationToken ct)
     {
-        var tenantIdString = User.FindFirst("tenantId")?.Value;
-        if (!Guid.TryParse(tenantIdString, out var tenantId))
+        if (!User.TryGetTenantId(out var tenantId))
             return Unauthorized();
 
         var tenant = await _dbContext.Tenants
@@ -109,11 +110,10 @@ public class TenantSubscriptionController : ControllerBase
     }
 
     [HttpPost("checkout")]
-    [Authorize]
+    [Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
     public async Task<IActionResult> Checkout([FromBody] CheckoutRequest req, CancellationToken ct)
     {
-        var tenantIdString = User.FindFirst("tenantId")?.Value;
-        if (!Guid.TryParse(tenantIdString, out var tenantId))
+        if (!User.TryGetTenantId(out var tenantId))
             return Unauthorized();
 
         var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
@@ -121,6 +121,23 @@ public class TenantSubscriptionController : ControllerBase
 
         var plan = await _dbContext.SubscriptionPlans.FirstOrDefaultAsync(p => p.Id == req.PlanId, ct);
         if (plan == null) return NotFound("Plan not found");
+        if (!plan.IsActive)
+        {
+            return BadRequest(new { success = false, message = "แพ็กเกจนี้ไม่เปิดใช้งานแล้ว" });
+        }
+
+        if (plan.MaxUsers > 0)
+        {
+            var activeUsers = await _dbContext.AppUsers.CountAsync(u => u.TenantId == tenantId && u.IsActive, ct);
+            if (activeUsers > plan.MaxUsers)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"ไม่สามารถเปลี่ยนเป็นแพ็กเกจ {plan.Name} ได้เนื่องจากมีผู้ใช้งานที่เปิดอยู่ ({activeUsers} บัญชี) เกินโควต้าของแพ็กเกจ ({plan.MaxUsers} บัญชี)"
+                });
+            }
+        }
 
         try
         {
@@ -152,11 +169,26 @@ public class TenantSubscriptionController : ControllerBase
 
             _dbContext.TenantSubscriptions.Add(subscription);
 
+            var oldPlanId = tenant.CurrentPlanId;
             tenant.SubscriptionStatus = "Active";
             tenant.IsActive = true;
             tenant.CurrentPlanId = plan.Id;
             tenant.SubscriptionValidUntil = subscription.EndDate;
             tenant.UpdatedAt = DateTime.UtcNow;
+
+            var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.Identity?.Name ?? "Admin";
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenant.Id,
+                Username = username,
+                Action = "CheckoutSubscriptionPlan",
+                EntityName = "TenantSubscription",
+                EntityId = subscription.Id.ToString(),
+                OldValues = JsonSerializer.Serialize(new { PlanId = oldPlanId }),
+                NewValues = JsonSerializer.Serialize(new { PlanId = plan.Id, PlanName = plan.Name, ChargeId = chargeId }),
+                Timestamp = DateTime.UtcNow
+            });
 
             await _dbContext.SaveChangesAsync(ct);
 
@@ -177,24 +209,83 @@ public class TenantSubscriptionController : ControllerBase
 
     [HttpPost("webhook/omise")]
     [AllowAnonymous]
-    public async Task<IActionResult> OmiseWebhook([FromBody] JsonElement payload)
+    public async Task<IActionResult> OmiseWebhook([FromBody] JsonElement payload, CancellationToken ct = default)
     {
-        // This endpoint will handle recurring charges if schedules are used in Omise
-        // For phase 4, we implemented the card charge which handles the immediate payment.
-        // In a full recurring setup, we would listen to `charge.complete` where `schedule` is not null.
-        
         try
         {
-            var key = payload.GetProperty("key").GetString();
-            if (key == "charge.complete")
+            if (payload.ValueKind != JsonValueKind.Object)
+                return BadRequest();
+
+            if (!payload.TryGetProperty("key", out var keyEl))
+                return Ok(new { received = true });
+
+            var key = keyEl.GetString();
+            if (key == "charge.complete" && payload.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
             {
-                var data = payload.GetProperty("data");
-                var status = data.GetProperty("status").GetString();
-                // If it's a successful recurring charge, we would extend the Tenant's SubscriptionValidUntil by 1 month.
+                var status = data.TryGetProperty("status", out var statusEl) ? statusEl.GetString() : null;
                 _logger.LogInformation("Omise subscription webhook received. Status: {Status}", status);
+
+                if (string.Equals(status, "successful", StringComparison.OrdinalIgnoreCase))
+                {
+                    Guid tenantId = Guid.Empty;
+                    if (data.TryGetProperty("description", out var descEl) && Guid.TryParse(descEl.GetString(), out var parsedFromDesc))
+                    {
+                        tenantId = parsedFromDesc;
+                    }
+                    else if (data.TryGetProperty("metadata", out var metaEl) &&
+                             metaEl.ValueKind == JsonValueKind.Object &&
+                             metaEl.TryGetProperty("tenantId", out var metaTenantEl) &&
+                             Guid.TryParse(metaTenantEl.GetString(), out var parsedFromMeta))
+                    {
+                        tenantId = parsedFromMeta;
+                    }
+
+                    if (tenantId != Guid.Empty)
+                    {
+                        var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+                        if (tenant != null)
+                        {
+                            var baseDate = tenant.SubscriptionValidUntil.HasValue && tenant.SubscriptionValidUntil.Value > DateTime.UtcNow
+                                ? tenant.SubscriptionValidUntil.Value
+                                : DateTime.UtcNow;
+                            var newValidUntil = baseDate.AddMonths(1);
+
+                            tenant.SubscriptionValidUntil = newValidUntil;
+                            tenant.SubscriptionStatus = "Active";
+                            tenant.IsActive = true;
+                            tenant.UpdatedAt = DateTime.UtcNow;
+
+                            var latestSub = await _dbContext.TenantSubscriptions
+                                .Where(s => s.TenantId == tenantId)
+                                .OrderByDescending(s => s.EndDate)
+                                .FirstOrDefaultAsync(ct);
+
+                            if (latestSub != null)
+                            {
+                                latestSub.EndDate = newValidUntil;
+                                latestSub.Status = "Active";
+                                latestSub.UpdatedAt = DateTime.UtcNow;
+                            }
+
+                            _dbContext.AuditLogs.Add(new AuditLog
+                            {
+                                Id = Guid.NewGuid(),
+                                TenantId = tenant.Id,
+                                Username = "OmiseWebhook",
+                                Action = "RenewSubscriptionWebhook",
+                                EntityName = "Tenant",
+                                EntityId = tenant.Id.ToString(),
+                                NewValues = JsonSerializer.Serialize(new { SubscriptionValidUntil = newValidUntil, Status = "Active" }),
+                                Timestamp = DateTime.UtcNow
+                            });
+
+                            await _dbContext.SaveChangesAsync(ct);
+                        }
+                    }
+                }
             }
 
-            return Ok();
+            return Ok(new { received = true });
         }
         catch (Exception ex)
         {

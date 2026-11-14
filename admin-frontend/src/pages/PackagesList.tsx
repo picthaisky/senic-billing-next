@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Package, X } from 'lucide-react';
 import { saApiClient } from '../services/apiClient';
+import { useAdminLocale } from '../i18n/AdminLocaleContext';
 
 interface PlanDto {
   id: string;
@@ -25,6 +26,7 @@ interface PlanFormState {
 }
 
 export default function PackagesList() {
+  const { t } = useAdminLocale();
   const [plans, setPlans] = useState<PlanDto[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,7 +108,7 @@ export default function PackagesList() {
       fetchPlans();
     } catch (error) {
       console.error('Failed to save plan', error);
-      alert('ไม่สามารถบันทึกแพ็กเกจได้');
+      alert(t.packages.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -116,14 +118,14 @@ export default function PackagesList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">แพ็กเกจราคา (Subscription Plans)</h1>
-          <p className="text-slate-500 mt-1">จัดการแพ็กเกจและข้อจำกัด Quota ของแต่ละระดับ</p>
+          <h1 className="text-2xl font-bold text-slate-800">{t.packages.title}</h1>
+          <p className="text-slate-500 mt-1">{t.packages.subtitle}</p>
         </div>
         <button
           onClick={openCreateModal}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-medium transition-colors"
         >
-          <Plus size={20} /> เพิ่มแพ็กเกจใหม่
+          <Plus size={20} /> {t.packages.createBtn}
         </button>
       </div>
 
@@ -144,22 +146,22 @@ export default function PackagesList() {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-800">฿{Number(plan.monthlyPrice || 0).toLocaleString()}</span>
-                <span className="text-slate-500 font-medium">/เดือน</span>
+                <span className="text-slate-500 font-medium">{t.packages.perMonth}</span>
               </div>
-              <p className="text-sm text-slate-500 mt-1">หรือ ฿{Number(plan.yearlyPrice || 0).toLocaleString()}/ปี</p>
+              <p className="text-sm text-slate-500 mt-1">{t.packages.yearlyLine(Number(plan.yearlyPrice || 0).toLocaleString())}</p>
             </div>
 
             <div className="p-6 flex-1 space-y-4">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600">ผู้ใช้งานสูงสุด</span>
+                <span className="text-slate-600">{t.packages.maxUsersLabel}</span>
                 <span className="font-semibold text-slate-800">
-                  {plan.maxUsers === -1 ? 'ไม่จำกัด' : `${plan.maxUsers} บัญชี`}
+                  {plan.maxUsers === -1 ? t.packages.unlimited : `${plan.maxUsers} ${t.packages.usersSuffix}`}
                 </span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600">โควต้าเอกสารรายเดือน</span>
+                <span className="text-slate-600">{t.packages.maxDocsLabel}</span>
                 <span className="font-semibold text-slate-800">
-                  {plan.maxDocumentsPerMonth === -1 ? 'ไม่จำกัด' : `${plan.maxDocumentsPerMonth} ใบ`}
+                  {plan.maxDocumentsPerMonth === -1 ? t.packages.unlimited : `${plan.maxDocumentsPerMonth} ${t.packages.docsSuffix}`}
                 </span>
               </div>
             </div>
@@ -169,13 +171,13 @@ export default function PackagesList() {
                 onClick={() => openEditModal(plan)}
                 className="w-full flex justify-center items-center gap-2 text-blue-600 font-medium hover:text-blue-700 transition-colors py-2"
               >
-                <Edit2 size={16} /> แก้ไขแพ็กเกจ
+                <Edit2 size={16} /> {t.packages.editBtn}
               </button>
             </div>
           </div>
         ))}
         {plans.length === 0 && (
-          <div className="col-span-3 text-center py-12 text-slate-500">ยังไม่มีข้อมูลแพ็กเกจ</div>
+          <div className="col-span-3 text-center py-12 text-slate-500">{t.packages.empty}</div>
         )}
       </div>
 
@@ -184,7 +186,7 @@ export default function PackagesList() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h2 className="text-lg font-bold text-slate-800">
-                {formData.id ? 'แก้ไขแพ็กเกจ' : 'เพิ่มแพ็กเกจใหม่'}
+                {formData.id ? t.packages.modalEditTitle : t.packages.modalCreateTitle}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={20} />
@@ -193,7 +195,7 @@ export default function PackagesList() {
 
             <form onSubmit={handleSavePlan} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อแพ็กเกจ *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t.packages.planNameLabel}</label>
                 <input
                   type="text"
                   required
@@ -205,7 +207,7 @@ export default function PackagesList() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ราคารายเดือน (บาท)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.packages.monthlyPriceLabel}</label>
                   <input
                     type="number"
                     min={0}
@@ -216,7 +218,7 @@ export default function PackagesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ราคารายปี (บาท)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.packages.yearlyPriceLabel}</label>
                   <input
                     type="number"
                     min={0}
@@ -230,10 +232,10 @@ export default function PackagesList() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ผู้ใช้งานสูงสุด (คน)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.packages.maxUsersInputLabel}</label>
                   <input
                     type="number"
-                    min={1}
+                    min={-1}
                     required
                     className="w-full px-3.5 py-2 border border-slate-300 rounded-xl"
                     value={formData.maxUsers}
@@ -241,10 +243,10 @@ export default function PackagesList() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">โควต้าเอกสาร/เดือน</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.packages.maxDocsInputLabel}</label>
                   <input
                     type="number"
-                    min={1}
+                    min={-1}
                     required
                     className="w-full px-3.5 py-2 border border-slate-300 rounded-xl"
                     value={formData.maxDocumentsPerMonth}
@@ -254,7 +256,7 @@ export default function PackagesList() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">ฟีเจอร์ (JSON Array)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t.packages.featuresInputLabel}</label>
                 <textarea
                   rows={3}
                   className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm font-mono"
@@ -269,7 +271,7 @@ export default function PackagesList() {
                   checked={formData.isActive}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 />
-                เปิดใช้งานแพ็กเกจนี้ (Active)
+                {t.packages.activeCheckboxLabel}
               </label>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
@@ -278,14 +280,14 @@ export default function PackagesList() {
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50"
                 >
-                  ยกเลิก
+                  {t.packages.cancelBtn}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
-                  {saving ? 'กำลังบันทึก...' : 'บันทึกแพ็กเกจ'}
+                  {saving ? t.packages.savingBtn : t.packages.saveBtn}
                 </button>
               </div>
             </form>

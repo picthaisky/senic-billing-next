@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SenicBilling.API.Hubs;
+using SenicBilling.Application.DTOs;
 using SenicBilling.Application.Interfaces;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Domain.Enums;
@@ -147,6 +148,70 @@ public class PaymentsController : ControllerBase
         }
     }
 
+    [HttpGet("callback-status")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetCallbackStatus(
+        [FromQuery] Guid? documentId = null,
+        [FromQuery] string? reference = null,
+        [FromQuery] string? chargeId = null)
+    {
+        Guid? targetDocId = documentId;
+        if (!targetDocId.HasValue && Guid.TryParse(reference, out var parsedRef))
+        {
+            targetDocId = parsedRef;
+        }
+
+        if (!targetDocId.HasValue && !string.IsNullOrWhiteSpace(chargeId))
+        {
+            targetDocId = await _dbContext.PaymentTransactions
+                .AsNoTracking()
+                .Where(t => t.GatewayReference == chargeId)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => (Guid?)t.DocumentId)
+                .FirstOrDefaultAsync();
+        }
+
+        if (!targetDocId.HasValue)
+        {
+            return NotFound(new { success = false, message = "Payment document reference not found" });
+        }
+
+        var hasTenantClaim = Guid.TryParse(User.FindFirst("tenantId")?.Value, out var callerTenantId);
+        var query = _dbContext.DocumentHeaders.AsNoTracking().Where(d => d.Id == targetDocId.Value);
+        if (hasTenantClaim)
+        {
+            query = query.Where(d => d.TenantId == callerTenantId);
+        }
+
+        var document = await query.FirstOrDefaultAsync();
+        if (document == null)
+        {
+            return NotFound(new { success = false, message = "Document not found" });
+        }
+
+        var latestTx = await _dbContext.PaymentTransactions
+            .AsNoTracking()
+            .Where(t => t.DocumentId == document.Id && t.TenantId == document.TenantId)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var isPaid = document.Status == DocumentStatus.Paid ||
+                     string.Equals(latestTx?.Status, "successful", StringComparison.OrdinalIgnoreCase);
+
+        return Ok(new
+        {
+            success = true,
+            documentId = document.Id,
+            documentNumber = document.DocumentNumber,
+            documentType = document.DocumentType.ToString(),
+            status = document.Status.ToString(),
+            isPaid,
+            grandTotal = document.GrandTotal,
+            paymentStatus = latestTx?.Status ?? (isPaid ? "successful" : "pending"),
+            paidAt = latestTx?.PaidAt
+        });
+    }
+
     // Omise Webhook Endpoint (No Authorization needed, it's called by Omise)
     [HttpPost("webhook")]
     [AllowAnonymous]
@@ -154,18 +219,30 @@ public class PaymentsController : ControllerBase
     {
         try
         {
-            var key = payload.GetProperty("key").GetString();
-            if (key != "charge.complete")
+            if (payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("key", out var keyProp) ||
+                keyProp.GetString() != "charge.complete")
             {
                 return Ok(); // Ignore other events
             }
 
-            var data = payload.GetProperty("data");
-            var chargeId = data.GetProperty("id").GetString();
-            var status = data.GetProperty("status").GetString();
-            var metadata = data.GetProperty("metadata");
-            
-            var documentIdString = metadata.GetProperty("DocumentId").GetString();
+            if (!payload.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
+            {
+                return Ok();
+            }
+
+            var chargeId = data.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+            var status = data.TryGetProperty("status", out var statusProp) ? statusProp.GetString() : null;
+
+            string? documentIdString = null;
+            if (data.TryGetProperty("metadata", out var metadata) && metadata.ValueKind == JsonValueKind.Object)
+            {
+                if (metadata.TryGetProperty("DocumentId", out var docIdProp))
+                    documentIdString = docIdProp.GetString();
+                else if (metadata.TryGetProperty("documentId", out docIdProp))
+                    documentIdString = docIdProp.GetString();
+            }
+
             if (string.IsNullOrEmpty(documentIdString) || !Guid.TryParse(documentIdString, out var documentId))
             {
                 return Ok();
@@ -205,6 +282,17 @@ public class PaymentsController : ControllerBase
                     // Notify Frontend Real-time via SignalR
                     await _hubContext.Clients.Group($"Tenant_{document.TenantId}")
                         .SendAsync("PaymentReceived", new { documentId = document.Id, amount = document.GrandTotal });
+
+                    await _hubContext.Clients.Group($"Tenant_{document.TenantId}")
+                        .SendAsync("NotificationReceived", new NotificationFeedItemDto(
+                            Id: $"paid-{document.Id}",
+                            Title: $"รับชำระเงินสำเร็จ {document.DocumentNumber}",
+                            Detail: $"{document.CustomerName ?? "ลูกค้าทั่วไป"} • ฿{document.GrandTotal:N2}",
+                            TimeLabel: "เมื่อสักครู่",
+                            OccurredAt: DateTime.UtcNow,
+                            Tone: "success",
+                            Route: $"/documents/{document.DocumentType.ToString().ToLowerInvariant()}"
+                        ));
 
                     // Notify via LINE (Messaging API or Notify) if configured for this Tenant
                     var tenant = await _dbContext.Tenants

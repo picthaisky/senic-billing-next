@@ -89,6 +89,13 @@ public class ExpensesController(
         if (validationError is not null)
             return BadRequest(new ApiResponse<ExpenseResponse>(false, validationError, null));
 
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null && await accountingPrecheck.IsPeriodLockedAsync(tenantId, request.ExpenseDate, ct))
+        {
+            return BadRequest(new ApiResponse<ExpenseResponse>(false,
+                $"งวดบัญชี {request.ExpenseDate.Month:D2}/{request.ExpenseDate.Year} ถูกปิดงวดแล้ว ไม่สามารถบันทึกใบสำคัญจ่ายได้", null));
+        }
+
         var expense = new ExpenseRecord
         {
             Id = Guid.NewGuid(),
@@ -125,6 +132,14 @@ public class ExpensesController(
         if (validationError is not null)
             return BadRequest(new ApiResponse<ExpenseResponse>(false, validationError, null));
 
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null &&
+            (await accountingPrecheck.IsPeriodLockedAsync(tenantId, expense.ExpenseDate, ct) ||
+             await accountingPrecheck.IsPeriodLockedAsync(tenantId, request.ExpenseDate, ct)))
+        {
+            return BadRequest(new ApiResponse<ExpenseResponse>(false, "ไม่สามารถแก้ไขใบสำคัญจ่ายในงวดบัญชีที่ปิดงวดแล้วได้", null));
+        }
+
         ApplyRequest(expense, request);
         expense.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(ct);
@@ -148,6 +163,13 @@ public class ExpensesController(
         if (expense is null) return NotFound(new ApiResponse<ExpenseResponse>(false, "ไม่พบใบสำคัญจ่าย", null));
         if (expense.Status == ExpenseStatus.Cancelled)
             return BadRequest(new ApiResponse<ExpenseResponse>(false, "ใบสำคัญจ่ายนี้ถูกยกเลิกแล้ว", null));
+
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null && await accountingPrecheck.IsPeriodLockedAsync(tenantId, expense.ExpenseDate, ct))
+        {
+            return BadRequest(new ApiResponse<ExpenseResponse>(false,
+                $"งวดบัญชี {expense.ExpenseDate.Month:D2}/{expense.ExpenseDate.Year} ถูกปิดงวดแล้ว ไม่สามารถยกเลิกใบสำคัญจ่ายได้", null));
+        }
 
         expense.Status = ExpenseStatus.Cancelled;
         expense.CancellationReason = request?.Reason;

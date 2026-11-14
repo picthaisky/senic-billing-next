@@ -37,6 +37,9 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
     public DbSet<ChartOfAccount> ChartOfAccounts => Set<ChartOfAccount>();
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
+    public DbSet<BankStatementTransaction> BankStatementTransactions => Set<BankStatementTransaction>();
+    public DbSet<AccountingPeriodLock> AccountingPeriodLocks => Set<AccountingPeriodLock>();
+    public DbSet<PlatformAnnouncement> PlatformAnnouncements => Set<PlatformAnnouncement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -98,6 +101,7 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
 
             // Precise currency fields
             entity.Property(e => e.UnitPrice).HasPrecision(18, 4);
+            entity.Property(e => e.CostPrice).HasPrecision(18, 4);
             entity.Property(e => e.StockQuantity).HasPrecision(18, 4);
 
             entity.HasOne(e => e.Tenant)
@@ -139,6 +143,10 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
             entity.Property(e => e.DocumentType).HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.VatMode).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CustomerApprovalStatus).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.ApprovedByName).HasMaxLength(200);
+            entity.Property(e => e.CustomerSignatureText).HasMaxLength(4000);
+            entity.Property(e => e.CustomerApprovalComment).HasMaxLength(1000);
 
             // Relationships
             entity.HasOne(e => e.Tenant)
@@ -599,6 +607,46 @@ public class SenicBillingDbContext(DbContextOptions<SenicBillingDbContext> optio
             entity.Property(e => e.Memo).HasMaxLength(300);
             entity.HasOne(e => e.JournalEntry).WithMany(j => j.Lines).HasForeignKey(e => e.JournalEntryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Account).WithMany().HasForeignKey(e => e.AccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AccountingPeriodLock>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LockedBy).HasMaxLength(100);
+            entity.Property(e => e.UnlockedBy).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.Year, e.Month }).IsUnique();
+        });
+
+        modelBuilder.Entity<BankStatementTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BankName).HasMaxLength(100);
+            entity.Property(e => e.AccountNumber).HasMaxLength(50);
+            entity.Property(e => e.ReferenceNo).HasMaxLength(100);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.CounterpartyName).HasMaxLength(200);
+            entity.Property(e => e.DepositAmount).HasPrecision(18, 4);
+            entity.Property(e => e.WithdrawalAmount).HasPrecision(18, 4);
+            entity.Property(e => e.Balance).HasPrecision(18, 4);
+            entity.Property(e => e.MatchStatus).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.MatchedDocumentNumber).HasMaxLength(50);
+            entity.Property(e => e.MatchedExpenseNumber).HasMaxLength(50);
+            entity.Property(e => e.MatchedBy).HasMaxLength(100);
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.TransactionDate });
+            entity.HasIndex(e => new { e.TenantId, e.MatchStatus });
+        });
+
+        modelBuilder.Entity<PlatformAnnouncement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Severity).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100);
+            entity.HasIndex(e => new { e.IsActive, e.StartsAt, e.EndsAt });
         });
 
         // ──────────────────────────────────────────────

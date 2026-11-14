@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Search, X, MapPin } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 
@@ -19,6 +20,7 @@ interface CustomerSelectModalProps {
 }
 
 export default function CustomerSelectModal({ isOpen, onClose, onSelect }: CustomerSelectModalProps) {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -57,18 +59,18 @@ export default function CustomerSelectModal({ isOpen, onClose, onSelect }: Custo
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="rounded-2xl shadow-xl w-full max-w-2xl border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)]  flex flex-col max-h-[85vh]">
         <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
-          <h3 className="font-bold text-lg">เลือกข้อมูลลูกค้า</h3>
-          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors" title="ปิดหน้าต่าง" aria-label="ปิดหน้าต่าง">
+          <h3 className="font-bold text-lg">{t('customerSelect.title')}</h3>
+          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors" title={t('customerSelect.closeAria')} aria-label={t('customerSelect.closeAria')}>
             <X size={20} />
           </button>
         </div>
-        
+
         <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               type="text"
-              placeholder="ค้นหาชื่อลูกค้า, เลขผู้เสียภาษี..."
+              placeholder={t('customerSelect.searchPlaceholder')}
               className="input-field pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -79,9 +81,9 @@ export default function CustomerSelectModal({ isOpen, onClose, onSelect }: Custo
 
         <div className="overflow-y-auto flex-1 p-2">
           {loading ? (
-            <div className="py-8 text-center text-[var(--color-text-muted)]">กำลังโหลดข้อมูล...</div>
+            <div className="py-8 text-center text-[var(--color-text-muted)]">{t('customerSelect.loading')}</div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="py-8 text-center text-[var(--color-text-muted)]">ไม่พบรายชื่อลูกค้า</div>
+            <div className="py-8 text-center text-[var(--color-text-muted)]">{t('customerSelect.empty')}</div>
           ) : (
             <div className="grid gap-2">
               {filteredCustomers.map(customer => (
@@ -93,9 +95,9 @@ export default function CustomerSelectModal({ isOpen, onClose, onSelect }: Custo
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-[var(--color-text)] mb-1 truncate">{customer.name}</h4>
                     <div className="text-xs text-[var(--color-text-muted)] flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span className="truncate">เลขประจำตัวผู้เสียภาษี: {customer.taxId || '-'}</span>
-                      <span className="truncate">สาขา: {customer.branch || 'สำนักงานใหญ่'}</span>
-                      {customer.phone && <span className="truncate">โทร: {customer.phone}</span>}
+                      <span className="truncate">{t('customerSelect.taxIdLabel')} {customer.taxId || '-'}</span>
+                      <span className="truncate">{t('customerSelect.branchLabel')} {customer.branch || t('customerSelect.defaultBranch')}</span>
+                      {customer.phone && <span className="truncate">{t('customerSelect.phoneLabel')} {customer.phone}</span>}
                     </div>
                     {customer.address && (
                       <div className="text-xs text-[var(--color-text-muted)] mt-1 flex items-start gap-1">
@@ -106,7 +108,7 @@ export default function CustomerSelectModal({ isOpen, onClose, onSelect }: Custo
                   </div>
                   <div className="hidden sm:block">
                     <div className="px-4 py-2 bg-[var(--color-surface)] text-[var(--color-primary)] text-sm font-medium rounded-lg whitespace-nowrap group-hover:bg-[var(--color-primary)] group-hover:text-white transition-colors border border-[var(--color-border)]">
-                      เลือกรายการ
+                      {t('customerSelect.selectBtn')}
                     </div>
                   </div>
                 </button>

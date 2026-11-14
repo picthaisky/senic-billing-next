@@ -1,8 +1,10 @@
 import { Plus, Trash2, Save, Printer, RotateCcw, CreditCard, Search, ScanLine } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentForm, type VatMode } from '../../hooks/useDocumentForm';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { apiClient } from '../../services/apiClient';
 import { getDocumentTypeMeta } from '../../utils/documentTypeMeta';
+import { getLocalIsoDate } from '../../utils/dateUtils';
 
 import AttachmentUpload from './AttachmentUpload';
 import PaymentModal from '../payments/PaymentModal';
@@ -15,6 +17,8 @@ interface InvoiceFormProps {
 }
 
 export default function InvoiceForm({ documentType, title, documentId: propDocumentId }: InvoiceFormProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
   const { lines, addLine, appendLine, removeLine, updateLine, vatMode, setVatMode, discountAmount, setDiscountAmount, whtRate, setWhtRate, totals, resetForm, restoreState } = useDocumentForm(7);
   const draftKey = `senic_draft_${documentType}`;
   const [initialDraft] = useState<{
@@ -23,6 +27,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     customerTaxId?: string;
     customerAddress?: string;
     customerBranch?: string;
+    documentDate?: string;
+    dueDate?: string;
     notes?: string;
     formState?: Parameters<typeof restoreState>[0];
   } | null>(() => {
@@ -40,6 +46,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
   const [customerTaxId, setCustomerTaxId] = useState(() => initialDraft?.customerTaxId ?? '');
   const [customerAddress, setCustomerAddress] = useState(() => initialDraft?.customerAddress ?? '');
   const [customerBranch, setCustomerBranch] = useState(() => initialDraft?.customerBranch ?? '');
+  const [documentDate, setDocumentDate] = useState(() => initialDraft?.documentDate ?? getLocalIsoDate());
+  const [dueDate, setDueDate] = useState(() => initialDraft?.dueDate ?? '');
   const [notes, setNotes] = useState(() => initialDraft?.notes ?? '');
   const [documentId] = useState(() => propDocumentId || crypto.randomUUID());
   const [attachments, setAttachments] = useState<Array<{ id: string; fileName: string; fileSize: number; uploadedAt: string }>>([]);
@@ -82,6 +90,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           setCustomerTaxId(doc.customerTaxId || '');
           setCustomerAddress(doc.customerAddress || '');
           setCustomerBranch(doc.customerBranch || '');
+          if (doc.documentDate) setDocumentDate(String(doc.documentDate).split('T')[0]);
+          if (doc.dueDate) setDueDate(String(doc.dueDate).split('T')[0]);
           setNotes(doc.notes || '');
           restoreState({
             lines: doc.lines,
@@ -117,11 +127,13 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       customerTaxId,
       customerAddress,
       customerBranch,
+      documentDate,
+      dueDate,
       notes,
       formState: { lines, vatMode, discountAmount, whtRate }
     };
     localStorage.setItem(draftKey, JSON.stringify(draft));
-  }, [propDocumentId, customerId, customerName, customerTaxId, customerAddress, customerBranch, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
+  }, [propDocumentId, customerId, customerName, customerTaxId, customerAddress, customerBranch, documentDate, dueDate, notes, lines, vatMode, discountAmount, whtRate, draftKey]);
 
   const config = getDocumentTypeMeta(documentType);
   const accentClasses: Record<string, { bar: string; text: string }> = {
@@ -144,20 +156,20 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!customerName.trim()) e.customerName = 'กรุณากรอกชื่อลูกค้า / บริษัท';
+    if (!customerName.trim()) e.customerName = t('invoiceForm.errCustomerName');
     if (documentType === 'taxinvoice') {
-      if (!customerTaxId.trim()) e.customerTaxId = 'ใบกำกับภาษีต้องระบุเลขประจำตัวผู้เสียภาษี';
-      else if (!/^\d{13}$/.test(customerTaxId.trim())) e.customerTaxId = 'เลขผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก';
+      if (!customerTaxId.trim()) e.customerTaxId = t('invoiceForm.errTaxIdRequired');
+      else if (!/^\d{13}$/.test(customerTaxId.trim())) e.customerTaxId = t('invoiceForm.errTaxIdDigits');
     }
     const validLines = lines.filter(l => l.description.trim() !== '' && l.quantity > 0 && l.unitPrice > 0);
-    if (validLines.length === 0) e.lines = 'กรุณาเพิ่มรายการที่มีชื่อ จำนวน และราคา อย่างน้อย 1 รายการ';
+    if (validLines.length === 0) e.lines = t('invoiceForm.errLinesRequired');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const formatNumber = useCallback((n: number) => {
-    return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-  }, []);
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  }, [locale]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, isLastLine: boolean) => {
     if (e.key === 'Enter' && isLastLine) {
@@ -179,7 +191,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             productId: product.id,
             description: product.name,
             unitPrice: product.unitPrice,
-            unit: product.unit || 'ชิ้น',
+            unit: product.unit || t('invoiceForm.defaultUnit'),
             quantity: 1,
           });
         } else {
@@ -187,14 +199,14 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             productId: product.id,
             description: product.name,
             unitPrice: product.unitPrice,
-            unit: product.unit || 'ชิ้น',
+            unit: product.unit || t('invoiceForm.defaultUnit'),
             quantity: 1,
           });
         }
       }
       clearError('lines');
     },
-    [lines, updateLine, appendLine, clearError]
+    [lines, updateLine, appendLine, clearError, t]
   );
 
   // Barcode scanning logic
@@ -264,7 +276,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
       const payload = {
         documentType: mapDocType(documentType),
-        documentDate: new Date().toISOString(),
+        documentDate: documentDate ? new Date(documentDate).toISOString() : new Date().toISOString(),
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
         customerId,
         customerName,
         customerTaxId,
@@ -328,8 +341,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
       if (!silent) {
         alert(targetId
-          ? `อัปเดตเอกสาร ${savedMeta.documentNumber} สำเร็จ`
-          : `บันทึกเอกสาร ${savedMeta.documentNumber} สำเร็จ`);
+          ? t('invoiceForm.updateSuccess', { docNo: savedMeta.documentNumber })
+          : t('invoiceForm.createSuccess', { docNo: savedMeta.documentNumber }));
       }
 
       if (resetAfter && !propDocumentId) {
@@ -340,6 +353,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
         setCustomerTaxId('');
         setCustomerAddress('');
         setCustomerBranch('');
+        setDocumentDate(getLocalIsoDate());
+        setDueDate('');
         setNotes('');
         setSavedDocMeta(null);
         setRecurringFrequency('');
@@ -352,7 +367,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       return savedMeta.id ? savedMeta : null;
     } catch (error) {
       console.error('Failed to save document:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกเอกสาร');
+      alert(t('invoiceForm.saveError'));
       return null;
     } finally {
       setIsSaving(false);
@@ -401,7 +416,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               {title}
             </h2>
             <p className="invoice-page-subtitle text-sm text-[var(--color-text-muted)]">
-              เลขที่เอกสาร: <span className={`font-mono font-semibold ${accent.text}`}>
+              {t('invoiceForm.docNoLabel')} <span className={`font-mono font-semibold ${accent.text}`}>
                 {effectiveDocNumber}
               </span>
             </p>
@@ -410,11 +425,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
         {/* Document actions */}
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={resetForm} className="btn btn-ghost" title="รีเซ็ตฟอร์ม" disabled={isSaving}>
-            <RotateCcw size={15} /> ล้างข้อมูล
+          <button type="button" onClick={resetForm} className="btn btn-ghost" title={t('invoiceForm.resetTitle')} disabled={isSaving}>
+            <RotateCcw size={15} /> {t('invoiceForm.resetBtn')}
           </button>
           <button type="button" className="btn btn-secondary" onClick={() => void handlePrintClick()} disabled={isSaving}>
-            <Printer size={15} /> พิมพ์
+            <Printer size={15} /> {t('invoiceForm.printBtn')}
           </button>
           <button
             type="button"
@@ -422,10 +437,10 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             className="btn btn-secondary border !border-[rgba(37,99,235,0.28)] bg-[var(--color-info-bg)] text-[var(--color-info)]"
             disabled={isSaving}
           >
-            <CreditCard size={15} /> ชำระเงินออนไลน์
+            <CreditCard size={15} /> {t('invoiceForm.payOnlineBtn')}
           </button>
           <button type="button" onClick={handleSave} className="btn btn-primary" disabled={isSaving}>
-            <Save size={15} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
+            <Save size={15} /> {isSaving ? t('invoiceForm.savingBtn') : t('invoiceForm.saveBtn')}
           </button>
         </div>
       </div>
@@ -433,18 +448,18 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       {/* ── Customer Info Card ── */}
       <div className="card form-section-card">
         <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
-          ข้อมูลลูกค้า
+          {t('invoiceForm.customerSection')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-1.5">
             <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-              ชื่อลูกค้า / บริษัท <span className="text-red-400">*</span>
+              {t('invoiceForm.customerNameLabel')} <span className="text-red-400">*</span>
             </label>
             <div className="relative">
               <input
                 type="text"
                 className={`input-field pr-12 ${errors.customerName ? 'input-error' : ''}`}
-                placeholder="พิมพ์เพื่อค้นหา..."
+                placeholder={t('invoiceForm.customerNamePlaceholder')}
                 value={customerName}
                 onChange={(e) => { setCustomerName(e.target.value); clearError('customerName'); }}
               />
@@ -452,7 +467,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                 type="button"
                 onClick={() => setCustomerModalOpen(true)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] rounded-md transition-colors"
-                title="ค้นหาลูกค้าจากฐานข้อมูล"
+                title={t('invoiceForm.searchCustomerTitle')}
               >
                 <Search size={18} />
               </button>
@@ -462,13 +477,13 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           {documentType === 'taxinvoice' && (
             <div className="space-y-1.5">
               <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-                เลขประจำตัวผู้เสียภาษี (13 หลัก) <span className="text-red-400">*</span>
+                {t('invoiceForm.taxIdLabel')} <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 inputMode="numeric"
                 className={`input-field font-mono ${errors.customerTaxId ? 'input-error' : ''}`}
-                placeholder="เลข 13 หลัก"
+                placeholder={t('invoiceForm.taxIdPlaceholder')}
                 maxLength={13}
                 value={customerTaxId}
                 onChange={(e) => { setCustomerTaxId(e.target.value.replace(/\D/g, '')); clearError('customerTaxId'); }}
@@ -476,14 +491,39 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               {errors.customerTaxId && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerTaxId}</p>}
             </div>
           )}
-          <div className={`${documentType === 'taxinvoice' ? 'md:col-span-2' : ''} space-y-1.5`}>
+          <div className="space-y-1.5">
             <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-              หมายเหตุ
+              {t('invoiceForm.docDateLabel')}
+            </label>
+            <input
+              type="date"
+              required
+              aria-label={t('invoiceForm.docDateAria')}
+              className="input-field"
+              value={documentDate}
+              onChange={(e) => setDocumentDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+              {t('invoiceForm.dueDateLabel')}
+            </label>
+            <input
+              type="date"
+              aria-label={t('invoiceForm.dueDateAria')}
+              className="input-field"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2 space-y-1.5">
+            <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+              {t('invoiceForm.notesLabel')}
             </label>
             <input
               type="text"
               className="input-field"
-              placeholder="หมายเหตุ..."
+              placeholder={t('invoiceForm.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -492,20 +532,20 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           <div className="md:col-span-2 p-5 md:p-6 border border-orange-200 bg-orange-50/70 rounded-xl mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-4 sm:gap-6">
             <div className="space-y-1">
               <label className="text-sm font-semibold block text-orange-900 leading-normal">
-                ออกเอกสารนี้ซ้ำอัตโนมัติ (Recurring)
+                {t('invoiceForm.recurringTitle')}
               </label>
-              <p className="text-xs text-orange-700 leading-normal">ตั้งเวลาให้ระบบสร้างเอกสารนี้ซ้ำใหม่อัตโนมัติตามรอบที่กำหนด</p>
+              <p className="text-xs text-orange-700 leading-normal">{t('invoiceForm.recurringSubtitle')}</p>
             </div>
             <select
-              aria-label="ตั้งค่าออกเอกสารซ้ำอัตโนมัติ"
+              aria-label={t('invoiceForm.recurringAria')}
               className="input-field w-full sm:w-[250px] border-orange-300 bg-white"
               value={recurringFrequency}
               onChange={(e) => setRecurringFrequency(e.target.value as '' | 'Weekly' | 'Monthly' | 'Yearly')}
             >
-              <option value="">ไม่ทำซ้ำ</option>
-              <option value="Weekly">ทุกสัปดาห์</option>
-              <option value="Monthly">ทุกเดือน</option>
-              <option value="Yearly">ทุกปี</option>
+              <option value="">{t('invoiceForm.recurringNone')}</option>
+              <option value="Weekly">{t('invoiceForm.recurringWeekly')}</option>
+              <option value="Monthly">{t('invoiceForm.recurringMonthly')}</option>
+              <option value="Yearly">{t('invoiceForm.recurringYearly')}</option>
             </select>
           </div>
         </div>
@@ -515,12 +555,12 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       <div className="card overflow-hidden">
         <div className="invoice-lines-head flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[var(--color-border)] gap-4">
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
-            รายการสินค้า / บริการ
+            {t('invoiceForm.linesSection')}
           </h3>
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             {catalogProducts.length > 0 && (
               <select
-                aria-label="เลือกสินค้าจากคลัง"
+                aria-label={t('invoiceForm.catalogAria')}
                 className="input-field !py-1.5 text-sm w-full sm:w-56"
                 value=""
                 onChange={(e) => {
@@ -530,7 +570,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                   }
                 }}
               >
-                <option value="">+ เลือกสินค้า/บริการจากคลัง...</option>
+                <option value="">{t('invoiceForm.catalogPlaceholder')}</option>
                 {catalogProducts.map((p) => (
                   <option key={p.id} value={p.id}>
                     {(p.sku || p.code) ? `[${p.sku || p.code}] ` : ''}
@@ -544,7 +584,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               <input
                 ref={barcodeInputRef}
                 type="text"
-                placeholder="สแกนบาร์โค้ดสินค้า..."
+                placeholder={t('invoiceForm.barcodePlaceholder')}
                 className="input-field pl-9 !py-1.5 text-sm w-full"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
@@ -552,7 +592,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               />
             </div>
             <button onClick={() => { addLine(); clearError('lines'); }} className="btn btn-ghost text-xs whitespace-nowrap">
-              <Plus size={14} /> เพิ่มรายการ
+              <Plus size={14} /> {t('invoiceForm.addLineBtn')}
             </button>
           </div>
         </div>
@@ -567,12 +607,12 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             <thead>
               <tr>
                 <th className="w-[48px] text-center">#</th>
-                <th>รายละเอียด</th>
-                <th className="w-[88px] text-right">จำนวน</th>
-                <th className="w-[72px]">หน่วย</th>
-                <th className="w-[120px] text-right">ราคา/หน่วย</th>
-                <th className="w-[100px] text-right">ส่วนลด</th>
-                <th className="w-[120px] text-right">รวม</th>
+                <th>{t('invoiceForm.colDesc')}</th>
+                <th className="w-[88px] text-right">{t('invoiceForm.colQty')}</th>
+                <th className="w-[72px]">{t('invoiceForm.colUnit')}</th>
+                <th className="w-[120px] text-right">{t('invoiceForm.colPrice')}</th>
+                <th className="w-[100px] text-right">{t('invoiceForm.colDiscount')}</th>
+                <th className="w-[120px] text-right">{t('invoiceForm.colTotal')}</th>
                 <th className="w-[44px]"></th>
               </tr>
             </thead>
@@ -586,7 +626,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                     <input
                       type="text"
                       className="input-field invoice-input-compact !text-sm"
-                      placeholder="ชื่อสินค้า / รายละเอียด"
+                      placeholder={t('invoiceForm.descPlaceholder')}
                       value={line.description}
                       onChange={(e) => { updateLine(line.id, { description: e.target.value }); clearError('lines'); }}
                       onKeyDown={(e) => handleKeyDown(e, idx === lines.length - 1)}
@@ -595,7 +635,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                   <td>
                     <input
                       type="number"
-                      aria-label="จำนวน"
+                      aria-label={t('invoiceForm.colQty')}
                       className="input-field invoice-input-compact !text-sm text-right"
                       min={0}
                       step={1}
@@ -606,7 +646,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                   <td>
                     <input
                       type="text"
-                      aria-label="หน่วย"
+                      aria-label={t('invoiceForm.colUnit')}
                       className="input-field invoice-input-compact !text-sm text-center"
                       value={line.unit}
                       onChange={(e) => updateLine(line.id, { unit: e.target.value })}
@@ -615,7 +655,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                   <td>
                     <input
                       type="number"
-                      aria-label="ราคาต่อหน่วย"
+                      aria-label={t('invoiceForm.unitPriceAria')}
                       className="input-field invoice-input-compact !text-sm text-right"
                       min={0}
                       step={0.01}
@@ -626,7 +666,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                   <td>
                     <input
                       type="number"
-                      aria-label="ส่วนลด"
+                      aria-label={t('invoiceForm.colDiscount')}
                       className="input-field invoice-input-compact !text-sm text-right"
                       min={0}
                       step={0.01}
@@ -642,8 +682,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                       onClick={() => removeLine(line.id)}
                       className={`p-1.5 rounded-lg transition-colors hover:bg-red-50 ${lines.length === 1 ? 'text-[var(--color-text-muted)]' : 'text-[#dc2626]'}`}
                       disabled={lines.length === 1}
-                      aria-label={`ลบรายการที่ ${idx + 1}`}
-                      title={`ลบรายการที่ ${idx + 1}`}
+                      aria-label={t('invoiceForm.removeLineTitle', { index: idx + 1 })}
+                      title={t('invoiceForm.removeLineTitle', { index: idx + 1 })}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -664,15 +704,15 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               {/* Card header: index + remove */}
               <div className="invoice-mobile-line-head flex items-center justify-between">
                 <span className="text-xs font-bold text-[var(--color-text-muted)]">
-                  รายการที่ {idx + 1}
+                  {t('invoiceForm.mobileLineLabel', { index: idx + 1 })}
                 </span>
                 <button
                   type="button"
                   onClick={() => removeLine(line.id)}
-                  title={`ลบรายการที่ ${idx + 1}`}
+                  title={t('invoiceForm.removeLineTitle', { index: idx + 1 })}
                   className={`p-1.5 rounded-lg transition-colors hover:bg-red-50 disabled:opacity-40 ${lines.length === 1 ? 'text-[var(--color-text-muted)]' : 'text-[#dc2626]'}`}
                   disabled={lines.length === 1}
-                  aria-label={`ลบรายการที่ ${idx + 1}`}
+                  aria-label={t('invoiceForm.removeLineTitle', { index: idx + 1 })}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -680,12 +720,12 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
 
               {/* Description */}
               <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
-                รายละเอียด
+                {t('invoiceForm.colDesc')}
               </label>
               <input
                 type="text"
                 className="input-field invoice-input-compact !text-sm invoice-mobile-desc-input"
-                placeholder="ชื่อสินค้า / รายละเอียด"
+                placeholder={t('invoiceForm.descPlaceholder')}
                 value={line.description}
                 onChange={(e) => updateLine(line.id, { description: e.target.value })}
                 onKeyDown={(e) => handleKeyDown(e, idx === lines.length - 1)}
@@ -695,12 +735,12 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
-                    จำนวน
+                    {t('invoiceForm.colQty')}
                   </label>
                   <input
                     type="number"
                     inputMode="decimal"
-                    aria-label="จำนวน"
+                    aria-label={t('invoiceForm.colQty')}
                     className="input-field invoice-input-compact !text-sm text-right"
                     min={0}
                     step={1}
@@ -710,11 +750,11 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                 </div>
                 <div>
                   <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
-                    หน่วย
+                    {t('invoiceForm.colUnit')}
                   </label>
                   <input
                     type="text"
-                    aria-label="หน่วย"
+                    aria-label={t('invoiceForm.colUnit')}
                     className="input-field invoice-input-compact !text-sm text-center"
                     value={line.unit}
                     onChange={(e) => updateLine(line.id, { unit: e.target.value })}
@@ -722,12 +762,12 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                 </div>
                 <div>
                   <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
-                    ราคา/หน่วย
+                    {t('invoiceForm.colPrice')}
                   </label>
                   <input
                     type="number"
                     inputMode="decimal"
-                    aria-label="ราคาต่อหน่วย"
+                    aria-label={t('invoiceForm.unitPriceAria')}
                     className="input-field invoice-input-compact !text-sm text-right"
                     min={0}
                     step={0.01}
@@ -737,12 +777,12 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                 </div>
                 <div>
                   <label className="invoice-mobile-label block text-[11px] font-medium text-[var(--color-text-muted)]">
-                    ส่วนลด
+                    {t('invoiceForm.colDiscount')}
                   </label>
                   <input
                     type="number"
                     inputMode="decimal"
-                    aria-label="ส่วนลด"
+                    aria-label={t('invoiceForm.colDiscount')}
                     className="input-field invoice-input-compact !text-sm text-right"
                     min={0}
                     step={0.01}
@@ -755,7 +795,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               {/* Line total */}
               <div className="invoice-mobile-line-total flex items-center justify-between border-t border-[var(--color-border)]">
                 <span className="text-xs font-medium text-[var(--color-text-muted)]">
-                  รวม
+                  {t('invoiceForm.colTotal')}
                 </span>
                 <span className="text-sm font-bold tabular-nums text-[var(--color-text)]">
                   {formatNumber(line.lineTotal)}
@@ -780,7 +820,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
         <div className="lg:col-span-2">
           <div className="card form-section-card">
             <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
-              ตั้งค่าภาษี
+              {t('invoiceForm.taxSettingsTitle')}
             </h3>
             <div className="invoice-vat-mode-switch flex rounded-lg bg-[var(--color-bg-secondary)]">
               {(['exclusive', 'inclusive'] as VatMode[]).map((mode) => (
@@ -792,13 +832,13 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
                       : 'bg-transparent text-[var(--color-text-muted)] shadow-none'
                     }`}
                 >
-                  {mode === 'exclusive' ? 'ราคาแยกภาษี' : 'ราคารวมภาษี'}
+                  {mode === 'exclusive' ? t('invoiceForm.vatExclusive') : t('invoiceForm.vatInclusive')}
                 </button>
               ))}
             </div>
             <div>
               <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-                ส่วนลดรวม (บาท)
+                {t('invoiceForm.discountTotalLabel')}
               </label>
               <input
                 type="number"
@@ -812,17 +852,17 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             </div>
             <div className="mt-4">
               <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-                หักภาษี ณ ที่จ่าย (WHT)
+                {t('invoiceForm.whtLabel')}
               </label>
               <select
                 className="input-field mt-1"
                 value={whtRate}
                 onChange={(e) => setWhtRate(Number(e.target.value))}
               >
-                <option value={0}>ไม่มีหัก ณ ที่จ่าย (0%)</option>
-                <option value={1}>1% - ค่าขนส่ง</option>
-                <option value={3}>3% - ค่าบริการ/รับจ้างทำของ</option>
-                <option value={5}>5% - ค่าเช่า</option>
+                <option value={0}>{t('invoiceForm.wht0')}</option>
+                <option value={1}>{t('invoiceForm.wht1')}</option>
+                <option value={3}>{t('invoiceForm.wht3')}</option>
+                <option value={5}>{t('invoiceForm.wht5')}</option>
               </select>
             </div>
           </div>
@@ -832,36 +872,36 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
         <div className="lg:col-span-3">
           <div className="glass-card form-section-card">
             <h3 className="invoice-section-title font-semibold text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
-              สรุปยอดรวม
+              {t('invoiceForm.summaryTitle')}
             </h3>
             <div className="form-stack-sm">
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--color-text-secondary)]">ยอดรวมก่อนส่วนลด</span>
+                <span className="text-[var(--color-text-secondary)]">{t('invoiceForm.subtotalLabel')}</span>
                 <span className="font-semibold tabular-nums">{formatNumber(totals.subtotal)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-[var(--color-text-secondary)]">ส่วนลดรวม</span>
+                  <span className="text-[var(--color-text-secondary)]">{t('invoiceForm.discountSummaryLabel')}</span>
                   <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--color-text-secondary)]">
-                  ยอดรวม{vatMode === 'inclusive' ? '' : 'ก่อน'}ภาษี
+                  {vatMode === 'inclusive' ? t('invoiceForm.totalWithVatLabel') : t('invoiceForm.totalBeforeVatLabel')}
                 </span>
                 <span className="font-semibold tabular-nums">{formatNumber(totals.totalBeforeVat)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--color-text-secondary)]">
-                  ภาษีมูลค่าเพิ่ม 7%
-                  <span className="invoice-vat-mode-note text-xs opacity-60">({vatMode === 'exclusive' ? 'แยก' : 'รวม'})</span>
+                  {t('invoiceForm.vat7Label')}
+                  <span className="invoice-vat-mode-note text-xs opacity-60">({vatMode === 'exclusive' ? t('invoiceForm.vatNoteExclusive') : t('invoiceForm.vatNoteInclusive')})</span>
                 </span>
                 <span className="font-semibold tabular-nums">{formatNumber(totals.vatAmount)}</span>
               </div>
 
               {whtRate > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-[var(--color-text-secondary)]">หัก ณ ที่จ่าย {whtRate}%</span>
+                  <span className="text-[var(--color-text-secondary)]">{t('invoiceForm.whtSummaryLabel', { rate: whtRate })}</span>
                   <span className="font-semibold text-red-500 tabular-nums">-{formatNumber(totals.whtAmount)}</span>
                 </div>
               )}
@@ -869,7 +909,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               {/* Grand Total */}
               <div className="invoice-grand-total-row flex justify-between items-center border-t border-[var(--color-border)]">
                 <span className="font-bold text-base text-[var(--color-text)]">
-                  ยอดรวมสุทธิ
+                  {t('invoiceForm.grandTotalLabel')}
                 </span>
                 <span className="text-2xl font-extrabold tabular-nums text-[var(--color-primary)]">
                   ฿{formatNumber(totals.grandTotal)}
@@ -900,7 +940,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
           setCustomerName(customer.name);
           setCustomerTaxId(customer.taxId || '');
           setCustomerAddress(customer.address || '');
-          setCustomerBranch(customer.branch || 'สำนักงานใหญ่');
+          setCustomerBranch(customer.branch || t('invoiceForm.defaultBranch'));
           clearError('customerName');
           clearError('customerTaxId');
           setCustomerModalOpen(false);

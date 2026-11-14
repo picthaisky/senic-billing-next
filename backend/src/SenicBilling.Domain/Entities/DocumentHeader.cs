@@ -90,6 +90,24 @@ public class DocumentHeader
     /// <summary>วันที่ลูกค้าเปิดดูเอกสาร (Read Receipt)</summary>
     public DateTime? ViewedAt { get; set; }
 
+    /// <summary>สถานะการยืนยัน/อนุมัติเอกสารออนไลน์โดยลูกค้า</summary>
+    public CustomerApprovalStatus CustomerApprovalStatus { get; set; } = CustomerApprovalStatus.Pending;
+
+    /// <summary>ชื่อผู้ลงนามอนุมัติ/ปฏิเสธฝั่งลูกค้า</summary>
+    public string? ApprovedByName { get; set; }
+
+    /// <summary>วันเวลาที่ลูกค้ากดอนุมัติหรือขอแก้ไข</summary>
+    public DateTime? ApprovedAt { get; set; }
+
+    /// <summary>ลายเซ็นดิจิทัล / ข้อความลงนามของลูกค้า</summary>
+    public string? CustomerSignatureText { get; set; }
+
+    /// <summary>ความเห็นหรือเหตุผลจากลูกค้า</summary>
+    public string? CustomerApprovalComment { get; set; }
+
+    /// <summary>วันเวลาที่ส่งแจ้งเตือนชำระเงินครั้งล่าสุด</summary>
+    public DateTime? LastReminderSentAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public string? CreatedBy { get; set; }

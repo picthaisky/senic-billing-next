@@ -8,6 +8,7 @@ using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
 using SenicBilling.Application.Interfaces;
 using SenicBilling.Infrastructure.HealthChecks;
+using SenicBilling.API.Extensions;
 using SenicBilling.API.Hubs;
 using SenicBilling.API.Services;
 using Minio;
@@ -69,7 +70,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("PlatformAdmin", policy => policy.RequireAssertion(ctx => ctx.User.IsPlatformAdmin()));
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, SenicBilling.Infrastructure.Auth.PermissionPolicyProvider>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, SenicBilling.Infrastructure.Auth.PermissionAuthorizationHandler>();
 
@@ -126,16 +128,28 @@ builder.Services.AddSignalR();
 // ──────────────────────────────────────────────
 // CORS (for React frontend)
 // ──────────────────────────────────────────────
+var configuredCorsOrigins = new[]
+    {
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:4173",
+        "http://localhost:3000",
+        "http://localhost:8810",
+        "http://localhost:8811",
+        builder.Configuration["App:FrontendBaseUrl"],
+        builder.Configuration["App:AdminBaseUrl"]
+    }
+    .Concat(builder.Configuration.GetSection("App:CorsOrigins").Get<string[]>() ?? [])
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin!.Trim().TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:3000",
-                "http://localhost:8810",
-                "http://localhost:8811")
+        policy.WithOrigins(configuredCorsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -190,6 +204,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/api/health");
 app.MapControllers();
 app.MapHub<SenicBillingHub>("/hubs/billing");
 

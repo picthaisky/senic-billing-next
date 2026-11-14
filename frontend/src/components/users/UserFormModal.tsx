@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Save, Eye, EyeOff, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/errorUtils';
 
@@ -21,6 +22,7 @@ interface UserFormModalProps {
 }
 
 export default function UserFormModal({ user, roles, onClose, onSaved }: UserFormModalProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     username: '',
     displayName: '',
@@ -69,7 +71,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
       } else {
         // Create
         if (!formData.username || !formData.password) {
-          alert('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน');
+          alert(t('usersPage.requiredUsernamePassword'));
           setIsSaving(false);
           return;
         }
@@ -78,7 +80,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
       onSaved();
     } catch (error: unknown) {
       console.error('Failed to save user', error);
-      alert(getApiErrorMessage(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้งาน'));
+      alert(getApiErrorMessage(error, t('usersPage.saveUserError')));
     } finally {
       setIsSaving(false);
     }
@@ -90,7 +92,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
         <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
           <h2 className="text-lg font-bold flex items-center gap-2 text-[var(--color-text)]">
             <Shield size={20} className="text-[var(--color-primary)]" />
-            {isEditing ? 'แก้ไขข้อมูลผู้ใช้งาน' : 'เพิ่มผู้ใช้งานใหม่'}
+            {isEditing ? t('usersPage.modalEditTitle') : t('usersPage.modalAddTitle')}
           </h2>
           <button onClick={onClose} className="p-2 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] rounded-full transition-colors">
             <X size={20} />
@@ -99,7 +101,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">ชื่อผู้ใช้งาน (Username) <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('usersPage.usernameLabel')} <span className="text-red-500">*</span></label>
             <input
               type="text"
               name="username"
@@ -110,11 +112,11 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
               placeholder="e.g. jdoe"
               required={!isEditing}
             />
-            {isEditing && <p className="text-xs text-[var(--color-text-muted)] mt-1">ไม่สามารถเปลี่ยนชื่อผู้ใช้งานได้</p>}
+            {isEditing && <p className="text-xs text-[var(--color-text-muted)] mt-1">{t('usersPage.usernameCannotChange')}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">ชื่อที่แสดง (Display Name)</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('usersPage.displayNameLabel')}</label>
             <input
               type="text"
               name="displayName"
@@ -126,7 +128,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">อีเมล (Email)</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('usersPage.emailLabel')}</label>
             <input
               type="email"
               name="email"
@@ -138,7 +140,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">สิทธิ์การใช้งาน (Role) <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('usersPage.roleLabel')} <span className="text-red-500">*</span></label>
             <select
               name="role"
               value={formData.role}
@@ -155,7 +157,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
 
           <div>
             <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
-              {isEditing ? 'เปลี่ยนรหัสผ่าน (เว้นว่างหากไม่ต้องการเปลี่ยน)' : 'รหัสผ่าน (Password)'} {!isEditing && <span className="text-red-500">*</span>}
+              {isEditing ? t('usersPage.passwordChangeLabel') : t('usersPage.passwordLabel')} {!isEditing && <span className="text-red-500">*</span>}
             </label>
             <div className="relative">
               <input
@@ -164,7 +166,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-2 pr-10 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all text-[var(--color-text)]"
-                placeholder={isEditing ? 'กรอกรหัสผ่านใหม่...' : 'รหัสผ่านเริ่มต้น'}
+                placeholder={isEditing ? t('usersPage.passwordPlaceholderEdit') : t('usersPage.passwordPlaceholderNew')}
                 required={!isEditing}
               />
               <button
@@ -184,7 +186,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
               className="px-4 py-2 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] rounded-xl transition-colors font-medium"
               disabled={isSaving}
             >
-              ยกเลิก
+              {t('usersPage.cancel')}
             </button>
             <button
               type="submit"
@@ -192,7 +194,7 @@ export default function UserFormModal({ user, roles, onClose, onSaved }: UserFor
               disabled={isSaving}
             >
               <Save size={18} />
-              {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+              {isSaving ? t('usersPage.saving') : t('usersPage.save')}
             </button>
           </div>
         </form>

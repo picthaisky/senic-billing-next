@@ -1,16 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/useAuthStore';
 import { apiClient } from '../../services/apiClient';
 import axios from 'axios';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#impersonate=')) return;
+    const rawToken = decodeURIComponent(hash.slice('#impersonate='.length)).trim();
+    if (!rawToken) return;
+
+    let active = true;
+    apiClient
+      .get('/auth/me', { headers: { Authorization: `Bearer ${rawToken}` } })
+      .then((res) => {
+        if (!active) return;
+        const verifiedUser = res.data?.data ?? res.data;
+        if (verifiedUser?.id) {
+          window.history.replaceState(null, '', window.location.pathname);
+          setAuth(rawToken, verifiedUser);
+          navigate('/dashboard', { replace: true });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setError(t('auth.invalidImpersonation'));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [navigate, setAuth, t]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,16 +58,16 @@ export default function LoginPage() {
       const { token, user } = payload ?? {};
 
       if (!token || !user) {
-        throw new Error('รูปแบบข้อมูลการเข้าสู่ระบบไม่ถูกต้อง');
+        throw new Error(t('auth.invalidPayload'));
       }
 
       setAuth(token, user);
       navigate('/');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+        setError(err.response?.data?.message || err.message || t('auth.invalidCredentials'));
       } else {
-        setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+        setError(t('auth.invalidCredentials'));
       }
     } finally {
       setLoading(false);
@@ -61,7 +92,7 @@ export default function LoginPage() {
             Senic<span className="text-[var(--color-primary)]">Billing</span>
           </h1>
           <p className="layout-auth-subtitle text-sm text-[var(--color-text-muted)]">
-            เข้าสู่ระบบเพื่อจัดการเอกสารของคุณ
+            {t('auth.subtitle')}
           </p>
         </div>
 
@@ -76,7 +107,7 @@ export default function LoginPage() {
             <label
               className="layout-form-label-tight block font-medium text-[13px] text-[var(--color-text-secondary)]"
             >
-              ชื่อผู้ใช้งาน
+              {t('auth.username')}
             </label>
             <input
               type="text"
@@ -92,7 +123,7 @@ export default function LoginPage() {
             <label
               className="layout-form-label-tight block font-medium text-[13px] text-[var(--color-text-secondary)]"
             >
-              รหัสผ่าน
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -109,7 +140,7 @@ export default function LoginPage() {
             disabled={loading}
             className="btn btn-primary btn-lg w-full layout-auth-submit-btn"
           >
-            {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+            {loading ? t('auth.submitting') : t('auth.submit')}
           </button>
         </form>
       </div>

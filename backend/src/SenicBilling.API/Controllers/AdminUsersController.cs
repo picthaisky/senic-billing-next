@@ -1,8 +1,7 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SenicBilling.API.Extensions;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Infrastructure.Auth;
@@ -12,9 +11,13 @@ namespace SenicBilling.API.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "Admin,SystemAdmin")]
+[Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
 public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerBase
 {
+    private static bool IsReservedPlatformRole(string? role) =>
+        string.Equals(role?.Trim(), "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(role?.Trim(), "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<UserProfileDto>>>> GetUsers(CancellationToken ct)
     {
@@ -33,6 +36,11 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
     public async Task<ActionResult<ApiResponse<UserProfileDto>>> CreateUser([FromBody] CreateUserRequest request, CancellationToken ct)
     {
         var tenantId = GetTenantId();
+
+        if (IsReservedPlatformRole(request.Role) && !User.IsPlatformAdmin())
+        {
+            return Forbid();
+        }
 
         var tenant = await dbContext.Tenants
             .Include(t => t.CurrentPlan)
@@ -65,7 +73,7 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
             DisplayName = request.DisplayName ?? request.Username,
             Email = request.Email,
             PasswordHash = HashPassword(request.Password),
-            Role = string.IsNullOrWhiteSpace(request.Role) ? "User" : request.Role,
+            Role = string.IsNullOrWhiteSpace(request.Role) ? "User" : request.Role.Trim(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -86,12 +94,17 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
         if (user is null)
             return NotFound(new ApiResponse<UserProfileDto>(false, "ไม่พบผู้ใช้งาน", null));
 
-        user.DisplayName = request.DisplayName ?? user.DisplayName;
-        user.Email = request.Email ?? user.Email;
         if (!string.IsNullOrWhiteSpace(request.Role))
         {
-            user.Role = request.Role;
+            if (IsReservedPlatformRole(request.Role) && !User.IsPlatformAdmin())
+            {
+                return Forbid();
+            }
+            user.Role = request.Role.Trim();
         }
+
+        user.DisplayName = request.DisplayName ?? user.DisplayName;
+        user.Email = request.Email ?? user.Email;
 
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
@@ -120,23 +133,36 @@ public class AdminUsersController(SenicBillingDbContext dbContext) : ControllerB
             return BadRequest(new ApiResponse<bool>(false, "ไม่สามารถระงับการใช้งานบัญชีของตนเองได้", false));
         }
 
+        if (!user.IsActive && request.IsActive)
+        {
+            var tenant = await dbContext.Tenants
+                .Include(t => t.CurrentPlan)
+                .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+            if (tenant?.CurrentPlan != null && tenant.CurrentPlan.MaxUsers > 0)
+            {
+                var activeUsersCount = await dbContext.AppUsers
+                    .CountAsync(u => u.TenantId == tenantId && u.IsActive, ct);
+
+                if (activeUsersCount >= tenant.CurrentPlan.MaxUsers)
+                {
+                    return BadRequest(new ApiResponse<bool>(
+                        false,
+                        $"จำนวนผู้ใช้งานครบโควต้าของแพ็กเกจ {tenant.CurrentPlan.Name} ({tenant.CurrentPlan.MaxUsers} บัญชี) กรุณาอัปเกรดแพ็กเกจ",
+                        false));
+                }
+            }
+        }
+
         user.IsActive = request.IsActive;
         await dbContext.SaveChangesAsync(ct);
 
         return Ok(new ApiResponse<bool>(true, "อัปเดตสถานะสำเร็จ", true));
     }
 
-    private Guid GetTenantId()
-    {
-        var claim = User.FindFirst("tenantId")?.Value;
-        return claim is not null ? Guid.Parse(claim) : throw new UnauthorizedAccessException("Tenant ID claim not found");
-    }
+    private Guid GetTenantId() => User.GetTenantId();
 
-    private Guid GetUserId()
-    {
-        var claim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        return claim is not null ? Guid.Parse(claim) : Guid.Empty;
-    }
+    private Guid GetUserId() => User.TryGetUserId() ?? Guid.Empty;
 
     private static string HashPassword(string password) =>
         PasswordHasher.HashPassword(password);

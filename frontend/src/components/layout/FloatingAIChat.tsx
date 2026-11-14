@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 
 type Message = {
@@ -9,9 +10,10 @@ type Message = {
 };
 
 export default function FloatingAIChat() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { id: 'welcome', sender: 'ai', text: 'สวัสดีครับ ผมคือ Senic Billing Assistant มีอะไรให้ผมช่วยสรุปหรือวิเคราะห์เกี่ยวกับบัญชีวันนี้ไหมครับ?' }
+    { id: 'welcome', sender: 'ai', text: '' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -35,12 +37,12 @@ export default function FloatingAIChat() {
 
     try {
       const res = await apiClient.post('/AIAssistant/chat', { message: userMsg });
-      const reply = res.data.data?.reply || 'ขออภัย ไม่สามารถดึงข้อมูลจาก AI ได้ในขณะนี้';
+      const reply = res.data.data?.reply || t('aiChat.fallbackError');
       
       setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'ai', text: reply }]);
     } catch (error) {
       console.error('AI Chat Error:', error);
-      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'ai', text: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์' }]);
+      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'ai', text: t('aiChat.connectionError') }]);
     } finally {
       setIsTyping(false);
     }
@@ -61,7 +63,7 @@ export default function FloatingAIChat() {
           <div className="bg-[var(--color-primary)] text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot size={20} />
-              <h3 className="font-bold">Senic Billing Assistant</h3>
+              <h3 className="font-bold">{t('aiChat.title')}</h3>
             </div>
             <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors">
               <X size={20} />
@@ -70,19 +72,22 @@ export default function FloatingAIChat() {
 
           {/* Messages */}
           <div className="flex-1 p-4 overflow-y-auto bg-[var(--color-bg)] flex flex-col gap-3">
-            {messages.map(msg => (
+            {messages.map(msg => {
+              const displayText = msg.id === 'welcome' ? t('aiChat.welcome') : msg.text;
+              return (
               <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
                   msg.sender === 'user' 
                     ? 'bg-[var(--color-primary)] text-white rounded-tr-sm' 
                     : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] rounded-tl-sm'
                 }`}>
-                  {msg.text.split('\n').map((line, i) => (
+                  {displayText.split('\n').map((line, i) => (
                     <span key={i}>{line}<br/></span>
                   ))}
                 </div>
               </div>
-            ))}
+              );
+            })}
             {isTyping && (
               <div className="flex justify-start">
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
@@ -102,7 +107,7 @@ export default function FloatingAIChat() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="ถามอะไรฉันสิ..."
+              placeholder={t('aiChat.placeholder')}
               className="flex-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full px-4 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-colors"
             />
             <button

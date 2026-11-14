@@ -16,7 +16,7 @@ public record LoginRequest(string Username, string Password);
 
 public record LoginResponse(string Token, string RefreshToken, DateTime ExpiresAt, UserInfo User);
 
-public record UserInfo(Guid Id, string Username, string DisplayName, string Role, Guid TenantId, string TenantName);
+public record UserInfo(Guid Id, string Username, string DisplayName, string Role, Guid TenantId, string TenantName, bool IsPlatformAdmin = false);
 
 public record RegisterRequest(string Username, string Password, string DisplayName, string? Email, string Role = "User");
 
@@ -119,7 +119,13 @@ public record DocumentResponse(
     DateTime? ViewedAt,
     DateTime CreatedAt,
     string? CreatedBy,
-    List<DocumentLineDto> Lines
+    List<DocumentLineDto> Lines,
+    CustomerApprovalStatus CustomerApprovalStatus = CustomerApprovalStatus.Pending,
+    string? ApprovedByName = null,
+    DateTime? ApprovedAt = null,
+    string? CustomerSignatureText = null,
+    string? CustomerApprovalComment = null,
+    DateTime? LastReminderSentAt = null
 );
 
 public record CancelDocumentRequest(string Reason);
@@ -170,17 +176,20 @@ public record UpdateCustomerRequest(
 
 public record ProductDto(
     Guid Id, string? Sku, string? Barcode, string Name, string? Description,
-    string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity, bool IsActive
+    string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity, bool IsActive,
+    decimal? CostPrice = null
 );
 
 public record CreateProductRequest(
     string? Sku, string? Barcode, string Name, string? Description,
-    string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity
+    string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity,
+    decimal? CostPrice = null
 );
 
 public record UpdateProductRequest(
     string? Sku, string? Barcode, string Name, string? Description,
-    string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity, bool IsActive
+    string Unit, decimal UnitPrice, string? Category, decimal? StockQuantity, bool IsActive,
+    decimal? CostPrice = null
 );
 
 // ──────────────────────────────────────────────

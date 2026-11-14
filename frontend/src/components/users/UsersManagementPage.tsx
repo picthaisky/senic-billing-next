@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Shield, Users, UserPlus, Key, Edit, UserCheck, UserX } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 import UserFormModal from './UserFormModal';
 
@@ -25,6 +26,7 @@ interface RoleWithPermissions {
 }
 
 export default function UsersManagementPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -87,8 +89,8 @@ export default function UsersManagementPage() {
 
   const handleToggleUserStatus = async (user: User) => {
     const nextActive = !user.isActive;
-    const actionLabel = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
-    if (!window.confirm(`ยืนยันการ${actionLabel}ผู้ใช้งาน "${user.username}" หรือไม่?`)) return;
+    const actionLabel = nextActive ? t('usersPage.activateAction') : t('usersPage.suspendAction');
+    if (!window.confirm(t('usersPage.confirmToggle', { action: actionLabel, username: user.username }))) return;
     try {
       await apiClient.put(`/admin/users/${user.id}/status`, { isActive: nextActive });
       void fetchUsers();
@@ -97,7 +99,7 @@ export default function UsersManagementPage() {
         typeof error === 'object' && error !== null && 'response' in error
           ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
           : undefined;
-      alert(msg || `ไม่สามารถ${actionLabel}ผู้ใช้งานได้`);
+      alert(msg || t('usersPage.toggleError', { action: actionLabel }));
     }
   };
 
@@ -106,7 +108,7 @@ export default function UsersManagementPage() {
       await apiClient.put(`/tenant-users/${userId}/role`, { role: newRole });
       void fetchUsers();
     } catch {
-      alert('ไม่สามารถเปลี่ยนสิทธิ์การใช้งานได้');
+      alert(t('usersPage.roleChangeError'));
     }
   };
 
@@ -117,11 +119,11 @@ export default function UsersManagementPage() {
         roleName: selectedRole.roleName,
         permissionIds: selectedRole.permissionIds
       });
-      alert('บันทึกสิทธิ์สำหรับ Role สำเร็จ');
+      alert(t('usersPage.saveRoleSuccess'));
       fetchRolesAndPermissions();
     } catch (error) {
       console.error('Failed to save role permissions', error);
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+      alert(t('usersPage.saveError'));
     }
   };
 
@@ -143,7 +145,7 @@ export default function UsersManagementPage() {
     <div className="p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
       <div className="flex items-center gap-3">
         <div className="w-1.5 h-8 rounded-full bg-[var(--color-primary)]" />
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">จัดการผู้ใช้งานและสิทธิ์</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">{t('usersPage.pageTitle')}</h1>
       </div>
 
       <div className="flex space-x-1 bg-[var(--color-surface-hover)] p-1 rounded-xl w-fit">
@@ -153,7 +155,7 @@ export default function UsersManagementPage() {
           }`}
           onClick={() => setActiveTab('users')}
         >
-          <Users size={16} /> ผู้ใช้งานระบบ
+          <Users size={16} /> {t('usersPage.tabUsers')}
         </button>
         <button
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -161,7 +163,7 @@ export default function UsersManagementPage() {
           }`}
           onClick={() => setActiveTab('roles')}
         >
-          <Shield size={16} /> กำหนดสิทธิ์ (Roles)
+          <Shield size={16} /> {t('usersPage.tabRoles')}
         </button>
       </div>
 
@@ -170,13 +172,13 @@ export default function UsersManagementPage() {
           <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-bg-secondary)]">
             <h2 className="font-semibold flex items-center gap-2">
               <Users size={18} className="text-[var(--color-primary)]" />
-              รายชื่อผู้ใช้งานทั้งหมด
+              {t('usersPage.allUsersTitle')}
             </h2>
             <button
               onClick={() => { setEditingUser(null); setIsUserModalOpen(true); }}
               className="btn btn-primary btn-sm flex items-center gap-2"
             >
-              <UserPlus size={16} /> เพิ่มผู้ใช้งาน
+              <UserPlus size={16} /> {t('usersPage.addUser')}
             </button>
           </div>
           
@@ -184,19 +186,19 @@ export default function UsersManagementPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[var(--color-bg)] border-b border-[var(--color-border)] text-sm">
-                  <th className="p-4 font-semibold text-[var(--color-text-muted)]">ชื่อผู้ใช้งาน</th>
-                  <th className="p-4 font-semibold text-[var(--color-text-muted)]">ชื่อที่แสดง</th>
-                  <th className="p-4 font-semibold text-[var(--color-text-muted)]">อีเมล</th>
-                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-center">สิทธิ์ (Role)</th>
-                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-center">สถานะ</th>
-                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-right">จัดการ</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)]">{t('usersPage.colUsername')}</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)]">{t('usersPage.colDisplayName')}</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)]">{t('usersPage.colEmail')}</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-center">{t('usersPage.colRole')}</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-center">{t('usersPage.colStatus')}</th>
+                  <th className="p-4 font-semibold text-[var(--color-text-muted)] text-right">{t('usersPage.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingUsers ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">กำลังโหลดข้อมูล...</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">{t('usersPage.loading')}</td></tr>
                 ) : users.length === 0 ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">ไม่พบข้อมูลผู้ใช้งาน</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">{t('usersPage.emptyUsers')}</td></tr>
                 ) : (
                   users.map(user => (
                     <tr key={user.id} className={`border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)] ${user.isActive === false ? 'opacity-60' : ''}`}>
@@ -205,7 +207,7 @@ export default function UsersManagementPage() {
                       <td className="p-4 text-[var(--color-text)]">{user.email || '-'}</td>
                       <td className="p-4 text-center">
                         <select
-                          aria-label={`สิทธิ์ของ ${user.username}`}
+                          aria-label={t('usersPage.roleSelectAria', { username: user.username })}
                           value={user.role}
                           onChange={(e) => handleQuickRoleChange(user.id, e.target.value)}
                           className="input-field py-1 px-2.5 text-xs font-medium max-w-[140px] mx-auto"
@@ -219,7 +221,7 @@ export default function UsersManagementPage() {
                       </td>
                       <td className="p-4 text-center">
                         <span className={`badge text-xs ${user.isActive !== false ? 'badge-success' : 'badge-danger'}`}>
-                          {user.isActive !== false ? 'ใช้งาน' : 'ระงับใช้งาน'}
+                          {user.isActive !== false ? t('usersPage.statusActive') : t('usersPage.statusSuspended')}
                         </span>
                       </td>
                       <td className="p-4 text-right">
@@ -227,14 +229,14 @@ export default function UsersManagementPage() {
                           <button
                             onClick={() => { setEditingUser(user); setIsUserModalOpen(true); }}
                             className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-md"
-                            title="แก้ไขข้อมูล"
+                            title={t('usersPage.editTitle')}
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => void handleToggleUserStatus(user)}
                             className={`p-1.5 rounded-md ${user.isActive !== false ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-                            title={user.isActive !== false ? 'ระงับการใช้งาน' : 'เปิดใช้งานอีกครั้ง'}
+                            title={user.isActive !== false ? t('usersPage.suspendAction') : t('usersPage.reactivateTitle')}
                           >
                             {user.isActive !== false ? <UserX size={16} /> : <UserCheck size={16} />}
                           </button>
@@ -253,11 +255,11 @@ export default function UsersManagementPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-1 bg-[var(--color-surface-solid)] rounded-2xl shadow-sm border border-[var(--color-border)] overflow-hidden h-fit">
             <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-              <h2 className="font-semibold text-[var(--color-text)]">Roles</h2>
+              <h2 className="font-semibold text-[var(--color-text)]">{t('usersPage.rolesTitle')}</h2>
             </div>
             <div className="p-2 space-y-1">
               {loadingRoles ? (
-                <div className="p-4 text-center text-[var(--color-text-muted)] text-sm">กำลังโหลด...</div>
+                <div className="p-4 text-center text-[var(--color-text-muted)] text-sm">{t('usersPage.loadingShort')}</div>
               ) : (
                 roles.map(role => (
                   <button
@@ -279,22 +281,22 @@ export default function UsersManagementPage() {
           <div className="md:col-span-3 bg-[var(--color-surface-solid)] rounded-2xl shadow-sm border border-[var(--color-border)] overflow-hidden">
             <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex justify-between items-center">
               <h2 className="font-semibold text-[var(--color-text)]">
-                กำหนดสิทธิ์การใช้งานสำหรับ: <span className="text-[var(--color-primary)]">{selectedRole?.roleName || '-'}</span>
+                {t('usersPage.rolePermFor')} <span className="text-[var(--color-primary)]">{selectedRole?.roleName || '-'}</span>
               </h2>
               <button 
                 className="btn btn-primary btn-sm flex items-center gap-2"
                 onClick={handleSaveRolePermissions}
                 disabled={!selectedRole || selectedRole.roleName === 'SystemAdmin'}
               >
-                <Key size={16} /> บันทึกการเปลี่ยนแปลง
+                <Key size={16} /> {t('usersPage.saveChanges')}
               </button>
             </div>
             
             <div className="p-6">
               {!selectedRole ? (
-                <div className="text-center py-12 text-[var(--color-text-muted)]">กรุณาเลือก Role ด้านซ้ายมือเพื่อกำหนดสิทธิ์</div>
+                <div className="text-center py-12 text-[var(--color-text-muted)]">{t('usersPage.selectRoleHint')}</div>
               ) : selectedRole.roleName === 'SystemAdmin' ? (
-                <div className="text-center py-12 text-red-500 font-medium">สิทธิ์ SystemAdmin มีอำนาจสูงสุด ไม่สามารถปรับแก้สิทธิ์ได้</div>
+                <div className="text-center py-12 text-red-500 font-medium">{t('usersPage.sysAdminLocked')}</div>
               ) : (
                 <div className="space-y-8">
                   {categories.map(category => {

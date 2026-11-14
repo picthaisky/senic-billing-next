@@ -13,7 +13,7 @@ namespace SenicBilling.Infrastructure.Auth;
 /// </summary>
 public class JwtTokenService(IConfiguration configuration)
 {
-    public string GenerateToken(AppUser user, string tenantName)
+    public string GenerateToken(AppUser user, string tenantName, string? impersonatedBy = null)
     {
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is not configured");
@@ -24,16 +24,23 @@ public class JwtTokenService(IConfiguration configuration)
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim("tenantId", user.TenantId.ToString()),
-            new Claim("tenantName", tenantName),
-            new Claim("displayName", user.DisplayName),
-            new Claim(ClaimTypes.Role, user.Role)
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new("id", user.Id.ToString()),
+            new(JwtRegisteredClaimNames.UniqueName, user.Username),
+            new("username", user.Username),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("tenantId", user.TenantId.ToString()),
+            new("tenantName", tenantName),
+            new("displayName", user.DisplayName),
+            new(ClaimTypes.Role, user.Role)
         };
+
+        if (!string.IsNullOrWhiteSpace(impersonatedBy))
+        {
+            claims.Add(new Claim("impersonatedBy", impersonatedBy));
+        }
 
         var token = new JwtSecurityToken(
             issuer: issuer,

@@ -11,11 +11,20 @@ namespace SenicBilling.Infrastructure.Services;
 
 public class QuestPdfService : IPdfService
 {
-    public QuestPdfService()
+    private const string LogoBucketName = "senic-billing-logos";
+    private readonly IStorageService? _storageService;
+
+    public QuestPdfService() : this(null)
+    {
+    }
+
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public QuestPdfService(IStorageService? storageService)
     {
         // Must configure license for QuestPDF 2022.12+
         QuestPDF.Settings.License = LicenseType.Community;
-        
+        _storageService = storageService;
+
         // Ensure default font family supports Thai (e.g., Tahoma or specific downloaded font)
         // If not running on Windows, you must ensure fonts are available in the container or load them explicitly
         // Try to use Tahoma as it supports Thai, fallback to Arial.
@@ -201,12 +210,20 @@ public class QuestPdfService : IPdfService
 
                 page.Header().Row(row =>
                 {
+                    var buyerLogoBytes = TryLoadTenantLogoBytes(buyer?.LogoUrl);
+                    if (buyerLogoBytes is not null)
+                    {
+                        row.ConstantItem(56).PaddingRight(10).AlignMiddle().Height(48).Image(buyerLogoBytes).FitArea();
+                    }
+
                     row.RelativeItem().Column(c =>
                     {
-                        c.Item().Text(buyer.CompanyName).FontSize(15).SemiBold();
-                        if (!string.IsNullOrWhiteSpace(buyer.TaxId))
+                        c.Item().Text(!string.IsNullOrWhiteSpace(buyer?.CompanyName) ? buyer.CompanyName : "Senic Billing").FontSize(15).SemiBold();
+                        if (!string.IsNullOrWhiteSpace(buyer?.BranchName))
+                            c.Item().Text($"สาขา: {buyer.BranchName}").FontSize(9);
+                        if (!string.IsNullOrWhiteSpace(buyer?.TaxId))
                             c.Item().Text($"เลขประจำตัวผู้เสียภาษี: {buyer.TaxId}");
-                        if (!string.IsNullOrWhiteSpace(buyer.Address))
+                        if (!string.IsNullOrWhiteSpace(buyer?.Address))
                             c.Item().Text(buyer.Address);
                     });
                     row.ConstantItem(210).AlignRight().Column(c =>
@@ -302,6 +319,11 @@ public class QuestPdfService : IPdfService
             DocumentType.Quotation => "ใบเสนอราคา",
             DocumentType.CashBill => "บิลเงินสด",
             DocumentType.DeliveryNote => "ใบส่งของ",
+            DocumentType.CreditNote => "ใบลดหนี้",
+            DocumentType.DebitNote => "ใบเพิ่มหนี้",
+            DocumentType.ExpenseVoucher => "ใบสำคัญจ่าย",
+            DocumentType.PurchaseOrder => "ใบสั่งซื้อ",
+            DocumentType.JournalVoucher => "ใบสำคัญทั่วไป",
             _ => "เอกสาร"
         };
     }
@@ -309,15 +331,34 @@ public class QuestPdfService : IPdfService
     private void ComposeHeader(IContainer container, DocumentHeader document, string title)
     {
         var tenant = document.Tenant;
+        var companyName = !string.IsNullOrWhiteSpace(tenant?.CompanyName) ? tenant.CompanyName : "Senic Billing";
+        var logoBytes = TryLoadTenantLogoBytes(tenant?.LogoUrl);
 
         container.Row(row =>
         {
+            if (logoBytes is not null)
+            {
+                row.ConstantItem(60).PaddingRight(10).AlignMiddle().Height(52).Image(logoBytes).FitArea();
+            }
+
             row.RelativeItem().Column(column =>
             {
-                column.Item().Text(tenant.CompanyName).FontSize(16).SemiBold();
-                if (!string.IsNullOrEmpty(tenant.TaxId))
+                column.Item().Text(companyName).FontSize(16).SemiBold();
+                if (!string.IsNullOrWhiteSpace(tenant?.BranchName))
                 {
-                    column.Item().Text($"เลขประจำตัวผู้เสียภาษี: {tenant.TaxId}");
+                    column.Item().Text($"สาขา: {tenant.BranchName}").FontSize(9);
+                }
+                if (!string.IsNullOrWhiteSpace(tenant?.TaxId))
+                {
+                    column.Item().Text($"เลขประจำตัวผู้เสียภาษี: {tenant.TaxId}").FontSize(9);
+                }
+                if (!string.IsNullOrWhiteSpace(tenant?.Address))
+                {
+                    column.Item().Text(tenant.Address).FontSize(9);
+                }
+                if (!string.IsNullOrWhiteSpace(tenant?.Phone))
+                {
+                    column.Item().Text($"โทร: {tenant.Phone}").FontSize(9);
                 }
             });
 
@@ -333,6 +374,104 @@ public class QuestPdfService : IPdfService
                 }
             });
         });
+    }
+
+    private byte[]? TryLoadTenantLogoBytes(string? logoUrl)
+    {
+        if (string.IsNullOrWhiteSpace(logoUrl))
+            return null;
+
+        var rawPath = Uri.TryCreate(logoUrl.Trim(), UriKind.Absolute, out var absUri)
+            ? absUri.AbsolutePath
+            : logoUrl.Trim().Split('?', '#')[0];
+
+        const string routePrefix = "/api/tenants/logo/";
+        var idx = rawPath.IndexOf(routePrefix, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+            return null;
+
+        var remainder = rawPath[(idx + routePrefix.Length)..];
+        var parts = remainder.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2)
+            return null;
+
+        if (!Guid.TryParse(parts[0], out var tenantId))
+            return null;
+
+        var fileName = parts[1];
+        var safeFileName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeFileName) || !string.Equals(safeFileName, fileName, StringComparison.Ordinal))
+            return null;
+
+        var ext = Path.GetExtension(safeFileName).ToLowerInvariant();
+        if (ext is not (".png" or ".jpg" or ".jpeg" or ".webp"))
+            return null;
+
+        var roots = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory }
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var root in roots)
+        {
+            var candidatePath = Path.Combine(root, "App_Data", "logos", tenantId.ToString(), safeFileName);
+            if (!File.Exists(candidatePath))
+                continue;
+
+            try
+            {
+                var bytes = File.ReadAllBytes(candidatePath);
+                if (HasSupportedImageHeader(bytes))
+                    return bytes;
+            }
+            catch
+            {
+                // Keep PDF generation resilient if disk read fails
+            }
+        }
+
+        if (_storageService is not null)
+        {
+            try
+            {
+                using var stream = _storageService
+                    .DownloadFileAsync(LogoBucketName, $"tenants/{tenantId}/{safeFileName}")
+                    .GetAwaiter()
+                    .GetResult();
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                var storageBytes = ms.ToArray();
+                if (HasSupportedImageHeader(storageBytes))
+                    return storageBytes;
+            }
+            catch
+            {
+                // Keep PDF generation resilient if object storage is unavailable or object missing
+            }
+        }
+
+        return null;
+    }
+
+    private static bool HasSupportedImageHeader(byte[] bytes)
+    {
+        if (bytes.Length < 4)
+            return false;
+
+        // PNG
+        if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+            return true;
+
+        // JPEG
+        if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+            return true;
+
+        // WEBP (RIFF....WEBP)
+        if (bytes.Length >= 12
+            && bytes[0] == (byte)'R' && bytes[1] == (byte)'I' && bytes[2] == (byte)'F' && bytes[3] == (byte)'F'
+            && bytes[8] == (byte)'W' && bytes[9] == (byte)'E' && bytes[10] == (byte)'B' && bytes[11] == (byte)'P')
+            return true;
+
+        return false;
     }
 
     private void ComposeContent(IContainer container, DocumentHeader document)

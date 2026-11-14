@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import {
   TrendingUp, FileText, Clock, ArrowUpRight, ArrowDownRight,
-  Receipt, Banknote, Truck, FileCheck, Download, Loader2, Printer
+  Receipt, Banknote, Truck, FileCheck, Download, Loader2, Printer, Users
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
@@ -78,17 +79,26 @@ type ProductPiePoint = {
 type RecentDocumentItem = {
   id: string;
   number: string;
-  type: string;
+  documentType: RecentActivityDto['documentType'];
   customer: string;
   amount: number;
-  date: string;
+  createdAt: string;
   icon: LucideIcon;
+};
+
+type TopSpenderDto = {
+  customerId: string;
+  customerName: string;
+  totalOrders: number;
+  totalSpent: number;
+  lastPurchaseDate: string | null;
 };
 
 type DashboardViewModel = {
   revenueData: RevenueChartPoint[];
   productData: ProductPiePoint[];
   recentDocs: RecentDocumentItem[];
+  topSpenders: TopSpenderDto[];
   agingData: AgingReportDto | null;
   taxData: TaxEstimatorDto | null;
   kpiStats: {
@@ -100,8 +110,6 @@ type DashboardViewModel = {
   };
 };
 
-const THAI_MONTH_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
@@ -111,37 +119,41 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const getLastSixMonthKeys = () => {
+const getLastSixMonthKeys = (locale: string) => {
   const now = new Date();
   const keys: Array<{ key: string; label: string }> = [];
 
   for (let i = 5; i >= 0; i -= 1) {
     const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
-    keys.push({ key, label: THAI_MONTH_SHORT[monthDate.getMonth()] });
+    const label = new Intl.DateTimeFormat(locale, { month: 'short' }).format(monthDate);
+    keys.push({ key, label });
   }
 
   return keys;
 };
 
-const getDocumentTypeLabel = (documentType: RecentActivityDto['documentType']) => {
+const getDocumentTypeLabel = (
+  documentType: RecentActivityDto['documentType'],
+  t: (key: string) => string
+) => {
   switch (documentType) {
     case 'TaxInvoice':
-      return 'ใบกำกับภาษี';
+      return t('docType.taxinvoice');
     case 'Quotation':
-      return 'ใบเสนอราคา';
+      return t('docType.quotation');
     case 'Receipt':
-      return 'ใบเสร็จรับเงิน';
+      return t('docType.receipt');
     case 'CashBill':
-      return 'บิลเงินสด';
+      return t('docType.cashbill');
     case 'DeliveryNote':
-      return 'ใบส่งของ';
+      return t('docType.delivery');
     case 'CreditNote':
-      return 'ใบลดหนี้';
+      return t('docType.creditnote');
     case 'DebitNote':
-      return 'ใบเพิ่มหนี้';
+      return t('docType.debitnote');
     default:
-      return 'เอกสาร';
+      return t('forms.genericDocument');
   }
 };
 
@@ -165,7 +177,11 @@ const getDocumentTypeIcon = (documentType: RecentActivityDto['documentType']) =>
   }
 };
 
-const formatRelativeTime = (isoDate: string) => {
+const formatRelativeTime = (
+  isoDate: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  locale: string
+) => {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
   const diff = Math.max(0, now - then);
@@ -176,19 +192,19 @@ const formatRelativeTime = (isoDate: string) => {
 
   if (diff < hour) {
     const minutes = Math.max(1, Math.floor(diff / minute));
-    return `${minutes} นาทีที่แล้ว`;
+    return t('dashboard.minutesAgo', { count: minutes });
   }
 
   if (diff < day) {
     const hours = Math.floor(diff / hour);
-    return `${hours} ชั่วโมงที่แล้ว`;
+    return t('dashboard.hoursAgo', { count: hours });
   }
 
   if (diff < day * 2) {
-    return 'เมื่อวาน';
+    return t('dashboard.yesterday');
   }
 
-  return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' }).format(new Date(isoDate));
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(new Date(isoDate));
 };
 
 const formatTooltipCurrency = (value: number | string | readonly (number | string)[] | undefined) => {
@@ -200,6 +216,8 @@ const formatTooltipCurrency = (value: number | string | readonly (number | strin
 };
 
 export default function DashboardPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
   const { theme } = useTheme();
   const chartColors = theme === 'deep-ocean'
     ? ['#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd']
@@ -210,6 +228,7 @@ export default function DashboardPage() {
     revenueData: [],
     productData: [],
     recentDocs: [],
+    topSpenders: [],
     agingData: null,
     taxData: null,
     kpiStats: {
@@ -225,13 +244,14 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      const [summaryRes, revenueRes, topProductRes, recentRes, agingRes, taxRes] = await Promise.all([
+      const [summaryRes, revenueRes, topProductRes, recentRes, agingRes, taxRes, spendersRes] = await Promise.all([
         apiClient.get<ApiEnvelope<DashboardSummaryDto>>('/dashboard/summary'),
         apiClient.get<ApiEnvelope<MonthlyRevenueDto[]>>('/dashboard/revenue-chart'),
         apiClient.get<ApiEnvelope<TopProductDto[]>>('/dashboard/top-products?top=5'),
         apiClient.get<ApiEnvelope<RecentActivityDto[]>>('/dashboard/recent-activity?count=8'),
         apiClient.get<ApiEnvelope<AgingReportDto>>('/dashboard/aging-report'),
-        apiClient.get<ApiEnvelope<TaxEstimatorDto>>('/dashboard/tax-estimator')
+        apiClient.get<ApiEnvelope<TaxEstimatorDto>>('/dashboard/tax-estimator'),
+        apiClient.get<ApiEnvelope<TopSpenderDto[]>>('/dashboard/top-spenders?top=5')
       ]);
 
       const summary = summaryRes.data.data;
@@ -240,8 +260,9 @@ export default function DashboardPage() {
       const recentActivity = recentRes.data.data ?? [];
       const agingData = agingRes.data.data;
       const taxData = taxRes.data.data;
+      const topSpenders = spendersRes.data.data ?? [];
 
-      const monthKeys = getLastSixMonthKeys();
+      const monthKeys = getLastSixMonthKeys('th-TH');
       const revenueByMonth = new Map(monthlyRevenue.map((item) => [item.month, item]));
       const normalizedRevenue: RevenueChartPoint[] = monthKeys.map(({ key, label }) => {
         const monthData = revenueByMonth.get(key);
@@ -263,10 +284,10 @@ export default function DashboardPage() {
       const normalizedRecentDocs: RecentDocumentItem[] = recentActivity.map((item) => ({
         id: item.id,
         number: item.documentNumber,
-        type: getDocumentTypeLabel(item.documentType),
+        documentType: item.documentType,
         customer: item.customerName || '-',
         amount: Number(item.grandTotal),
-        date: formatRelativeTime(item.createdAt),
+        createdAt: item.createdAt,
         icon: getDocumentTypeIcon(item.documentType)
       }));
 
@@ -274,6 +295,7 @@ export default function DashboardPage() {
         revenueData: normalizedRevenue,
         productData: normalizedProducts,
         recentDocs: normalizedRecentDocs,
+        topSpenders,
         agingData: agingData,
         taxData: taxData,
         kpiStats: {
@@ -306,54 +328,58 @@ export default function DashboardPage() {
 
   const kpis = useMemo(() => [
     {
-      label: 'รายได้รวม',
+      id: 'revenue',
+      label: t('dashboard.kpiTotalRevenue'),
       value: formatCurrency(dashboardData.kpiStats.totalRevenue),
       change: `${dashboardData.kpiStats.monthlyGrowthPercent >= 0 ? '+' : ''}${dashboardData.kpiStats.monthlyGrowthPercent.toFixed(1)}%`,
       positive: dashboardData.kpiStats.monthlyGrowthPercent >= 0,
       icon: TrendingUp,
-      desc: 'เทียบเดือนก่อน',
+      desc: t('dashboard.kpiTotalRevenueDesc'),
     },
     {
-      label: 'เอกสารที่ออก',
+      id: 'issued',
+      label: t('dashboard.kpiDocumentsIssued'),
       value: dashboardData.kpiStats.documentsIssued.toString(),
       change: `+${dashboardData.kpiStats.documentsIssued}`,
       positive: true,
       icon: FileText,
-      desc: 'สะสมทั้งหมด',
+      desc: t('dashboard.kpiDocumentsIssuedDesc'),
     },
     {
-      label: 'รอดำเนินการ',
+      id: 'pending',
+      label: t('dashboard.kpiPendingDrafts'),
       value: dashboardData.kpiStats.pendingDrafts.toString(),
       change: `-${dashboardData.kpiStats.pendingDrafts}`,
       positive: dashboardData.kpiStats.pendingDrafts === 0,
       icon: Clock,
-      desc: 'เอกสารร่าง',
+      desc: t('dashboard.kpiPendingDraftsDesc'),
     },
     {
-      label: 'เติบโต MoM',
+      id: 'growth',
+      label: t('dashboard.kpiMomGrowth'),
       value: `${dashboardData.kpiStats.monthlyGrowthPercent >= 0 ? '+' : ''}${dashboardData.kpiStats.monthlyGrowthPercent.toFixed(1)}%`,
       change: formatCurrency(dashboardData.kpiStats.currentMonthRevenue),
       positive: dashboardData.kpiStats.monthlyGrowthPercent >= 0,
       icon: TrendingUp,
-      desc: 'รายได้เดือนนี้',
+      desc: t('dashboard.kpiMomGrowthDesc'),
     },
-  ], [dashboardData]);
+  ], [dashboardData, t]);
 
   const handleExport = () => {
     const mapping = {
-      number: 'เลขที่เอกสาร',
-      type: 'ประเภท',
-      customer: 'ลูกค้า',
-      amount: 'จำนวนเงิน',
-      date: 'เวลา'
+      number: t('dashboard.colDocNumber'),
+      type: t('dashboard.colType'),
+      customer: t('dashboard.colCustomer'),
+      amount: t('dashboard.colAmount'),
+      date: t('dashboard.colTime')
     };
 
     const exportData = dashboardData.recentDocs.map((doc) => ({
       number: doc.number,
-      type: doc.type,
+      type: getDocumentTypeLabel(doc.documentType, t),
       customer: doc.customer,
       amount: doc.amount,
-      date: doc.date
+      date: formatRelativeTime(doc.createdAt, t, locale)
     }));
 
     exportToExcel(exportData, 'Recent_Documents', mapping);
@@ -375,8 +401,8 @@ export default function DashboardPage() {
       <div className="flex items-center gap-3">
         <div className="w-1.5 h-10 rounded-full bg-[var(--color-primary)]" />
         <div>
-          <h2 className="text-lg font-bold leading-tight text-[var(--color-text)]">ภาพรวมธุรกิจ</h2>
-          <p className="dashboard-page-subtitle text-sm text-[var(--color-text-muted)]">สรุปรายได้และเอกสารล่าสุด</p>
+          <h2 className="text-lg font-bold leading-tight text-[var(--color-text)]">{t('dashboard.title')}</h2>
+          <p className="dashboard-page-subtitle text-sm text-[var(--color-text-muted)]">{t('dashboard.subtitle')}</p>
         </div>
       </div>
 
@@ -384,7 +410,7 @@ export default function DashboardPage() {
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((kpi, i) => (
           <div
-            key={kpi.label}
+            key={kpi.id}
             className={`kpi-card relative overflow-hidden animate-fade-in-up !p-4 sm:!p-6 delay-${Math.min(i + 1, 5)}`}
           >
             {/* Watermark Icon */}
@@ -414,13 +440,13 @@ export default function DashboardPage() {
           <div className="dashboard-panel-head flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-[var(--color-text)]">
-                แนวโน้มรายได้ และ ภาษีขาย
+                {t('dashboard.revenueChartTitle')}
               </h3>
               <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)]">
-                มูลค่ารวมจากการออกเอกสาร 6 เดือนล่าสุด
+                {t('dashboard.revenueChartSubtitle')}
               </p>
             </div>
-            <span className="badge badge-neutral">6 เดือน</span>
+            <span className="badge badge-neutral">{t('dashboard.sixMonths')}</span>
           </div>
           <div className={`h-[280px] ${loading ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
             <ResponsiveContainer width="100%" height="100%">
@@ -449,8 +475,8 @@ export default function DashboardPage() {
                   }}
                   formatter={formatTooltipCurrency}
                 />
-                <Bar dataKey="goods" name="มูลค่าสินค้า" fill="url(#colorGoods)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="vat" name="ภาษีขาย 7%" fill="url(#colorVat)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="goods" name={t('dashboard.goodsValue')} fill="url(#colorGoods)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="vat" name={t('dashboard.salesVat7')} fill="url(#colorVat)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -461,13 +487,13 @@ export default function DashboardPage() {
           <div className="dashboard-panel-head flex items-center justify-between">
             <div>
               <h3 className="font-bold text-base text-[var(--color-text)]">
-                สัดส่วนสินค้าที่ขายดี
+                {t('dashboard.topProductsTitle')}
               </h3>
               <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)]">
-                Top 5 รายการจัดตามมูลค่า
+                {t('dashboard.topProductsSubtitle')}
               </p>
             </div>
-            <span className="badge badge-neutral">จัดตามมูลค่า</span>
+            <span className="badge badge-neutral">{t('dashboard.byValue')}</span>
           </div>
           <div className={`h-[280px] ${loading ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
             <ResponsiveContainer width="100%" height="100%">
@@ -514,10 +540,10 @@ export default function DashboardPage() {
             <div>
               <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
                 <FileText size={18} className="text-[var(--color-primary)]" />
-                ประมาณการภาษี (Tax Estimator)
+                {t('dashboard.taxEstimatorTitle')}
               </h3>
               <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
-                ข้อมูลภาษีมูลค่าเพิ่มที่ต้องนำส่งเดือนนี้
+                {t('dashboard.taxEstimatorSubtitle')}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -537,19 +563,19 @@ export default function DashboardPage() {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `รายงานภาษีขาย_${y}_${String(m).padStart(2, '0')}.xlsx`;
+                    a.download = `OutputTax_${y}_${String(m).padStart(2, '0')}.xlsx`;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
                     window.URL.revokeObjectURL(url);
                   } catch {
-                    alert('ไม่สามารถดาวน์โหลดรายงานภาษีขายได้');
+                    alert(t('dashboard.outputVatError'));
                   }
                 }}
                 className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
-                title="ดาวน์โหลดรายงานภาษีขายประจำเดือน (Excel)"
+                title={t('dashboard.outputVatBtnTitle')}
               >
-                <Download size={14} /> ภาษีขาย (Excel)
+                <Download size={14} /> {t('dashboard.outputVatBtn')}
               </button>
               <button
                 type="button"
@@ -567,39 +593,39 @@ export default function DashboardPage() {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `รายงานภาษีซื้อ_ภพ30_${y}_${String(m).padStart(2, '0')}.xlsx`;
+                    a.download = `InputTax_PP30_${y}_${String(m).padStart(2, '0')}.xlsx`;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
                     window.URL.revokeObjectURL(url);
                   } catch {
-                    alert('ไม่สามารถดาวน์โหลดรายงานภาษีซื้อได้');
+                    alert(t('dashboard.inputVatError'));
                   }
                 }}
                 className="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
-                title="ดาวน์โหลดรายงานภาษีซื้อและสรุป ภ.พ.30 (Excel)"
+                title={t('dashboard.inputVatBtnTitle')}
               >
-                <Download size={14} /> ภาษีซื้อ + ภ.พ.30
+                <Download size={14} /> {t('dashboard.inputVatBtn')}
               </button>
             </div>
           </div>
           <div className={`mt-4 grid grid-cols-2 gap-4 ${loading ? 'opacity-50' : ''}`}>
             <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)]">
-              <p className="text-xs text-[var(--color-text-muted)]">ภาษีขาย (Sales VAT)</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{t('dashboard.salesVatCard')}</p>
               <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(dashboardData.taxData?.totalSalesVat || 0)}</p>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm border border-[var(--color-border)]">
-              <p className="text-xs text-[var(--color-text-muted)]">ภาษีซื้อ (Purchase VAT)</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{t('dashboard.purchaseVatCard')}</p>
               <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(dashboardData.taxData?.totalPurchaseVat || 0)}</p>
             </div>
             <div className="bg-[var(--color-primary)] p-5 rounded-xl shadow-sm col-span-2 text-white">
               <p className="text-sm opacity-90">
                 {(dashboardData.taxData?.estimatedTaxPayable || 0) >= 0
-                  ? 'ยอดภาษีมูลค่าเพิ่มที่ต้องชำระสุทธิ (ภ.พ.30)'
-                  : 'ยอดภาษีชำระเกินยกไป (ภ.พ.30)'}
+                  ? t('dashboard.netVatPayable')
+                  : t('dashboard.netVatCredit')}
               </p>
               <p className="text-3xl font-bold mt-1">{formatCurrency(Math.abs(dashboardData.taxData?.estimatedTaxPayable || 0))}</p>
-              <p className="text-xs opacity-80 mt-2">*หักภาษี ณ ที่จ่ายสะสม: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
+              <p className="text-xs opacity-80 mt-2">*{t('dashboard.whtCumulative')}: {formatCurrency(dashboardData.taxData?.whtDeducted || 0)}</p>
             </div>
           </div>
         </div>
@@ -610,25 +636,25 @@ export default function DashboardPage() {
             <div>
               <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
                 <Clock size={18} className="text-orange-500" />
-                รายงานอายุหนี้ (A/R Aging)
+                {t('dashboard.arAgingTitle')}
               </h3>
               <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
-                ยอดหนี้ค้างชำระแบ่งตามช่วงเวลา
+                {t('dashboard.arAgingSubtitle')}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-[var(--color-text-muted)]">ยอดค้างชำระรวม</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{t('dashboard.totalOverdue')}</p>
               <p className="text-lg font-bold text-red-600">{formatCurrency(dashboardData.agingData?.totalOverdue || 0)}</p>
             </div>
           </div>
           <div className={`mt-4 ${loading ? 'opacity-50' : ''}`}>
             <div className="space-y-3">
               {[
-                { label: 'ยังไม่ถึงกำหนด (Current)', value: dashboardData.agingData?.current || 0, color: 'bg-green-500' },
-                { label: 'เกินกำหนด 1-30 วัน', value: dashboardData.agingData?.overdue1_30 || 0, color: 'bg-yellow-400' },
-                { label: 'เกินกำหนด 31-60 วัน', value: dashboardData.agingData?.overdue31_60 || 0, color: 'bg-orange-500' },
-                { label: 'เกินกำหนด 61-90 วัน', value: dashboardData.agingData?.overdue61_90 || 0, color: 'bg-red-500' },
-                { label: 'เกินกำหนด > 90 วัน', value: dashboardData.agingData?.overdue90Plus || 0, color: 'bg-red-700' }
+                { label: t('dashboard.agingCurrent'), value: dashboardData.agingData?.current || 0, color: 'bg-green-500' },
+                { label: t('dashboard.aging1_30'), value: dashboardData.agingData?.overdue1_30 || 0, color: 'bg-yellow-400' },
+                { label: t('dashboard.aging31_60'), value: dashboardData.agingData?.overdue31_60 || 0, color: 'bg-orange-500' },
+                { label: t('dashboard.aging61_90'), value: dashboardData.agingData?.overdue61_90 || 0, color: 'bg-red-500' },
+                { label: t('dashboard.aging90Plus'), value: dashboardData.agingData?.overdue90Plus || 0, color: 'bg-red-700' }
               ].map((item, idx) => {
                 const total = (dashboardData.agingData?.totalOverdue || 0) + (dashboardData.agingData?.current || 0);
                 const percent = total > 0 ? (item.value / total) * 100 : 0;
@@ -647,25 +673,66 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Top Spenders */}
+      <div className="card dashboard-panel-card p-6 mb-6">
+        <div className="dashboard-panel-head flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+              <Users size={18} className="text-[var(--color-primary)]" />
+              {t('dashboard.topSpendersTitle')}
+            </h3>
+            <p className="dashboard-panel-subtitle text-xs text-[var(--color-text-muted)] mt-1">
+              {t('dashboard.topSpendersSubtitle')}
+            </p>
+          </div>
+          <span className="badge badge-neutral">{t('dashboard.top5')}</span>
+        </div>
+        {dashboardData.topSpenders.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-muted)] py-6 text-center">
+            {loading ? t('dashboard.loading') : t('dashboard.noTopSpenders')}
+          </p>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            {dashboardData.topSpenders.map((spender, index) => (
+              <div
+                key={spender.customerId || spender.customerName}
+                className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] flex flex-col justify-between gap-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="badge badge-primary text-[11px] px-2 py-0.5">#{index + 1}</span>
+                  <span className="text-xs text-[var(--color-text-muted)]">{spender.totalOrders} {t('dashboard.billsSuffix')}</span>
+                </div>
+                <p className="font-semibold text-sm text-[var(--color-text)] truncate" title={spender.customerName}>
+                  {spender.customerName}
+                </p>
+                <p className="text-base font-bold text-[var(--color-primary)] tabular-nums">
+                  {formatCurrency(spender.totalSpent)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Recent Activity */}
       <div className="card overflow-hidden">
         <div className="dashboard-recent-head flex items-center justify-between border-b border-[var(--color-border)]">
           <h3 className="font-bold text-base text-[var(--color-text)]">
-            เอกสารล่าสุด
+            {t('dashboard.recentDocsTitle')}
           </h3>
           <button className="btn btn-secondary dashboard-export-btn text-xs" onClick={handleExport}>
-            <Download size={14} /> ส่งออก Excel
+            <Download size={14} /> {t('dashboard.exportExcel')}
           </button>
         </div>
         <table className="data-table table-responsive dashboard-recent-table">
           <thead>
             <tr>
-              <th>เลขที่เอกสาร</th>
-              <th>ประเภท</th>
-              <th>ลูกค้า</th>
-              <th className="text-right">จำนวนเงิน</th>
-              <th className="text-right">เวลา</th>
-              <th className="text-center w-24">จัดการ</th>
+              <th>{t('dashboard.colDocNumber')}</th>
+              <th>{t('dashboard.colType')}</th>
+              <th>{t('dashboard.colCustomer')}</th>
+              <th className="text-right">{t('dashboard.colAmount')}</th>
+              <th className="text-right">{t('dashboard.colTime')}</th>
+              <th className="text-center w-24">{t('dashboard.colActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -673,28 +740,28 @@ export default function DashboardPage() {
               const DocIcon = doc.icon;
               return (
               <tr key={doc.id}>
-                <td data-label="เลขที่เอกสาร">
+                <td data-label={t('dashboard.colDocNumber')}>
                   <div className="flex items-center gap-2">
                     <DocIcon size={16} className="text-[var(--color-primary)]" />
                     <span className="font-semibold text-sm font-mono tracking-tight">{doc.number}</span>
                   </div>
                 </td>
-                <td data-label="ประเภท">
+                <td data-label={t('dashboard.colType')}>
                   <span className={`badge ${getDocumentTypeMeta(getDocumentTypeByNumber(doc.number)).badgeClass}`}>
-                    {doc.type}
+                    {getDocumentTypeLabel(doc.documentType, t)}
                   </span>
                 </td>
-                <td data-label="ลูกค้า" className="text-[var(--color-text-secondary)]">{doc.customer}</td>
-                <td data-label="จำนวนเงิน" className="text-right font-semibold">{formatCurrency(doc.amount)}</td>
-                <td data-label="เวลา" className="text-right text-[var(--color-text-muted)]">{doc.date}</td>
-                <td data-label="จัดการ">
+                <td data-label={t('dashboard.colCustomer')} className="text-[var(--color-text-secondary)]">{doc.customer}</td>
+                <td data-label={t('dashboard.colAmount')} className="text-right font-semibold">{formatCurrency(doc.amount)}</td>
+                <td data-label={t('dashboard.colTime')} className="text-right text-[var(--color-text-muted)]">{formatRelativeTime(doc.createdAt, t, locale)}</td>
+                <td data-label={t('dashboard.colActions')}>
                   <div className="flex items-center justify-center">
                     <button
                       type="button"
                       onClick={() => window.open(`/print/${doc.id}`, '_blank')}
                       className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)] transition-colors"
-                      title="พิมพ์ / ออก PDF"
-                      aria-label={`พิมพ์เอกสาร ${doc.number}`}
+                      title={t('dashboard.printTitle')}
+                      aria-label={`${t('dashboard.printTitle')} ${doc.number}`}
                     >
                       <Printer size={16} />
                     </button>
@@ -707,7 +774,7 @@ export default function DashboardPage() {
             {!loading && dashboardData.recentDocs.length === 0 && (
               <tr>
                 <td colSpan={6} className="dashboard-empty-row text-center text-[var(--color-text-muted)]">
-                  ยังไม่มีเอกสารล่าสุด
+                  {t('dashboard.noRecentDocs')}
                 </td>
               </tr>
             )}

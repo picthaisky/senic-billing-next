@@ -22,6 +22,50 @@ namespace SenicBilling.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.AccountingPeriodLock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LockedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UnlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UnlockedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("AccountingPeriodLocks");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.AppUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -179,6 +223,89 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.BankStatementTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal?>("Balance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CounterpartyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DepositAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MatchStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("MatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MatchedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("MatchedDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MatchedDocumentNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("MatchedExpenseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MatchedExpenseNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ReferenceNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("WithdrawalAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "MatchStatus");
+
+                    b.HasIndex("TenantId", "TransactionDate");
+
+                    b.ToTable("BankStatementTransactions");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.BillingInvoice", b =>
                 {
                     b.Property<Guid>("Id")
@@ -325,6 +452,13 @@ namespace SenicBilling.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("CancellationReason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -343,6 +477,15 @@ namespace SenicBilling.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("CustomerApprovalComment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("CustomerApprovalStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("CustomerBranch")
                         .HasColumnType("text");
 
@@ -352,6 +495,10 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Property<string>("CustomerName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CustomerSignatureText")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<string>("CustomerTaxId")
                         .HasMaxLength(13)
@@ -384,6 +531,9 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Property<decimal>("GrandTotal")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTime?>("LastReminderSentAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)
@@ -916,6 +1066,53 @@ namespace SenicBilling.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.PlatformAnnouncement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive", "StartsAt", "EndsAt");
+
+                    b.ToTable("PlatformAnnouncements");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -928,6 +1125,10 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.Property<string>("Category")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("CostPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1717,6 +1918,17 @@ namespace SenicBilling.Infrastructure.Migrations
                     b.ToTable("Warehouses");
                 });
 
+            modelBuilder.Entity("SenicBilling.Domain.Entities.AccountingPeriodLock", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("SenicBilling.Domain.Entities.AppUser", b =>
                 {
                     b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
@@ -1740,6 +1952,17 @@ namespace SenicBilling.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("SenicBilling.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("SenicBilling.Domain.Entities.BankStatementTransaction", b =>
                 {
                     b.HasOne("SenicBilling.Domain.Entities.Tenant", "Tenant")
                         .WithMany()

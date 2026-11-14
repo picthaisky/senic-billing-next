@@ -27,6 +27,9 @@ public class Product
     /// <summary>ราคาต่อหน่วย - precision(18,4) for exact currency</summary>
     public decimal UnitPrice { get; set; }
 
+    /// <summary>ราคาทุนต่อหน่วย (ใช้คำนวณกำไรขั้นต้น COGS &amp; Gross Margin)</summary>
+    public decimal? CostPrice { get; set; }
+
     /// <summary>หมวดหมู่สินค้า</summary>
     public string? Category { get; set; }
 

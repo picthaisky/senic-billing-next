@@ -1,8 +1,11 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SenicBilling.API.Hubs;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Application.Interfaces;
 using SenicBilling.Domain.Interfaces;
@@ -102,6 +105,7 @@ public class SharedDocumentController(
     public async Task<IActionResult> DownloadPdf(Guid id, CancellationToken ct)
     {
         var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Tenant)
             .Include(d => d.Lines.OrderBy(l => l.SortOrder))
             .FirstOrDefaultAsync(d => d.Id == id, ct);
 
@@ -129,6 +133,13 @@ public class SharedDocumentController(
 
         if (source.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถแปลงเอกสารที่ยกเลิกแล้วได้", null));
+
+        var accountingCheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingCheck is not null && await accountingCheck.IsPeriodLockedAsync(tenantId, DateTime.UtcNow, ct))
+        {
+            var now = DateTime.UtcNow;
+            return BadRequest(new ApiResponse<DocumentResponse>(false, $"งวดบัญชี {now.Month:D2}/{now.Year} ถูกปิดงวดแล้ว ไม่สามารถออกเอกสารใหม่ได้", null));
+        }
 
         var newDocNumber = await numberGenerator.GenerateNextNumberAsync(
             tenantId, request.TargetType, ct);
@@ -273,6 +284,219 @@ public class SharedDocumentController(
         return Ok(new ApiResponse<List<AuditLog>>(true, "สำเร็จ", headerLogs));
     }
 
+    [HttpPost("{id:guid}/public/approve")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<DocumentApprovalResultDto>>> PublicApprove(
+        Guid id, [FromBody] CustomerApproveDocumentRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.SignerName))
+            return BadRequest(new ApiResponse<DocumentApprovalResultDto>(false, "กรุณาระบุชื่อผู้อนุมัติ", null));
+
+        var doc = await dbContext.DocumentHeaders.FirstOrDefaultAsync(d => d.Id == id, ct);
+        if (doc is null)
+            return NotFound(new ApiResponse<DocumentApprovalResultDto>(false, "ไม่พบเอกสาร", null));
+
+        if (doc.Status == DocumentStatus.Cancelled)
+            return BadRequest(new ApiResponse<DocumentApprovalResultDto>(false, "ไม่สามารถอนุมัติเอกสารที่ยกเลิกแล้วได้", null));
+
+        var now = DateTime.UtcNow;
+        doc.CustomerApprovalStatus = CustomerApprovalStatus.Approved;
+        doc.ApprovedByName = request.SignerName.Trim();
+        doc.ApprovedAt = now;
+        doc.CustomerSignatureText = string.IsNullOrWhiteSpace(request.SignatureText)
+            ? request.SignerName.Trim()
+            : request.SignatureText.Trim();
+        doc.CustomerApprovalComment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+        doc.ViewedAt ??= now;
+        if (doc.Status == DocumentStatus.Issued || doc.Status == DocumentStatus.Sent)
+        {
+            doc.Status = DocumentStatus.Viewed;
+        }
+        doc.UpdatedAt = now;
+
+        dbContext.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            TenantId = doc.TenantId,
+            Username = doc.ApprovedByName,
+            Action = "CustomerApprove",
+            EntityName = "DocumentHeader",
+            EntityId = doc.Id.ToString(),
+            NewValues = $"{{\"signerName\":\"{doc.ApprovedByName}\",\"comment\":\"{doc.CustomerApprovalComment ?? ""}\"}}",
+            Timestamp = now
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+
+        await BroadcastAndNotifyCustomerDecisionAsync(doc, approved: true, ct);
+
+        return Ok(new ApiResponse<DocumentApprovalResultDto>(
+            true,
+            "อนุมัติและลงนามเอกสารเรียบร้อยแล้ว",
+            new DocumentApprovalResultDto(doc.Id, doc.DocumentNumber, doc.CustomerApprovalStatus, doc.ApprovedByName, doc.ApprovedAt, doc.CustomerApprovalComment)));
+    }
+
+    [HttpPost("{id:guid}/public/reject")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<DocumentApprovalResultDto>>> PublicReject(
+        Guid id, [FromBody] CustomerRejectDocumentRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.SignerName) || string.IsNullOrWhiteSpace(request.Reason))
+            return BadRequest(new ApiResponse<DocumentApprovalResultDto>(false, "กรุณาระบุชื่อผู้ดำเนินการและเหตุผลในการขอแก้ไข", null));
+
+        var doc = await dbContext.DocumentHeaders.FirstOrDefaultAsync(d => d.Id == id, ct);
+        if (doc is null)
+            return NotFound(new ApiResponse<DocumentApprovalResultDto>(false, "ไม่พบเอกสาร", null));
+
+        if (doc.Status == DocumentStatus.Cancelled)
+            return BadRequest(new ApiResponse<DocumentApprovalResultDto>(false, "เอกสารนี้ถูกยกเลิกแล้ว", null));
+
+        var now = DateTime.UtcNow;
+        doc.CustomerApprovalStatus = CustomerApprovalStatus.Rejected;
+        doc.ApprovedByName = request.SignerName.Trim();
+        doc.ApprovedAt = now;
+        doc.CustomerApprovalComment = request.Reason.Trim();
+        doc.ViewedAt ??= now;
+        doc.UpdatedAt = now;
+
+        dbContext.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            TenantId = doc.TenantId,
+            Username = doc.ApprovedByName,
+            Action = "CustomerReject",
+            EntityName = "DocumentHeader",
+            EntityId = doc.Id.ToString(),
+            NewValues = $"{{\"signerName\":\"{doc.ApprovedByName}\",\"reason\":\"{doc.CustomerApprovalComment}\"}}",
+            Timestamp = now
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+
+        await BroadcastAndNotifyCustomerDecisionAsync(doc, approved: false, ct);
+
+        return Ok(new ApiResponse<DocumentApprovalResultDto>(
+            true,
+            "บันทึกคำขอแก้ไขเอกสารเรียบร้อยแล้ว",
+            new DocumentApprovalResultDto(doc.Id, doc.DocumentNumber, doc.CustomerApprovalStatus, doc.ApprovedByName, doc.ApprovedAt, doc.CustomerApprovalComment)));
+    }
+
+    [HttpPost("{id:guid}/send-reminder")]
+    public async Task<ActionResult<ApiResponse<bool>>> SendPaymentReminder(Guid id, CancellationToken ct)
+    {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out var tenantId))
+            return Unauthorized();
+
+        var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Customer)
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
+        if (doc is null)
+            return NotFound(new ApiResponse<bool>(false, "ไม่พบเอกสาร", false));
+
+        if (doc.Status is DocumentStatus.Cancelled or DocumentStatus.Paid)
+            return BadRequest(new ApiResponse<bool>(false, "ไม่สามารถส่งแจ้งเตือนสำหรับเอกสารที่ชำระแล้วหรือยกเลิกแล้ว", false));
+
+        var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+        var emailService = HttpContext?.RequestServices?.GetService<IEmailService>();
+        var paymentService = HttpContext?.RequestServices?.GetService<IPaymentService>();
+        var lineNotify = HttpContext?.RequestServices?.GetService<ILineNotifyService>();
+
+        var emailSent = false;
+        if (emailService is not null && !string.IsNullOrWhiteSpace(doc.Customer?.Email))
+        {
+            var paymentLink = paymentService is not null
+                ? await paymentService.CreatePaymentLinkAsync(doc.GrandTotal, $"Invoice {doc.DocumentNumber}", $"Payment Reminder for {doc.CustomerName}", doc.Id.ToString())
+                : null;
+            if (string.IsNullOrWhiteSpace(paymentLink))
+            {
+                var config = HttpContext?.RequestServices?.GetService<IConfiguration>();
+                var frontendBaseUrl = (config?["App:FrontendBaseUrl"] ?? "http://localhost:5173").Trim().TrimEnd('/');
+                paymentLink = $"{frontendBaseUrl}/print/{doc.Id}";
+            }
+            await emailService.SendPaymentReminderAsync(
+                doc.Customer.Email,
+                doc.CustomerName ?? doc.Customer.Name,
+                doc.DocumentNumber,
+                doc.GrandTotal,
+                doc.DueDate ?? doc.DocumentDate,
+                paymentLink,
+                ct);
+            emailSent = true;
+        }
+
+        var lineSent = false;
+        if (lineNotify is not null && tenant != null && tenant.HasAnyLineChannel())
+        {
+            lineSent = await lineNotify.NotifyTenantAsync(
+                tenant,
+                $"\nแจ้งเตือนวางบิล/รับชำระเงิน\nเลขที่เอกสาร: {doc.DocumentNumber}\nลูกค้า: {doc.CustomerName ?? "-"}\nยอดรวม: {doc.GrandTotal:N2} บาท\nครบกำหนด: {(doc.DueDate ?? doc.DocumentDate):dd/MM/yyyy}",
+                ct);
+        }
+
+        doc.LastReminderSentAt = DateTime.UtcNow;
+        doc.SentAt ??= doc.LastReminderSentAt;
+        if (doc.Status == DocumentStatus.Issued)
+        {
+            doc.Status = DocumentStatus.Sent;
+        }
+        await dbContext.SaveChangesAsync(ct);
+
+        var summary = (emailSent, lineSent) switch
+        {
+            (true, true) => "ส่งแจ้งเตือนทาง Email และ LINE สำเร็จ",
+            (true, false) => "ส่งแจ้งเตือนทาง Email สำเร็จ",
+            (false, true) => "ส่งแจ้งเตือนทาง LINE สำเร็จ (ไม่พบ Email ลูกค้า)",
+            _ => "บันทึกการส่งแจ้งเตือนแล้ว (กรุณาตั้งค่า Email ลูกค้าหรือ LINE ในหน้าตั้งค่าเพื่อส่งข้อความอัตโนมัติ)"
+        };
+
+        return Ok(new ApiResponse<bool>(true, summary, true));
+    }
+
+    private async Task BroadcastAndNotifyCustomerDecisionAsync(DocumentHeader doc, bool approved, CancellationToken ct)
+    {
+        var hub = HttpContext?.RequestServices?.GetService<IHubContext<SenicBillingHub>>();
+        if (hub is not null)
+        {
+            var evt = approved ? "DocumentApproved" : "DocumentRejected";
+            await hub.Clients.Group($"Tenant_{doc.TenantId}").SendAsync(evt, new
+            {
+                documentId = doc.Id,
+                documentNumber = doc.DocumentNumber,
+                signerName = doc.ApprovedByName,
+                comment = doc.CustomerApprovalComment
+            }, ct);
+
+            await hub.Clients.Group($"Tenant_{doc.TenantId}").SendAsync("NotificationReceived", new NotificationFeedItemDto(
+                Id: $"approval-{doc.Id}",
+                Title: approved
+                    ? $"ลูกค้าอนุมัติเอกสาร {doc.DocumentNumber}"
+                    : $"ลูกค้าขอแก้ไขเอกสาร {doc.DocumentNumber}",
+                Detail: string.IsNullOrWhiteSpace(doc.ApprovedByName)
+                    ? (doc.CustomerName ?? doc.DocumentNumber)
+                    : $"ผู้ดำเนินการ: {doc.ApprovedByName}",
+                TimeLabel: "เมื่อสักครู่",
+                OccurredAt: doc.ApprovedAt ?? DateTime.UtcNow,
+                Tone: approved ? "success" : "warning",
+                Route: $"/documents/{doc.DocumentType.ToString().ToLowerInvariant()}"
+            ), ct);
+        }
+
+        var lineNotify = HttpContext?.RequestServices?.GetService<ILineNotifyService>();
+        if (lineNotify is not null)
+        {
+            var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == doc.TenantId, ct);
+            if (tenant != null && tenant.HasAnyLineChannel())
+            {
+                var heading = approved ? "ลูกค้าอนุมัติและลงนามเอกสารแล้ว" : "ลูกค้าขอแก้ไข / ไม่อนุมัติเอกสาร";
+                await lineNotify.NotifyTenantAsync(
+                    tenant,
+                    $"\n{heading}\nเลขที่เอกสาร: {doc.DocumentNumber}\nผู้ดำเนินการ: {doc.ApprovedByName}\nหมายเหตุ: {doc.CustomerApprovalComment ?? "-"}",
+                    ct);
+            }
+        }
+    }
+
     private static DocumentResponse MapToResponse(DocumentHeader d) => new(
         d.Id, d.DocumentType, d.DocumentNumber, d.DocumentDate, d.DueDate,
         d.CustomerId, d.CustomerName, d.CustomerAddress, d.CustomerBranch, d.CustomerTaxId,
@@ -285,6 +509,12 @@ public class SharedDocumentController(
         d.Lines.OrderBy(l => l.SortOrder).Select(l => new DocumentLineDto(
             l.Id, l.SortOrder, l.ProductId, l.Description,
             l.Quantity, l.Unit, l.UnitPrice, l.DiscountAmount, l.LineTotal
-        )).ToList()
+        )).ToList(),
+        d.CustomerApprovalStatus,
+        d.ApprovedByName,
+        d.ApprovedAt,
+        d.CustomerSignatureText,
+        d.CustomerApprovalComment,
+        d.LastReminderSentAt
     );
 }

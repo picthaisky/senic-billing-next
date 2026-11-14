@@ -371,6 +371,22 @@ public class AccountingService(
         return lastReversal;
     }
 
+    public Task<bool> IsPeriodLockedAsync(Guid tenantId, DateTime date, CancellationToken ct = default)
+    {
+        return dbContext.AccountingPeriodLocks.AnyAsync(
+            p => p.TenantId == tenantId && p.Year == date.Year && p.Month == date.Month && p.IsLocked,
+            ct);
+    }
+
+    public async Task EnsurePeriodUnlockedAsync(Guid tenantId, DateTime date, CancellationToken ct = default)
+    {
+        if (await IsPeriodLockedAsync(tenantId, date, ct))
+        {
+            throw new InvalidOperationException(
+                $"งวดบัญชี {date.Month:D2}/{date.Year} ถูกปิดงวดแล้ว ไม่สามารถทำรายการหรือแก้ไขบัญชีในงวดนี้ได้");
+        }
+    }
+
     private async Task<Dictionary<string, ChartOfAccount>> GetAccountsByCodeAsync(Guid tenantId, CancellationToken ct)
     {
         await EnsureDefaultChartOfAccountsAsync(tenantId, ct);
@@ -390,6 +406,8 @@ public class AccountingService(
         string? createdBy,
         CancellationToken ct)
     {
+        await EnsurePeriodUnlockedAsync(tenantId, entryDate, ct);
+
         var debitTotal = lines.Sum(l => l.Debit);
         var creditTotal = lines.Sum(l => l.Credit);
         if (debitTotal != creditTotal)

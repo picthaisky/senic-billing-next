@@ -66,8 +66,8 @@ export default function FloatingActionButton() {
                   setIsExpanded(false);
                 }}
                 className={`layout-fab-action-btn ${actionColorClass[id]} haptic-tap w-12 h-12 rounded-full flex items-center justify-center shadow-lg`}
-                aria-label={`สร้าง${label}`}
-                title={`สร้าง${label}`}
+                aria-label={t('fab.createItem', { label })}
+                title={t('fab.createItem', { label })}
               >
                 <Icon size={20} />
               </button>
@@ -80,8 +80,8 @@ export default function FloatingActionButton() {
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`layout-fab-main haptic-tap fixed z-40 md:hidden w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 ${isExpanded ? 'is-expanded' : ''}`}
-        aria-label={isExpanded ? 'ปิดเมนูสร้างเอกสาร' : 'เปิดเมนูสร้างเอกสาร'}
-        title={isExpanded ? 'ปิดเมนูสร้างเอกสาร' : 'เปิดเมนูสร้างเอกสาร'}
+        aria-label={isExpanded ? t('fab.closeMenu') : t('fab.openMenu')}
+        title={isExpanded ? t('fab.closeMenu') : t('fab.openMenu')}
       >
         {isExpanded ? (
           <X size={24} className="layout-fab-main-icon is-rotated" />

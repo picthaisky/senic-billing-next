@@ -3,6 +3,8 @@ name: CI/CD Pipeline (Portainer)
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 env:
   REGISTRY: ghcr.io
@@ -10,8 +12,53 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  quality-checks:
+    name: Test, Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Backend Restore, Build & Unit/Integration Tests
+        working-directory: ./backend
+        run: |
+          dotnet restore SenicBilling.slnx
+          dotnet build SenicBilling.slnx --no-restore
+          dotnet test SenicBilling.slnx --no-build --verbosity normal
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Frontend Lint, Build & Unit Tests
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+          npm test
+          npx playwright install chromium --with-deps
+          npm run test:e2e
+
+      - name: Admin Frontend Lint, Build, Unit & E2E Tests
+        working-directory: ./admin-frontend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+          npm run test:e2e
+
   build-and-push:
     name: Build & Push to GHCR
+    needs: quality-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,6 +101,7 @@ jobs:
   deploy:
     name: Deploy to Portainer
     needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Portainer Webhook

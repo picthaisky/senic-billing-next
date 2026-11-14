@@ -1,15 +1,17 @@
 import { useAppSystem } from '../../hooks/useAppSystem';
 import { Activity, CheckCircle, AlertTriangle, XCircle, WifiOff } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function SystemStatusBadge() {
+  const { t, i18n } = useTranslation();
   const { status, isConnected, components, lastChecked } = useAppSystem();
   const [showDetails, setShowDetails] = useState(false);
 
   const statusLabel: Record<string, string> = {
-    Healthy: 'พร้อมใช้งาน',
-    Degraded: 'บางส่วนช้าลง',
-    Unhealthy: 'มีปัญหา',
+    Healthy: t('status.healthy'),
+    Degraded: t('status.degraded'),
+    Unhealthy: t('status.unhealthy'),
   };
 
   // Determine icon and colors based on status
@@ -47,7 +49,7 @@ export default function SystemStatusBadge() {
       <button 
         className={`layout-system-status-trigger flex items-center gap-2 rounded-full text-xs font-medium transition-colors ${bgClass} ${colorClass} hover:opacity-80`}
         onClick={() => setShowDetails(!showDetails)}
-        title="สถานะระบบ"
+        title={t('status.title')}
       >
         <div className="relative flex h-2 w-2">
           {pulse && (
@@ -57,7 +59,7 @@ export default function SystemStatusBadge() {
         </div>
         <Icon size={14} />
         <span className="hidden sm:inline-block">
-          {!isConnected ? 'ออฟไลน์' : (statusLabel[status] ?? status)}
+          {!isConnected ? t('status.offline') : (statusLabel[status] ?? status)}
         </span>
       </button>
 
@@ -68,20 +70,20 @@ export default function SystemStatusBadge() {
           <div className="layout-system-status-panel absolute right-0 w-64 rounded-xl shadow-xl border z-50 overflow-hidden animate-fade-in-up bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)]">
             <div className="layout-system-status-head border-b bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
               <h4 className="font-semibold text-sm flex items-center gap-2">
-                <Activity size={16} /> การติดตามสถานะระบบ
+                <Activity size={16} /> {t('status.monitorTitle')}
               </h4>
               <p className="layout-system-status-time text-xs text-[var(--color-text-muted)]">
-                ตรวจสอบล่าสุด: {lastChecked ? lastChecked.toLocaleTimeString('th-TH') : 'ยังไม่มีข้อมูล'}
+                {t('status.lastChecked')}: {lastChecked ? lastChecked.toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'th-TH') : t('status.noData')}
               </p>
             </div>
             <div className="layout-system-status-list max-h-64 overflow-y-auto">
               {!isConnected ? (
                 <div className="layout-system-status-empty text-sm text-[var(--color-text-muted)] text-center">
-                  ไม่ได้เชื่อมต่อกับเซิร์ฟเวอร์แบบเรียลไทม์
+                  {t('status.disconnected')}
                 </div>
               ) : components.length === 0 ? (
                 <div className="layout-system-status-empty text-sm text-[var(--color-text-muted)] text-center">
-                  ยังไม่มีข้อมูลสถานะของบริการ
+                  {t('status.emptyComponents')}
                 </div>
               ) : (
                 components.map((c, i) => (

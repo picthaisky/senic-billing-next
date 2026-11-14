@@ -16,5 +16,7 @@ public interface IAccountingService
         string? reason = null,
         string? createdBy = null,
         CancellationToken ct = default);
+    Task<bool> IsPeriodLockedAsync(Guid tenantId, DateTime date, CancellationToken ct = default);
+    Task EnsurePeriodUnlockedAsync(Guid tenantId, DateTime date, CancellationToken ct = default);
 }
 
