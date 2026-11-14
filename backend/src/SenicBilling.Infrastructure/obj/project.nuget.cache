@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "y/tkQPdijqk=",
+  "dgSpecHash": "0/iWGFjiMZE=",
   "success": true,
   "projectFilePath": "C:\\Users\\supachai.nil\\Documents\\GitHub\\senic-billing-next\\backend\\src\\SenicBilling.Infrastructure\\SenicBilling.Infrastructure.csproj",
   "expectedPackageFiles": [
@@ -39,6 +39,7 @@
     "C:\\Users\\supachai.nil\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\system.reactive\\6.0.0\\system.reactive.6.0.0.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\system.security.cryptography.pkcs\\10.0.8\\system.security.cryptography.pkcs.10.0.8.nupkg.sha512",
+    "C:\\Users\\supachai.nil\\.nuget\\packages\\system.security.cryptography.xml\\10.0.5\\system.security.cryptography.xml.10.0.5.nupkg.sha512",
     "C:\\Users\\supachai.nil\\.nuget\\packages\\webpush\\1.0.13\\webpush.1.0.13.nupkg.sha512"
   ],
   "logs": []

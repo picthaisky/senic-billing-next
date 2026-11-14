@@ -265,26 +265,21 @@ public class TenantsController : ControllerBase
         if (!HasSupportedLogoHeader(bytes))
             return BadRequest(new ApiResponse<TenantLogoUploadResultDto>(false, "เนื้อหาไฟล์ไม่ตรงกับรูปแบบรูปภาพ PNG, JPG หรือ WEBP ที่รองรับ", null));
 
-        var storedInObjectStorage = false;
+        var logoDir = GetLocalLogoDirectory(tenantId);
+        Directory.CreateDirectory(logoDir);
+        await System.IO.File.WriteAllBytesAsync(Path.Combine(logoDir, safeFileName), bytes, ct);
+
         if (_storageService is not null)
         {
             try
             {
                 await using var uploadStream = new MemoryStream(bytes);
                 await _storageService.UploadFileAsync(uploadStream, safeFileName, contentType, LogoBucketName, objectKey, ct);
-                storedInObjectStorage = true;
             }
             catch
             {
-                // Fall back to local App_Data storage if MinIO/S3 is unavailable in development
+                // Local App_Data copy is already persisted above
             }
-        }
-
-        if (!storedInObjectStorage)
-        {
-            var logoDir = GetLocalLogoDirectory(tenantId);
-            Directory.CreateDirectory(logoDir);
-            await System.IO.File.WriteAllBytesAsync(Path.Combine(logoDir, safeFileName), bytes, ct);
         }
 
         var previousLogoUrl = tenant.LogoUrl;
@@ -326,26 +321,49 @@ public class TenantsController : ControllerBase
         }
 
         var contentType = GetLogoContentType(Path.GetExtension(safeFileName));
+        var localPath = Path.Combine(GetLocalLogoDirectory(tenantId), safeFileName);
+
+        if (System.IO.File.Exists(localPath))
+        {
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(localPath, ct);
+            if (HasSupportedLogoHeader(fileBytes))
+            {
+                return File(fileBytes, contentType);
+            }
+        }
 
         if (_storageService is not null)
         {
             try
             {
-                var stream = await _storageService.DownloadFileAsync(LogoBucketName, $"tenants/{tenantId}/{safeFileName}", ct);
-                return File(stream, contentType);
+                await using var stream = await _storageService.DownloadFileAsync(LogoBucketName, $"tenants/{tenantId}/{safeFileName}", ct);
+                await using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms, ct);
+                var storageBytes = ms.ToArray();
+                if (HasSupportedLogoHeader(storageBytes))
+                {
+                    try
+                    {
+                        var logoDir = GetLocalLogoDirectory(tenantId);
+                        Directory.CreateDirectory(logoDir);
+                        await System.IO.File.WriteAllBytesAsync(localPath, storageBytes, ct);
+                    }
+                    catch
+                    {
+                        // Best-effort local cache write
+                    }
+
+                    return File(storageBytes, contentType);
+                }
             }
             catch
             {
-                // Check local App_Data fallback
+                // Fall through to 404 NotFound
             }
         }
 
-        var localPath = Path.Combine(GetLocalLogoDirectory(tenantId), safeFileName);
-        if (!System.IO.File.Exists(localPath))
-            return NotFound(new ApiResponse<object>(false, "ไม่พบไฟล์โลโก้บริษัท", null));
-
-        var fileBytes = await System.IO.File.ReadAllBytesAsync(localPath, ct);
-        return File(fileBytes, contentType);
+        Response.Headers.CacheControl = "no-store";
+        return NotFound(new ApiResponse<object>(false, "ไม่พบไฟล์โลโก้บริษัท", null));
     }
 
     private string GetLocalLogoDirectory(Guid tenantId)

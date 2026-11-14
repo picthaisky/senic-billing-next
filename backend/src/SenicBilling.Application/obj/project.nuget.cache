@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "P2mGAo+bHRI=",
+  "dgSpecHash": "mc4iSzxR44g=",
   "success": true,
   "projectFilePath": "C:\\Users\\supachai.nil\\Documents\\GitHub\\senic-billing-next\\backend\\src\\SenicBilling.Application\\SenicBilling.Application.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\supachai.nil\\.nuget\\packages\\system.security.cryptography.pkcs\\10.0.5\\system.security.cryptography.pkcs.10.0.5.nupkg.sha512",
+    "C:\\Users\\supachai.nil\\.nuget\\packages\\system.security.cryptography.xml\\10.0.5\\system.security.cryptography.xml.10.0.5.nupkg.sha512"
+  ],
   "logs": []
 }

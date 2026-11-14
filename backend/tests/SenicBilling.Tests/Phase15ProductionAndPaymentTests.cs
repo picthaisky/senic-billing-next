@@ -281,6 +281,24 @@ public class Phase15ProductionAndPaymentTests
         var spoofedFile = new FormFile(new MemoryStream(spoofedBytes), 0, spoofedBytes.Length, "file", "evil.png");
         var badRes = await controller.UploadLogo(spoofedFile, CancellationToken.None);
         Assert.IsType<BadRequestObjectResult>(badRes.Result);
+
+        // Even if ObjectStorage returns a 0-byte stream (e.g. MinIO silent connection error), UploadLogo + GetLogo must serve valid PNG bytes from local App_Data
+        var storage = new StubStorageService();
+        var validController = new TenantsController(db, new StubLineNotifyService(), storage, null)
+        {
+            ControllerContext = controller.ControllerContext
+        };
+        var validFile = new FormFile(new MemoryStream(TinyValidPngBytes), 0, TinyValidPngBytes.Length, "file", "company-logo.png");
+        var uploadRes = Assert.IsType<OkObjectResult>((await validController.UploadLogo(validFile, CancellationToken.None)).Result);
+        var uploadPayload = Assert.IsType<ApiResponse<TenantLogoUploadResultDto>>(uploadRes.Value);
+        Assert.NotNull(uploadPayload.Data);
+
+        // Simulate MinIO returning an empty 0-byte object
+        storage.Objects[$"senic-billing-logos/tenants/{tenantId}/{uploadPayload.Data!.FileName}"] = [];
+
+        var getLogoRes = Assert.IsType<FileContentResult>(await validController.GetLogo(tenantId, uploadPayload.Data.FileName, CancellationToken.None));
+        Assert.Equal("image/png", getLogoRes.ContentType);
+        Assert.Equal(TinyValidPngBytes, getLogoRes.FileContents);
     }
 
     [Fact]

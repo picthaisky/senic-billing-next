@@ -21,11 +21,18 @@ public class AuditInterceptor(IHttpContextAccessor httpContextAccessor) : SaveCh
                         e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .ToList();
 
-        if (entries.Count == 0) return base.SavingChangesAsync(eventData, result, cancellationToken);
-
         var username = httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "System";
         var tenantIdClaim = httpContextAccessor.HttpContext?.User?.FindFirst("tenantId")?.Value;
         Guid.TryParse(tenantIdClaim, out var tenantId);
+        var defaultTenantId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+        foreach (var existingAuditEntry in dbContext.ChangeTracker.Entries<AuditLog>()
+                     .Where(e => e.State == EntityState.Added && e.Entity.TenantId == Guid.Empty))
+        {
+            existingAuditEntry.Entity.TenantId = tenantId == Guid.Empty ? defaultTenantId : tenantId;
+        }
+
+        if (entries.Count == 0) return base.SavingChangesAsync(eventData, result, cancellationToken);
         
         if (tenantId == Guid.Empty)
         {

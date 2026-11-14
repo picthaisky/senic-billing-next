@@ -35,6 +35,9 @@ services:
       Vapid__PublicKey: ${VAPID_PUBLIC_KEY}
       Vapid__PrivateKey: ${VAPID_PRIVATE_KEY}
       Gemini__ApiKey: ${GEMINI_API_KEY}
+      Gemini__Model: ${GEMINI_MODEL:-gemini-2.5-flash}
+      ETax__CertificatePath: ${ETAX_CERT_PATH:-}
+      ETax__CertificatePassword: ${ETAX_CERT_PASSWORD:-}
       Omise__PublicKey: ${OMISE_PUBLIC_KEY}
       Omise__SecretKey: ${OMISE_SECRET_KEY}
       SmtpSettings__Host: ${SMTP_HOST:-smtp.gmail.com}

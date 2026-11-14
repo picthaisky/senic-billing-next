@@ -34,7 +34,13 @@ public class SaBillingController(SenicBillingDbContext dbContext) : ControllerBa
                 s.Id,
                 TenantName = s.Tenant != null ? s.Tenant.CompanyName : "N/A",
                 PlanName = s.Plan != null ? s.Plan.Name : "N/A",
-                Amount = s.Plan != null ? s.Plan.MonthlyPrice : 0m,
+                Amount = s.Plan != null
+                    ? (s.BillingCycle.ToLower() == "yearly"
+                        ? s.Plan.YearlyPrice
+                        : s.Plan.MonthlyPrice)
+                    : 0m,
+                s.BillingCycle,
+                s.PaymentMethod,
                 s.Status,
                 s.StartDate,
                 s.EndDate,
@@ -69,7 +75,13 @@ public class SaBillingController(SenicBillingDbContext dbContext) : ControllerBa
                 s.Id,
                 TenantName = s.Tenant != null ? s.Tenant.CompanyName : "N/A",
                 PlanName = s.Plan != null ? s.Plan.Name : "N/A",
-                Amount = s.Plan != null ? s.Plan.MonthlyPrice : 0m,
+                Amount = s.Plan != null
+                    ? (s.BillingCycle.ToLower() == "yearly"
+                        ? s.Plan.YearlyPrice
+                        : s.Plan.MonthlyPrice)
+                    : 0m,
+                s.BillingCycle,
+                s.PaymentMethod,
                 s.Status,
                 s.StartDate,
                 s.EndDate,
@@ -106,7 +118,7 @@ public class SaBillingController(SenicBillingDbContext dbContext) : ControllerBa
         {
             subscription.Tenant.IsActive = true;
             subscription.Tenant.SubscriptionStatus = "Active";
-            subscription.Tenant.CurrentPlanId ??= subscription.PlanId;
+            subscription.Tenant.CurrentPlanId = subscription.PlanId;
             subscription.Tenant.SubscriptionValidUntil = subscription.EndDate;
             subscription.Tenant.UpdatedAt = now;
         }

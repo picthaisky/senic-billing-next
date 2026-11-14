@@ -13,6 +13,8 @@ namespace SenicBilling.API.Controllers.SuperAdmin;
 [Authorize(Policy = "PlatformAdmin")]
 public class SaPlansController(SenicBillingDbContext dbContext) : ControllerBase
 {
+    private static readonly Guid DefaultTenantId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
     [HttpGet]
     public async Task<IActionResult> GetAllPlans(CancellationToken ct)
     {
@@ -39,20 +41,20 @@ public class SaPlansController(SenicBillingDbContext dbContext) : ControllerBase
         plan.Id = Guid.NewGuid();
         plan.Name = plan.Name.Trim();
         plan.CreatedAt = DateTime.UtcNow;
-        plan.IsActive = true;
 
         dbContext.SubscriptionPlans.Add(plan);
 
         var username = User?.FindFirst(ClaimTypes.Name)?.Value ?? User?.Identity?.Name ?? "SuperAdmin";
+        var auditTenantId = await ResolveAuditTenantIdAsync(ct);
         dbContext.AuditLogs.Add(new AuditLog
         {
             Id = Guid.NewGuid(),
-            TenantId = Guid.Empty,
+            TenantId = auditTenantId,
             Username = username,
             Action = "CreateSubscriptionPlan",
             EntityName = "SubscriptionPlan",
             EntityId = plan.Id.ToString(),
-            NewValues = JsonSerializer.Serialize(new { plan.Name, plan.MonthlyPrice, plan.YearlyPrice, plan.MaxUsers, plan.MaxDocumentsPerMonth }),
+            NewValues = JsonSerializer.Serialize(new { plan.Name, plan.MonthlyPrice, plan.YearlyPrice, plan.MaxUsers, plan.MaxDocumentsPerMonth, plan.IsActive }),
             Timestamp = DateTime.UtcNow
         });
 
@@ -89,10 +91,11 @@ public class SaPlansController(SenicBillingDbContext dbContext) : ControllerBase
         plan.UpdatedAt = DateTime.UtcNow;
 
         var username = User?.FindFirst(ClaimTypes.Name)?.Value ?? User?.Identity?.Name ?? "SuperAdmin";
+        var auditTenantId = await ResolveAuditTenantIdAsync(ct);
         dbContext.AuditLogs.Add(new AuditLog
         {
             Id = Guid.NewGuid(),
-            TenantId = Guid.Empty,
+            TenantId = auditTenantId,
             Username = username,
             Action = "UpdateSubscriptionPlan",
             EntityName = "SubscriptionPlan",
@@ -105,5 +108,28 @@ public class SaPlansController(SenicBillingDbContext dbContext) : ControllerBase
         await dbContext.SaveChangesAsync(ct);
 
         return Ok(new { success = true, data = plan });
+    }
+
+    private async Task<Guid> ResolveAuditTenantIdAsync(CancellationToken ct)
+    {
+        var claimValue = User?.FindFirst("tenantId")?.Value;
+        if (Guid.TryParse(claimValue, out var claimTenantId) &&
+            claimTenantId != Guid.Empty &&
+            await dbContext.Tenants.AsNoTracking().AnyAsync(t => t.Id == claimTenantId, ct))
+        {
+            return claimTenantId;
+        }
+
+        if (await dbContext.Tenants.AsNoTracking().AnyAsync(t => t.Id == DefaultTenantId, ct))
+        {
+            return DefaultTenantId;
+        }
+
+        var firstTenantId = await dbContext.Tenants.AsNoTracking()
+            .OrderBy(t => t.CreatedAt)
+            .Select(t => t.Id)
+            .FirstOrDefaultAsync(ct);
+
+        return firstTenantId != Guid.Empty ? firstTenantId : DefaultTenantId;
     }
 }

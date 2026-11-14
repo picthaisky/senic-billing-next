@@ -183,9 +183,11 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<SenicBillingDbContext>();
     dbContext.Database.Migrate();
 
+    var seeder = scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>();
+    await seeder.EnsureSubscriptionPlansAsync();
+
     if (app.Environment.IsDevelopment())
     {
-        var seeder = scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>();
         await seeder.SeedAsync();
     }
 }

@@ -412,6 +412,7 @@ public class TaxInvoiceController(
         var tenantId = GetTenantId();
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Tenant)
+            .Include(d => d.ReferenceDocument)
             .Include(d => d.Lines.OrderBy(l => l.SortOrder))
             .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId && d.DocumentType == DocumentType.TaxInvoice, ct);
 
@@ -421,7 +422,12 @@ public class TaxInvoiceController(
         if (doc.Status == DocumentStatus.Draft || doc.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<object>(false, "สามารถออก e-Tax XML ได้เฉพาะเอกสารที่อนุมัติ/ออกแล้วเท่านั้น", null));
 
-        var xmlBytes = ETaxXmlGenerator.GenerateXml(doc, doc.Tenant);
+        var configuration = HttpContext?.RequestServices?.GetService<IConfiguration>();
+        var xmlBytes = ETaxXmlGenerator.GenerateXml(
+            doc,
+            doc.Tenant,
+            configuration?["ETax:CertificatePath"],
+            configuration?["ETax:CertificatePassword"]);
         return File(xmlBytes, "application/xml", $"{doc.DocumentNumber}_eTax.xml");
     }
 

@@ -126,6 +126,7 @@ public class SharedDocumentController(
 
         var doc = await dbContext.DocumentHeaders
             .Include(d => d.Tenant)
+            .Include(d => d.ReferenceDocument)
             .Include(d => d.Lines.OrderBy(l => l.SortOrder))
             .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
 
@@ -138,7 +139,12 @@ public class SharedDocumentController(
         if (doc.Status is DocumentStatus.Draft or DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<object>(false, "สามารถออก e-Tax XML ได้เฉพาะเอกสารที่อนุมัติ/ออกแล้วเท่านั้น", null));
 
-        var xmlBytes = ETaxXmlGenerator.GenerateXml(doc, doc.Tenant);
+        var config = HttpContext?.RequestServices?.GetService<IConfiguration>();
+        var xmlBytes = ETaxXmlGenerator.GenerateXml(
+            doc,
+            doc.Tenant,
+            config?["ETax:CertificatePath"],
+            config?["ETax:CertificatePassword"]);
         return File(xmlBytes, "application/xml", $"{doc.DocumentNumber}_eTax.xml");
     }
 

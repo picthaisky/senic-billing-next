@@ -201,7 +201,7 @@ public sealed class DevelopmentDataSeeder(
             docs.Count);
     }
 
-    private async Task EnsureSubscriptionPlansAsync(CancellationToken ct)
+    public async Task EnsureSubscriptionPlansAsync(CancellationToken ct = default)
     {
         var proPlanId = Guid.Parse("30000000-0000-0000-0000-000000000003");
 

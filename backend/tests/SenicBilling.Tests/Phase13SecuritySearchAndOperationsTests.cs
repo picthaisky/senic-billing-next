@@ -578,7 +578,7 @@ public class Phase13SecuritySearchAndOperationsTests
         var uploadDto = Assert.IsType<ApiResponse<TenantLogoUploadResultDto>>(okObj.Value).Data!;
         Assert.StartsWith($"/api/tenants/logo/{tenantId}/", uploadDto.LogoUrl);
 
-        var logoFileResult = Assert.IsType<FileStreamResult>(
+        var logoFileResult = Assert.IsType<FileContentResult>(
             await tenantsCtrl.GetLogo(tenantId, uploadDto.FileName, CancellationToken.None));
         Assert.Equal("image/png", logoFileResult.ContentType);
 

@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SenicBilling.API.Extensions;
+using SenicBilling.API.Services;
 using SenicBilling.Application.DTOs;
+using SenicBilling.Application.Interfaces;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
@@ -218,4 +220,62 @@ public class SaTenantsController : ControllerBase
 
         return Ok(new { success = true, data = result });
     }
+
+    /// <summary>สร้างองค์กรใหม่พร้อมคลังหลัก ผังบัญชีเริ่มต้น และผู้ดูแลระบบองค์กร</summary>
+    [HttpPost]
+    public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest request, CancellationToken ct)
+    {
+        var operatorName = User.GetUsername();
+        Guid? operatorTenantId = User.TryGetTenantId(out var parsedTenantId) && parsedTenantId != Guid.Empty
+            ? parsedTenantId
+            : null;
+        var accountingService = HttpContext?.RequestServices?.GetService<IAccountingService>();
+
+        var result = await TenantOnboardingHelper.ProvisionTenantAsync(
+            dbContext,
+            accountingService,
+            request.CompanyName,
+            request.TaxId,
+            request.Email,
+            request.Phone,
+            request.Address,
+            request.BranchName,
+            request.AdminUsername,
+            request.AdminPassword,
+            request.AdminDisplayName,
+            request.PlanId,
+            auditActor: operatorName,
+            auditAction: "SuperAdminCreateTenant",
+            auditTenantId: operatorTenantId,
+            ct: ct);
+
+        if (!result.Success || result.Tenant is null || result.AdminUser is null)
+            return BadRequest(new { success = false, message = result.Message });
+
+        return Ok(new
+        {
+            success = true,
+            message = "สร้างองค์กรใหม่สำเร็จ",
+            data = new
+            {
+                result.Tenant.Id,
+                result.Tenant.CompanyName,
+                result.Tenant.SubscriptionStatus,
+                result.Tenant.CurrentPlanId,
+                AdminUsername = result.AdminUser.Username
+            }
+        });
+    }
 }
+
+public record CreateTenantRequest(
+    string CompanyName,
+    string AdminUsername,
+    string AdminPassword,
+    string? AdminDisplayName = null,
+    string? TaxId = null,
+    string? Email = null,
+    string? Phone = null,
+    string? Address = null,
+    string? BranchName = null,
+    Guid? PlanId = null);

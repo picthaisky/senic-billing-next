@@ -1,13 +1,13 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --test scripts/phase11-unit.test.mjs scripts/phase12-unit.test.mjs scripts/phase13-unit.test.mjs scripts/phase14-unit.test.mjs scripts/phase15-unit.test.mjs scripts/phase16-unit.test.mjs scripts/phase17-unit.test.mjs scripts/phase18-unit.test.mjs scripts/phase19-unit.test.mjs",
+    "test": "node --test scripts/phase11-unit.test.mjs scripts/phase12-unit.test.mjs scripts/phase13-unit.test.mjs scripts/phase14-unit.test.mjs scripts/phase15-unit.test.mjs scripts/phase16-unit.test.mjs scripts/phase17-unit.test.mjs scripts/phase18-unit.test.mjs scripts/phase19-unit.test.mjs scripts/phase20-unit.test.mjs scripts/phase21-unit.test.mjs",
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "shots": "node scripts/responsive-shots.mjs"

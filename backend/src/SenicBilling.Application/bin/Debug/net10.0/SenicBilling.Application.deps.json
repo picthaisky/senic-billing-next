@@ -8,10 +8,38 @@
     ".NETCoreApp,Version=v10.0": {
       "SenicBilling.Application/1.0.0": {
         "dependencies": {
-          "SenicBilling.Domain": "1.0.0"
+          "SenicBilling.Domain": "1.0.0",
+          "System.Security.Cryptography.Xml": "10.0.5"
         },
         "runtime": {
           "SenicBilling.Application.dll": {}
+        }
+      },
+      "System.Security.Cryptography.Pkcs/10.0.5": {
+        "runtime": {
+          "lib/net10.0/System.Security.Cryptography.Pkcs.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.526.15411"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net10.0/System.Security.Cryptography.Pkcs.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.526.15411"
+          }
+        }
+      },
+      "System.Security.Cryptography.Xml/10.0.5": {
+        "dependencies": {
+          "System.Security.Cryptography.Pkcs": "10.0.5"
+        },
+        "runtime": {
+          "lib/net10.0/System.Security.Cryptography.Xml.dll": {
+            "assemblyVersion": "10.0.0.0",
+            "fileVersion": "10.0.526.15411"
+          }
         }
       },
       "SenicBilling.Domain/1.0.0": {
@@ -29,6 +57,20 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "System.Security.Cryptography.Pkcs/10.0.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-BJEYUZfXpkPIHo2+oFoUemD5CPMFHPJOkRzXrbj/iZrWsjga3ypj8Rqd9bFlSLupEH4IIdD/aBWm/V1gCiBL9w==",
+      "path": "system.security.cryptography.pkcs/10.0.5",
+      "hashPath": "system.security.cryptography.pkcs.10.0.5.nupkg.sha512"
+    },
+    "System.Security.Cryptography.Xml/10.0.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1FW536WbzEWa/+UmSroCtfuTEPh3ueOnFtD0jEZP6xreGMf8/cSHDUFNpVUq4pXvvvVl4WMgBgavjxu5zTj+uw==",
+      "path": "system.security.cryptography.xml/10.0.5",
+      "hashPath": "system.security.cryptography.xml.10.0.5.nupkg.sha512"
     },
     "SenicBilling.Domain/1.0.0": {
       "type": "project",

@@ -266,9 +266,15 @@ public class PaymentsController : ControllerBase
                 return Ok();
             }
 
-            // Optional: You can verify with Omise API again to be absolutely secure against spoofing
-            // var isValid = await _paymentService.VerifyChargeAsync(chargeId);
-            // if (!isValid) return BadRequest();
+            if (!string.IsNullOrWhiteSpace(chargeId))
+            {
+                var isValid = await _paymentService.VerifyChargeAsync(chargeId);
+                if (!isValid)
+                {
+                    _logger.LogWarning("Rejected unverified Omise webhook for ChargeId {ChargeId}", chargeId);
+                    return BadRequest(new { message = "Invalid or unverified Omise charge" });
+                }
+            }
 
             if (status == "successful")
             {

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Receipt, Banknote, Truck, FileText, FileCheck, FileMinus2, FilePlus2,
   Users, Package, Settings, ChevronLeft, ChevronRight, User, Wallet,
-  ShoppingBag, Warehouse, BookOpen, Landmark, History
+  ShoppingBag, Warehouse, BookOpen, Landmark, History, HelpCircle
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -46,6 +46,8 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     navItems.push({ id: 'users', path: '/users', label: t('nav.users'), icon: Users });
     navItems.push({ id: 'audit-logs', path: '/audit-logs', label: t('nav.auditLogs'), icon: History });
   }
+
+  navItems.push({ id: 'help', path: '/help', label: t('nav.help'), icon: HelpCircle });
 
   const fullName = user
     ? user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || t('header.defaultUserName')

@@ -64,6 +64,22 @@ export interface AdminTranslations {
     activateBtn: string;
     loading: string;
     empty: string;
+    createBtn: string;
+    createModalTitle: string;
+    companyNameLabel: string;
+    taxIdLabel: string;
+    emailLabel: string;
+    phoneLabel: string;
+    addressLabel: string;
+    adminUsernameLabel: string;
+    adminPasswordLabel: string;
+    adminDisplayNameLabel: string;
+    planLabel: string;
+    createSubmitBtn: string;
+    creatingBtn: string;
+    cancelBtn: string;
+    createSuccessNotice: (name: string) => string;
+    createFailedNotice: string;
   };
   packages: {
     title: string;
@@ -206,6 +222,22 @@ export const ADMIN_RESOURCES: Record<AdminLocale, AdminTranslations> = {
       activateBtn: 'เปิดใช้งาน',
       loading: 'กำลังโหลดข้อมูล...',
       empty: 'ไม่พบข้อมูลองค์กร',
+      createBtn: 'เพิ่มองค์กรใหม่',
+      createModalTitle: 'สร้างองค์กรลูกค้าใหม่ (Provision Tenant)',
+      companyNameLabel: 'ชื่อบริษัท / องค์กร *',
+      taxIdLabel: 'เลขประจำตัวผู้เสียภาษี',
+      emailLabel: 'อีเมลติดต่อ',
+      phoneLabel: 'เบอร์โทรศัพท์',
+      addressLabel: 'ที่อยู่บริษัท',
+      adminUsernameLabel: 'ชื่อผู้ใช้ผู้ดูแล (Admin) *',
+      adminPasswordLabel: 'รหัสผ่านเริ่มต้น *',
+      adminDisplayNameLabel: 'ชื่อแสดงผล (Display Name)',
+      planLabel: 'แพ็กเกจเริ่มต้น',
+      createSubmitBtn: 'สร้างองค์กรใหม่',
+      creatingBtn: 'กำลังสร้างองค์กร...',
+      cancelBtn: 'ยกเลิก',
+      createSuccessNotice: (name) => `สร้างองค์กร "${name}" พร้อมคลังหลักและผังบัญชีเริ่มต้นสำเร็จ`,
+      createFailedNotice: 'ไม่สามารถสร้างองค์กรได้ กรุณาตรวจสอบข้อมูลและลองอีกครั้ง',
     },
     packages: {
       title: 'แพ็กเกจราคา (Subscription Plans)',
@@ -345,6 +377,22 @@ export const ADMIN_RESOURCES: Record<AdminLocale, AdminTranslations> = {
       activateBtn: 'Activate Tenant',
       loading: 'Loading tenants...',
       empty: 'No tenants found',
+      createBtn: 'Add Tenant',
+      createModalTitle: 'Provision New Tenant Organization',
+      companyNameLabel: 'Company / Organization Name *',
+      taxIdLabel: 'Tax ID',
+      emailLabel: 'Contact Email',
+      phoneLabel: 'Phone',
+      addressLabel: 'Registered Address',
+      adminUsernameLabel: 'Admin Username *',
+      adminPasswordLabel: 'Initial Password *',
+      adminDisplayNameLabel: 'Admin Display Name',
+      planLabel: 'Initial Subscription Plan',
+      createSubmitBtn: 'Create Organization',
+      creatingBtn: 'Creating...',
+      cancelBtn: 'Cancel',
+      createSuccessNotice: (name) => `Provisioned "${name}" with default warehouse & chart of accounts.`,
+      createFailedNotice: 'Failed to create tenant organization. Please check the fields and try again.',
     },
     packages: {
       title: 'Subscription Plans',
