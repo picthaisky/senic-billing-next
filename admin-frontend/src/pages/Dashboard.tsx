@@ -106,7 +106,8 @@ export default function Dashboard() {
           <Receipt size={20} className="text-blue-600" />
           <h2 className="text-lg font-bold text-slate-800">{t.dashboard.recentTxTitle}</h2>
         </div>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[640px]">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">{t.dashboard.colTenant}</th>
@@ -143,6 +144,7 @@ export default function Dashboard() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

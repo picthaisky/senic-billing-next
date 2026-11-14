@@ -3,7 +3,7 @@ import {
   Settings, Sun, Moon, LogOut, X, Banknote, Truck, FileText, FileCheck, Wallet,
   ShoppingBag, Warehouse, BookOpen, FileMinus2, FilePlus2, Landmark, History, HelpCircle
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,15 @@ export default function BottomNav() {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const [showMore, setShowMore] = useState(false);
+
+  useEffect(() => {
+    if (!showMore) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowMore(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showMore]);
   const location = useLocation();
   const navigate = useNavigate();
   const mainTabs = [
@@ -53,7 +62,7 @@ export default function BottomNav() {
   return (
     <>
       {/* Bottom Navigation Bar */}
-      <nav className="layout-bottom-nav fixed bottom-0 left-0 right-0 z-50 md:hidden">
+      <nav className="layout-bottom-nav fixed bottom-0 left-0 right-0 z-50 md:hidden" aria-label={t('nav.mobileNavAria')}>
         <div className="layout-bottom-nav-shell flex items-center justify-around h-16">
           {mainTabs.map(({ id, path, label, icon: Icon }) => {
             const isActive = location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path));
@@ -80,7 +89,10 @@ export default function BottomNav() {
 
           {/* More Button */}
           <button
+            type="button"
             onClick={() => setShowMore(!showMore)}
+            aria-expanded={showMore}
+            aria-controls="mobile-more-sheet"
             className={`layout-bottom-nav-item layout-bottom-nav-tab haptic-tap flex flex-col items-center justify-center gap-0.5 flex-1 ${isMoreActive ? 'is-active' : ''}`}
           >
             <Menu
@@ -99,7 +111,16 @@ export default function BottomNav() {
       {showMore && (
         <>
           <div className="fixed inset-0 z-50 bg-black/50 md:hidden" onClick={() => setShowMore(false)} />
-          <div className="layout-bottom-sheet fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl md:hidden">
+          <div
+            id="mobile-more-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('nav.moreSheetAria')}
+            tabIndex={-1}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setShowMore(false);
+            }}
+            className="layout-bottom-sheet fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl md:hidden">
             {/* Drag Handle */}
             <div className="layout-bottom-sheet-handle-wrap flex justify-center">
               <div className="layout-bottom-sheet-handle w-10 h-1 rounded-full" />

@@ -23,6 +23,9 @@ export interface AdminTranslations {
     announcements: string;
     logout: string;
     switchLocaleLabel: string;
+    openMenuAria: string;
+    closeMenuAria: string;
+    offlineBanner: string;
   };
   dashboard: {
     loading: string;
@@ -181,6 +184,9 @@ export const ADMIN_RESOURCES: Record<AdminLocale, AdminTranslations> = {
       announcements: 'ประกาศส่วนกลาง',
       logout: 'ออกจากระบบ',
       switchLocaleLabel: 'เปลี่ยนภาษา / Switch Language',
+      openMenuAria: 'เปิดเมนูนำทาง',
+      closeMenuAria: 'ปิดเมนูนำทาง',
+      offlineBanner: 'ออฟไลน์ — ไม่พบการเชื่อมต่ออินเทอร์เน็ต กรุณาตรวจสอบเครือข่าย',
     },
     dashboard: {
       loading: 'กำลังโหลดข้อมูล...',
@@ -336,6 +342,9 @@ export const ADMIN_RESOURCES: Record<AdminLocale, AdminTranslations> = {
       announcements: 'Platform Announcements',
       logout: 'Sign Out',
       switchLocaleLabel: 'Switch Language / เปลี่ยนภาษา',
+      openMenuAria: 'Open navigation menu',
+      closeMenuAria: 'Close navigation menu',
+      offlineBanner: 'Offline — No internet connection detected. Please check your network.',
     },
     dashboard: {
       loading: 'Loading data...',

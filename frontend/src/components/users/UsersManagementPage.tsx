@@ -183,7 +183,7 @@ export default function UsersManagementPage() {
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="data-table table-responsive w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[var(--color-bg)] border-b border-[var(--color-border)] text-sm">
                   <th className="p-4 font-semibold text-[var(--color-text-muted)]">{t('usersPage.colUsername')}</th>
@@ -202,10 +202,10 @@ export default function UsersManagementPage() {
                 ) : (
                   users.map(user => (
                     <tr key={user.id} className={`border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)] ${user.isActive === false ? 'opacity-60' : ''}`}>
-                      <td className="p-4 font-medium text-[var(--color-text)]">{user.username}</td>
-                      <td className="p-4 text-[var(--color-text)]">{user.displayName || '-'}</td>
-                      <td className="p-4 text-[var(--color-text)]">{user.email || '-'}</td>
-                      <td className="p-4 text-center">
+                      <td data-label={t('usersPage.colUsername')} className="p-4 font-medium text-[var(--color-text)]">{user.username}</td>
+                      <td data-label={t('usersPage.colDisplayName')} className="p-4 text-[var(--color-text)]">{user.displayName || '-'}</td>
+                      <td data-label={t('usersPage.colEmail')} className="p-4 text-[var(--color-text)]">{user.email || '-'}</td>
+                      <td data-label={t('usersPage.colRole')} className="p-4 text-center">
                         <select
                           aria-label={t('usersPage.roleSelectAria', { username: user.username })}
                           value={user.role}
@@ -219,12 +219,12 @@ export default function UsersManagementPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-center">
+                      <td data-label={t('usersPage.colStatus')} className="p-4 text-center">
                         <span className={`badge text-xs ${user.isActive !== false ? 'badge-success' : 'badge-danger'}`}>
                           {user.isActive !== false ? t('usersPage.statusActive') : t('usersPage.statusSuspended')}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
+                      <td data-label={t('usersPage.colActions')} className="p-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => { setEditingUser(user); setIsUserModalOpen(true); }}

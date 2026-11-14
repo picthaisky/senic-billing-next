@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ShieldCheck, LogOut, Globe } from 'lucide-react';
+import { ShieldCheck, LogOut, Globe, Menu, WifiOff } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import TenantsList from './pages/TenantsList';
 import PackagesList from './pages/PackagesList';
@@ -34,6 +34,21 @@ function App() {
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (!token || verifiedToken === token) return;
@@ -201,10 +216,36 @@ function App() {
 
   return (
     <Router>
-      <div className="flex h-screen bg-[var(--color-bg)]">
-        <Sidebar onLogout={handleLogout} />
-        <main className="flex-1 overflow-auto p-8">
+      <div className="flex flex-col md:flex-row h-[100dvh] bg-[var(--color-bg)] overflow-hidden">
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#1e293b] text-white shrink-0 shadow-sm">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label={t.nav.openMenuAria}
+              aria-expanded={mobileMenuOpen}
+              className="min-w-[44px] min-h-[44px] -ml-2 flex items-center justify-center rounded-lg hover:bg-slate-800"
+            >
+              <Menu size={22} />
+            </button>
+            <span className="font-bold text-base bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+              Senic Platform Admin
+            </span>
+          </div>
+        </header>
+        <Sidebar onLogout={handleLogout} isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
+            {!isOnline && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300"
+              >
+                <WifiOff size={18} className="shrink-0" />
+                <span>{t.nav.offlineBanner}</span>
+              </div>
+            )}
             <div className="flex justify-end gap-2 mb-4">
               <button
                 type="button"

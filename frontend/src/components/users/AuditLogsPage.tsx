@@ -365,7 +365,7 @@ export default function AuditLogsPage() {
       {/* Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="data-table table-responsive w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]/60 text-xs font-semibold text-[var(--color-text-secondary)]">
                 <th className="py-3.5 px-4">{t('auditLogs.colTimestamp')}</th>
@@ -392,11 +392,11 @@ export default function AuditLogsPage() {
               ) : (
                 items.map((log) => (
                   <tr key={log.id} className="hover:bg-[var(--color-surface-hover)]/50 transition-colors">
-                    <td className="py-3.5 px-4 whitespace-nowrap text-[var(--color-text-secondary)] tabular-nums">
+                    <td data-label={t('auditLogs.colTimestamp')} className="py-3.5 px-4 whitespace-nowrap text-[var(--color-text-secondary)] tabular-nums">
                       {new Date(log.timestamp).toLocaleString(locale)}
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-[var(--color-text)]">{log.username}</td>
-                    <td className="py-3.5 px-4">
+                    <td data-label={t('auditLogs.colUsername')} className="py-3.5 px-4 font-medium text-[var(--color-text)]">{log.username}</td>
+                    <td data-label={t('auditLogs.colAction')} className="py-3.5 px-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getActionBadgeClass(
                           log.action
@@ -405,13 +405,13 @@ export default function AuditLogsPage() {
                         {log.action}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-xs text-[var(--color-text)]">
+                    <td data-label={t('auditLogs.colEntity')} className="py-3.5 px-4 font-mono text-xs text-[var(--color-text)]">
                       {log.entityName}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-xs text-[var(--color-text-muted)] max-w-[200px] truncate" title={log.entityId}>
+                    <td data-label={t('auditLogs.colEntityId')} className="py-3.5 px-4 font-mono text-xs text-[var(--color-text-muted)] max-w-[180px] md:max-w-[200px] truncate" title={log.entityId}>
                       {log.entityId}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td data-label={t('auditLogs.colDetails')} className="py-3.5 px-4 text-right">
                       <button
                         type="button"
                         onClick={() => setSelectedLog(log)}

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocaleStore } from '../../store/useLocaleStore';
 import RecurringInvoicesConfig from './RecurringInvoicesConfig';
 import TenantBackupCard from './TenantBackupCard';
+import SettingsPwaCard from './SettingsPwaCard';
 import { apiClient } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/errorUtils';
 
@@ -594,6 +595,8 @@ export default function SettingsPage() {
           )}
         </div>
       )}
+
+      <SettingsPwaCard />
 
       <div className="card form-section-card p-6 md:p-8 space-y-6">
         <div>

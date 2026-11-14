@@ -437,7 +437,7 @@ export default function BankReconciliationPage() {
       {/* Transactions Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="data-table">
+          <table className="data-table table-responsive">
             <thead>
               <tr>
                 <th>{t('bankReconciliation.colDate')}</th>
@@ -469,14 +469,14 @@ export default function BankReconciliationPage() {
 
                   return (
                     <tr key={tx.id}>
-                      <td className="whitespace-nowrap text-xs font-mono">{fmtDate(tx.transactionDate, locale)}</td>
-                      <td className="text-xs">
+                      <td data-label={t('bankReconciliation.colDate')} className="whitespace-nowrap text-xs font-mono">{fmtDate(tx.transactionDate, locale)}</td>
+                      <td data-label={t('bankReconciliation.colBankRef')} className="text-xs">
                         <div className="font-semibold text-[var(--color-text)]">{tx.bankName || t('bankReconciliation.bankFallback')}</div>
                         {tx.referenceNo && (
                           <div className="font-mono text-[11px] text-[var(--color-text-muted)]">{tx.referenceNo}</div>
                         )}
                       </td>
-                      <td className="max-w-xs">
+                      <td data-label={t('bankReconciliation.colDescCounterparty')} className="max-w-xs">
                         <div className="text-sm font-medium truncate" title={tx.description}>
                           {tx.description}
                         </div>
@@ -484,7 +484,7 @@ export default function BankReconciliationPage() {
                           <div className="text-xs text-[var(--color-text-muted)] truncate">{tx.counterpartyName}</div>
                         )}
                       </td>
-                      <td className="text-right font-mono text-sm">
+                      <td data-label={t('bankReconciliation.colDeposit')} className="text-right font-mono text-sm">
                         {tx.depositAmount > 0 ? (
                           <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
                             <ArrowDownLeft size={13} />
@@ -494,7 +494,7 @@ export default function BankReconciliationPage() {
                           '-'
                         )}
                       </td>
-                      <td className="text-right font-mono text-sm">
+                      <td data-label={t('bankReconciliation.colWithdrawal')} className="text-right font-mono text-sm">
                         {tx.withdrawalAmount > 0 ? (
                           <span className="inline-flex items-center gap-1 text-amber-600 font-semibold">
                             <ArrowUpRight size={13} />
@@ -504,7 +504,7 @@ export default function BankReconciliationPage() {
                           '-'
                         )}
                       </td>
-                      <td>
+                      <td data-label={t('bankReconciliation.colStatusSuggestion')}>
                         {tx.matchStatus === 'Matched' ? (
                           <div className="space-y-0.5">
                             <span className="badge badge-success text-[10px]">{t('bankReconciliation.badgeMatched')}</span>
@@ -532,7 +532,7 @@ export default function BankReconciliationPage() {
                           <span className="badge badge-warning text-[10px]">{t('bankReconciliation.badgeUnmatched')}</span>
                         )}
                       </td>
-                      <td className="text-right whitespace-nowrap">
+                      <td data-label={t('bankReconciliation.colActions')} className="text-right whitespace-nowrap">
                         {tx.matchStatus !== 'Matched' && tx.matchStatus !== 'Ignored' && (
                           <div className="inline-flex items-center gap-1.5">
                             {hasSuggestion && (

@@ -397,7 +397,9 @@ export default function DocumentPrintView() {
 
       {/* ──────────────── A4 PREVIEW AREA ──────────────── */}
       <div className="flex-1 flex justify-center p-4">
-        <A4DocumentTemplate data={data} />
+        <div className="a4-preview-scroll">
+          <A4DocumentTemplate data={data} />
+        </div>
       </div>
 
       {rawDoc && (

@@ -79,4 +79,91 @@ test('Phase 21 TenantsList supports Super Admin Create Tenant modal and bilingua
   assert.match(localeCtxSource, /adminUsernameLabel/);
 });
 
+test('Senic Platform Admin custom favicon suite is present and wired in index.html', () => {
+  const indexHtml = fs.readFileSync(path.join(adminRoot, 'index.html'), 'utf8');
+  assert.match(indexHtml, /href="\/senic-admin-favicon\.svg"/);
+  assert.match(indexHtml, /href="\/favicon-32x32\.png"/);
+  assert.match(indexHtml, /href="\/favicon-16x16\.png"/);
+  assert.match(indexHtml, /href="\/favicon\.ico"/);
+  assert.match(indexHtml, /href="\/apple-touch-icon\.png"/);
+  assert.match(indexHtml, /href="\/manifest\.json"/);
 
+  const publicDir = path.join(adminRoot, 'public');
+  for (const fileName of [
+    'senic-admin-favicon.svg',
+    'favicon.svg',
+    'favicon.ico',
+    'favicon-16x16.png',
+    'favicon-32x32.png',
+    'apple-touch-icon.png',
+    'icon-192.png',
+    'icon-512.png',
+    'manifest.json',
+  ]) {
+    const filePath = path.join(publicDir, fileName);
+    assert.ok(fs.existsSync(filePath), `Expected favicon asset to exist: ${fileName}`);
+    assert.ok(fs.statSync(filePath).size > 0, `Expected favicon asset to be non-empty: ${fileName}`);
+  }
+
+  const svgContent = fs.readFileSync(path.join(publicDir, 'senic-admin-favicon.svg'), 'utf8');
+  assert.doesNotMatch(svgContent, /#863bff/, 'SVG favicon must not be the default Vite icon');
+  assert.match(svgContent, /senic-admin-bg/);
+  assert.match(svgContent, /#1d4ed8/);
+
+  const legacySvgContent = fs.readFileSync(path.join(publicDir, 'favicon.svg'), 'utf8');
+  assert.equal(legacySvgContent, svgContent);
+});
+
+
+
+test('Phase 22 Admin Portal supports PWA manifest/sw/offline assets and mobile drawer navigation', () => {
+  const adminRootDir = path.resolve(import.meta.dirname, '..');
+  const adminPublicDir = path.join(adminRootDir, 'public');
+  const adminSrcDir = path.join(adminRootDir, 'src');
+
+  for (const file of [
+    'favicon.ico',
+    'favicon-16x16.png',
+    'favicon-32x32.png',
+    'senic-admin-favicon.svg',
+    'apple-touch-icon.png',
+    'icon-192.png',
+    'icon-512.png',
+    'icon-maskable-512.png',
+    'manifest.json',
+    'sw.js',
+    'offline.html',
+  ]) {
+    const p = path.join(adminPublicDir, file);
+    assert.ok(fs.existsSync(p), `Missing admin asset: ${file}`);
+    assert.ok(fs.statSync(p).size > 0, `Empty admin asset: ${file}`);
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(path.join(adminPublicDir, 'manifest.json'), 'utf8'));
+  assert.equal(manifest.display, 'standalone');
+  assert.ok(manifest.icons.some((i) => i.sizes === '512x512' && i.purpose === 'maskable'));
+
+  const indexHtml = fs.readFileSync(path.join(adminRootDir, 'index.html'), 'utf8');
+  assert.match(indexHtml, /viewport-fit=cover/);
+  assert.match(indexHtml, /apple-mobile-web-app-capable/);
+
+  const mainSrc = fs.readFileSync(path.join(adminSrcDir, 'main.tsx'), 'utf8');
+  assert.match(mainSrc, /serviceWorker\.register\('\/sw\.js'/);
+
+  const nginxSrc = fs.readFileSync(path.join(adminRootDir, 'nginx.conf'), 'utf8');
+  assert.match(nginxSrc, /location = \/sw\.js/);
+  assert.match(nginxSrc, /no-cache, no-store, must-revalidate/);
+
+  const sidebarSrc = fs.readFileSync(path.join(adminSrcDir, 'components', 'Sidebar.tsx'), 'utf8');
+  assert.match(sidebarSrc, /-translate-x-full md:translate-x-0/);
+  assert.match(sidebarSrc, /min-h-\[44px\]/);
+
+  const appSrc = fs.readFileSync(path.join(adminSrcDir, 'App.tsx'), 'utf8');
+  assert.match(appSrc, /md:hidden flex items-center justify-between/);
+  assert.match(appSrc, /offlineBanner/);
+
+  const localeSrc = fs.readFileSync(path.join(adminSrcDir, 'i18n', 'AdminLocaleContext.tsx'), 'utf8');
+  assert.match(localeSrc, /openMenuAria/);
+  assert.match(localeSrc, /closeMenuAria/);
+  assert.match(localeSrc, /offlineBanner/);
+});

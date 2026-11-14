@@ -6,6 +6,7 @@ import Header from './Header';
 import BottomNav from './BottomNav';
 import FloatingActionButton from './FloatingActionButton';
 import FloatingAIChat from './FloatingAIChat';
+import { PwaStatusBanners } from '../pwa/PwaStatusBanners';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Megaphone, AlertTriangle, ShieldAlert, X } from 'lucide-react';
@@ -137,6 +138,7 @@ export default function DashboardLayout() {
         <Header pageTitle={getPageTitle()} />
         <main className="app-main-content flex-1">
           <div className="app-page-container animate-fade-in-up">
+            <PwaStatusBanners />
             {visibleAnnouncements.length > 0 && (
               <div className="space-y-2 mb-5" role="region" aria-label={t('header.announcementRegionAria')}>
                 {visibleAnnouncements.map((item) => {

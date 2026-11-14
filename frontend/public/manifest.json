@@ -1,16 +1,69 @@
 {
-  "name": "Senic Billing Next",
+  "id": "/",
+  "name": "Senic Billing Next — ระบบบิลลิ่งและบัญชี SME",
   "short_name": "Senic Billing",
-  "description": "Professional Invoicing & Billing System",
+  "description": "ระบบออกใบกำกับภาษี ใบแจ้งหนี้ ใบเสร็จรับเงิน บัญชี และบริหารสต็อกออนไลน์สำหรับ SME ไทย",
+  "lang": "th",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "any",
+  "background_color": "#fffbf7",
   "theme_color": "#ea580c",
+  "categories": ["business", "finance", "productivity"],
   "icons": [
     {
       "src": "/senic-favicon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "สร้างเอกสารใหม่",
+      "short_name": "สร้างเอกสาร",
+      "description": "เปิดหน้าสร้างใบกำกับภาษี / ใบแจ้งหนี้ใหม่",
+      "url": "/documents/taxinvoice/create",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "เอกสารทั้งหมด",
+      "short_name": "เอกสาร",
+      "description": "ดูรายการใบกำกับภาษีและเอกสารทางการเงิน",
+      "url": "/documents/taxinvoice",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
