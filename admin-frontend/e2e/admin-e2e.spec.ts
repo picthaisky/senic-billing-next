@@ -135,6 +135,24 @@ async function setupAdminMocks(page: Page) {
       return json({ success: true, data: tenants });
     }
 
+    if (pathname === '/api/superadmin/tenants' && method === 'POST') {
+      const payload = req.postDataJSON() as Record<string, unknown>;
+      const created = {
+        id: `ten-${tenants.length + 1}`,
+        companyName: String(payload.companyName || 'New Tenant Co.'),
+        email: (payload.email as string) || 'contact@newtenant.th',
+        currentPlanId: 'plan-1',
+        currentPlan: 'Pro Business',
+        maxUsers: 10,
+        maxDocumentsPerMonth: 1000,
+        userCount: 1,
+        documentsCreatedThisMonth: 0,
+        subscriptionStatus: 'Active',
+      };
+      tenants.push(created);
+      return json({ success: true, data: created });
+    }
+
     if (pathname === '/api/superadmin/tenants/ten-1/impersonate' && method === 'POST') {
       return json({
         success: true,
@@ -280,6 +298,17 @@ test('Super Admin Portal enforces token isolation and completes Dashboard, Tenan
   await page.getByRole('button', { name: 'Save Plan' }).click();
   await expect(page.getByText('Enterprise Unlimited')).toBeVisible();
   await expect(page.getByText('Unlimited').first()).toBeVisible();
+
+  // 8. Provision New Tenant modal in Super Admin Tenants page
+  await page.getByRole('link', { name: 'Organizations (Tenants)' }).click();
+  await page.getByRole('button', { name: 'Add Tenant' }).click();
+  await expect(page.getByRole('heading', { name: 'Provision New Tenant Organization' })).toBeVisible();
+  const tenantInputs = page.locator('form input');
+  await tenantInputs.nth(0).fill('Siam Provisioned Co.');
+  await tenantInputs.nth(5).fill('siamadmin');
+  await tenantInputs.nth(6).fill('Pass1234!');
+  await page.getByRole('button', { name: 'Create Organization' }).click();
+  await expect(page.getByText('Siam Provisioned Co.')).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });

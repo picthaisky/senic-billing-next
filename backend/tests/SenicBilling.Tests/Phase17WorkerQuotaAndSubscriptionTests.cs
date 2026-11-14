@@ -529,10 +529,15 @@ public class Phase17WorkerQuotaAndSubscriptionTests
                 MonthlyPrice = 2990m,
                 YearlyPrice = 29900m,
                 MaxUsers = -1,
-                MaxDocumentsPerMonth = -1
+                MaxDocumentsPerMonth = -1,
+                IsActive = false
             },
             CancellationToken.None);
         Assert.IsType<OkObjectResult>(validPlanRes);
-        Assert.True(await db.AuditLogs.AnyAsync(a => a.Action == "CreateSubscriptionPlan"));
+        var createdPlan = await db.SubscriptionPlans.SingleAsync(p => p.Name == "Unlimited Enterprise");
+        Assert.False(createdPlan.IsActive);
+        var planAuditLog = await db.AuditLogs.SingleAsync(a => a.Action == "CreateSubscriptionPlan");
+        Assert.Equal(tenantId, planAuditLog.TenantId);
+        Assert.NotEqual(Guid.Empty, planAuditLog.TenantId);
     }
 }

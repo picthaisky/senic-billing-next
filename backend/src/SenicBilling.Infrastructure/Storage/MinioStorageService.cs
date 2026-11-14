@@ -31,7 +31,11 @@ public class MinioStorageService : IStorageService
             .WithObjectSize(fileStream.Length)
             .WithContentType(contentType);
 
-        await _minioClient.PutObjectAsync(putObjectArgs, ct);
+        var putResponse = await _minioClient.PutObjectAsync(putObjectArgs, ct);
+        if (putResponse is null || (putResponse.Size <= 0 && string.IsNullOrWhiteSpace(putResponse.Etag)))
+        {
+            throw new IOException($"Failed to persist object '{objectKey}' in bucket '{bucketName}'.");
+        }
 
         return objectKey;
     }
@@ -47,7 +51,13 @@ public class MinioStorageService : IStorageService
                 stream.CopyTo(memoryStream);
             });
 
-        await _minioClient.GetObjectAsync(getObjectArgs, ct);
+        var stat = await _minioClient.GetObjectAsync(getObjectArgs, ct);
+        if (stat is null || string.IsNullOrWhiteSpace(stat.ObjectName) || memoryStream.Length == 0)
+        {
+            memoryStream.Dispose();
+            throw new FileNotFoundException($"Object '{objectKey}' was not found or was empty in bucket '{bucketName}'.");
+        }
+
         memoryStream.Position = 0;
         return memoryStream;
     }

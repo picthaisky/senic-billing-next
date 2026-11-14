@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Mail, Phone, MapPin, Save, Bell, BellOff, Send, Languages, Crown, CheckCircle2, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Save, Bell, BellOff, Send, Languages, Crown, CheckCircle2, Upload, Image as ImageIcon, Loader2, QrCode, CreditCard, Landmark, X } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +47,19 @@ export default function SettingsPage() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUpgradingPlan, setIsUpgradingPlan] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<SubscriptionData['availablePlans'][number] | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'Monthly' | 'Yearly'>('Monthly');
+  const [paymentMethod, setPaymentMethod] = useState<'promptpay' | 'card' | 'bank_transfer'>('promptpay');
+  const [cardTokenInput, setCardTokenInput] = useState('');
+  const [checkoutPending, setCheckoutPending] = useState<{
+    subscriptionId: string;
+    paymentMethod: string;
+    qrCodeUrl?: string;
+    chargeId: string;
+    amount: number;
+    planName: string;
+  } | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const pushNotifications = usePushNotifications();
   
   const [tenantId, setTenantId] = useState<string>('');
@@ -132,15 +145,78 @@ export default function SettingsPage() {
     return () => window.clearTimeout(timer);
   }, [fetchSubscription]);
 
-  const handleUpgradePlan = async (planId: string, planName: string) => {
-    if (!window.confirm(t('settings.confirmUpgradePlan', { planName }))) return;
+  const openCheckoutModal = (plan: SubscriptionData['availablePlans'][number]) => {
+    setCheckoutPlan(plan);
+    setBillingCycle('Monthly');
+    setPaymentMethod('promptpay');
+    setCardTokenInput('');
+    setCheckoutPending(null);
+  };
+
+  const handleCheckCheckoutStatus = useCallback(async (subscriptionId: string, planName: string) => {
     try {
-      setIsUpgradingPlan(planId);
-      await apiClient.post('/subscriptions/checkout', { planId, cardToken: '' });
-      await fetchSubscription();
-      alert(t('settings.upgradePlanSuccess', { planName }));
+      setIsCheckingStatus(true);
+      const res = await apiClient.get(`/subscriptions/status/${subscriptionId}`);
+      if (res.data?.isPaid || res.data?.status === 'Active' || res.data?.status === 'Paid') {
+        await fetchSubscription();
+        setCheckoutPending(null);
+        setCheckoutPlan(null);
+        alert(t('settings.upgradePlanSuccess', { planName }));
+      }
     } catch {
-      alert(t('settings.upgradePlanError'));
+      // Keep waiting cleanly on temporary network hiccups
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  }, [fetchSubscription, t]);
+
+  useEffect(() => {
+    if (!checkoutPending || checkoutPending.paymentMethod !== 'promptpay') return;
+    const timer = window.setInterval(() => {
+      void handleCheckCheckoutStatus(checkoutPending.subscriptionId, checkoutPending.planName);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [checkoutPending, handleCheckCheckoutStatus]);
+
+  const handleConfirmCheckout = async () => {
+    if (!checkoutPlan) return;
+    const payableAmount = billingCycle === 'Yearly' && checkoutPlan.yearlyPrice > 0
+      ? checkoutPlan.yearlyPrice
+      : checkoutPlan.monthlyPrice;
+
+    if (payableAmount > 0 && paymentMethod === 'card' && !cardTokenInput.trim()) {
+      alert(t('settings.cardTokenRequired'));
+      return;
+    }
+
+    try {
+      setIsUpgradingPlan(checkoutPlan.id);
+      const res = await apiClient.post('/subscriptions/checkout', {
+        planId: checkoutPlan.id,
+        cardToken: paymentMethod === 'card' ? cardTokenInput.trim() : '',
+        billingCycle,
+        paymentMethod: payableAmount <= 0 ? 'card' : paymentMethod,
+      });
+
+      const data = res.data;
+      if (data?.requiresPayment) {
+        setCheckoutPending({
+          subscriptionId: data.subscriptionId,
+          paymentMethod: data.paymentMethod,
+          qrCodeUrl: data.qrCodeUrl,
+          chargeId: data.chargeId,
+          amount: data.amount,
+          planName: checkoutPlan.name,
+        });
+      } else {
+        await fetchSubscription();
+        const activatedName = checkoutPlan.name;
+        setCheckoutPlan(null);
+        setCheckoutPending(null);
+        alert(t('settings.upgradePlanSuccess', { planName: activatedName }));
+      }
+    } catch (err) {
+      alert(getApiErrorMessage(err, t('settings.upgradePlanError')));
     } finally {
       setIsUpgradingPlan(null);
     }
@@ -481,6 +557,11 @@ export default function SettingsPage() {
                         ฿{plan.monthlyPrice.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH')}
                         <span className="text-xs font-normal text-[var(--color-text-muted)]"> {t('settings.perMonth')}</span>
                       </p>
+                      {plan.yearlyPrice > 0 && (
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                          {t('settings.yearlyPriceLabel', { price: plan.yearlyPrice.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH') })}
+                        </p>
+                      )}
                       <p className="text-xs text-[var(--color-text-muted)] mt-1">
                         {t('settings.planLimitsSummary', { maxUsers: plan.maxUsers, maxDocs: plan.maxDocumentsPerMonth.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH') })}
                       </p>
@@ -497,7 +578,7 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       disabled={isCurrent || isUpgradingPlan === plan.id}
-                      onClick={() => handleUpgradePlan(plan.id, plan.name)}
+                      onClick={() => openCheckoutModal(plan)}
                       className={`btn w-full text-xs ${isCurrent ? 'btn-secondary opacity-60 cursor-default' : 'btn-primary'}`}
                     >
                       {isCurrent
@@ -610,6 +691,206 @@ export default function SettingsPage() {
 
       {/* Admin Tenant Backup Export */}
       <TenantBackupCard />
+
+      {/* SaaS Plan Checkout Modal */}
+      {checkoutPlan && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card w-full max-w-lg p-6 space-y-5 relative">
+            <button
+              type="button"
+              aria-label={t('settings.closeModal')}
+              onClick={() => {
+                setCheckoutPlan(null);
+                setCheckoutPending(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]"
+            >
+              <X size={18} />
+            </button>
+
+            <div>
+              <h3 className="text-lg font-bold text-[var(--color-text)] flex items-center gap-2">
+                <Crown size={20} className="text-[var(--color-primary)]" />
+                {t('settings.checkoutModalTitle')}: {checkoutPlan.name}
+              </h3>
+            </div>
+
+            {checkoutPending ? (
+              <div className="space-y-4 text-center">
+                {checkoutPending.paymentMethod === 'promptpay' ? (
+                  <>
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      {t('settings.promptPayScanHint')}
+                    </p>
+                    <div className="p-4 bg-white rounded-xl inline-block border border-[var(--color-border)]">
+                      {checkoutPending.qrCodeUrl && (
+                        <img
+                          src={checkoutPending.qrCodeUrl}
+                          alt="PromptPay QR"
+                          className="w-52 h-52 object-contain mx-auto"
+                        />
+                      )}
+                    </div>
+                    <p className="text-xl font-bold text-[var(--color-primary)]">
+                      ฿{checkoutPending.amount.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH')}
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        type="button"
+                        disabled={isCheckingStatus}
+                        onClick={() => handleCheckCheckoutStatus(checkoutPending.subscriptionId, checkoutPending.planName)}
+                        className="btn btn-primary"
+                      >
+                        {isCheckingStatus && <Loader2 size={15} className="animate-spin" />}
+                        {t('settings.checkStatusBtn')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckoutPlan(null);
+                          setCheckoutPending(null);
+                        }}
+                        className="btn btn-secondary"
+                      >
+                        {t('settings.closeModal')}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm text-[var(--color-text)]">
+                      {t('settings.pendingBankTransferNotice', { reference: checkoutPending.chargeId })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckoutPlan(null);
+                        setCheckoutPending(null);
+                      }}
+                      className="btn btn-primary w-full"
+                    >
+                      {t('settings.closeModal')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
+                    {t('settings.billingCycleLabel')}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle('Monthly')}
+                      className={`p-3 rounded-xl border text-left ${billingCycle === 'Monthly' ? 'border-[var(--color-primary)] bg-[var(--color-primary-50)]/40' : 'border-[var(--color-border)]'}`}
+                    >
+                      <div className="text-sm font-semibold">{t('settings.billingMonthly')}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">
+                        ฿{checkoutPlan.monthlyPrice.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH')}
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={checkoutPlan.yearlyPrice <= 0 && checkoutPlan.monthlyPrice > 0}
+                      onClick={() => setBillingCycle('Yearly')}
+                      className={`p-3 rounded-xl border text-left ${billingCycle === 'Yearly' ? 'border-[var(--color-primary)] bg-[var(--color-primary-50)]/40' : 'border-[var(--color-border)]'}`}
+                    >
+                      <div className="text-sm font-semibold">{t('settings.billingYearly')}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">
+                        ฿{checkoutPlan.yearlyPrice.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH')}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {(billingCycle === 'Yearly' && checkoutPlan.yearlyPrice > 0 ? checkoutPlan.yearlyPrice : checkoutPlan.monthlyPrice) <= 0 ? (
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+                    {t('settings.freePlanNotice')}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[var(--color-text-secondary)]">
+                      {t('settings.paymentMethodLabel')}
+                    </label>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('promptpay')}
+                        className={`w-full p-3 rounded-xl border flex items-center gap-3 text-sm ${paymentMethod === 'promptpay' ? 'border-[var(--color-primary)] bg-[var(--color-primary-50)]/40 font-semibold' : 'border-[var(--color-border)]'}`}
+                      >
+                        <QrCode size={18} className="text-[var(--color-primary)]" />
+                        <span>{t('settings.methodPromptPay')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('card')}
+                        className={`w-full p-3 rounded-xl border flex items-center gap-3 text-sm ${paymentMethod === 'card' ? 'border-[var(--color-primary)] bg-[var(--color-primary-50)]/40 font-semibold' : 'border-[var(--color-border)]'}`}
+                      >
+                        <CreditCard size={18} className="text-[var(--color-primary)]" />
+                        <span>{t('settings.methodCard')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('bank_transfer')}
+                        className={`w-full p-3 rounded-xl border flex items-center gap-3 text-sm ${paymentMethod === 'bank_transfer' ? 'border-[var(--color-primary)] bg-[var(--color-primary-50)]/40 font-semibold' : 'border-[var(--color-border)]'}`}
+                      >
+                        <Landmark size={18} className="text-[var(--color-primary)]" />
+                        <span>{t('settings.methodBankTransfer')}</span>
+                      </button>
+                    </div>
+
+                    {paymentMethod === 'card' && (
+                      <div>
+                        <label className="block text-xs font-medium mb-1 text-[var(--color-text-secondary)]">
+                          {t('settings.cardTokenLabel')}
+                        </label>
+                        <input
+                          type="text"
+                          value={cardTokenInput}
+                          onChange={(e) => setCardTokenInput(e.target.value)}
+                          placeholder={t('settings.cardTokenPlaceholder')}
+                          className="input-field"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+                  <div>
+                    <div className="text-xs text-[var(--color-text-muted)]">{t('settings.totalPayableLabel')}</div>
+                    <div className="text-xl font-bold text-[var(--color-primary)]">
+                      ฿{(billingCycle === 'Yearly' && checkoutPlan.yearlyPrice > 0
+                        ? checkoutPlan.yearlyPrice
+                        : checkoutPlan.monthlyPrice).toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH')}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutPlan(null)}
+                      className="btn btn-secondary"
+                    >
+                      {t('settings.closeModal')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isUpgradingPlan === checkoutPlan.id}
+                      onClick={handleConfirmCheckout}
+                      className="btn btn-primary"
+                    >
+                      {isUpgradingPlan === checkoutPlan.id && <Loader2 size={15} className="animate-spin" />}
+                      {t('settings.confirmCheckoutBtn')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

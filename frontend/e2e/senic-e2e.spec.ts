@@ -286,6 +286,119 @@ async function setupApiMocks(page: Page, captured: { createdInvoice?: Record<str
       });
     }
 
+    if (path.endsWith('/tenants/current') && method === 'GET') {
+      return route.fulfill(
+        envelope({
+          id: '00000000-0000-0000-0000-000000000001',
+          companyName: 'Senic Corporation',
+          taxId: '0105559999999',
+          email: 'billing@senic.co.th',
+          phone: '02-123-4567',
+          address: '99 Sathorn, Bangkok',
+          branchName: 'สำนักงานใหญ่',
+          logoUrl: '',
+        })
+      );
+    }
+
+    if (path.endsWith('/subscriptions/current')) {
+      return route.fulfill(
+        envelope({
+          subscriptionStatus: 'Active',
+          subscriptionValidUntil: '2026-12-31T00:00:00Z',
+          currentPlan: {
+            id: 'plan-free',
+            name: 'Free Starter',
+            monthlyPrice: 0,
+            yearlyPrice: 0,
+            maxUsers: 2,
+            maxDocumentsPerMonth: 20,
+            features: '["ออกเอกสารพื้นฐาน"]',
+          },
+          usage: {
+            currentMonthDocuments: 3,
+            maxDocumentsPerMonth: 20,
+            currentUsers: 1,
+            maxUsers: 2,
+          },
+          availablePlans: [
+            {
+              id: 'plan-free',
+              name: 'Free Starter',
+              monthlyPrice: 0,
+              yearlyPrice: 0,
+              maxUsers: 2,
+              maxDocumentsPerMonth: 20,
+              features: '["ออกเอกสารพื้นฐาน"]',
+            },
+            {
+              id: 'plan-pro',
+              name: 'Pro Business',
+              monthlyPrice: 990,
+              yearlyPrice: 9900,
+              maxUsers: 10,
+              maxDocumentsPerMonth: 500,
+              features: '["PromptPay QR","e-Tax XML"]',
+            },
+          ],
+        })
+      );
+    }
+
+    if (path.endsWith('/subscriptions/checkout') && method === 'POST') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          requiresPayment: true,
+          paymentMethod: 'promptpay',
+          status: 'Pending',
+          subscriptionId: 'sub-e2e-pp-1',
+          chargeId: 'chrg_e2e_pp',
+          qrCodeUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+          amount: 990,
+          billingCycle: 'Monthly',
+          planName: 'Pro Business',
+        }),
+      });
+    }
+
+    if (path.endsWith('/subscriptions/status/sub-e2e-pp-1')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          status: 'Pending',
+          isPaid: false,
+          subscriptionId: 'sub-e2e-pp-1',
+        }),
+      });
+    }
+
+    if (path.endsWith('/auth/forgot-password') && method === 'POST') {
+      return route.fulfill(envelope(null));
+    }
+
+    if (path.endsWith('/auth/signup-tenant') && method === 'POST') {
+      return route.fulfill(
+        envelope({
+          token: 'e2e-signup-jwt',
+          refreshToken: 'e2e-refresh',
+          expiresAt: new Date(Date.now() + 8 * 3600_000).toISOString(),
+          user: {
+            id: 'user-signup-1',
+            username: 'founder1',
+            displayName: 'New Organization',
+            role: 'Admin',
+            tenantId: 'ten-signup-1',
+            tenantName: 'บจก. สตาร์ทอัพ ใหม่',
+          },
+        })
+      );
+    }
+
     return route.fulfill(envelope([]));
   });
 }
@@ -431,6 +544,34 @@ test('Login, Dashboard Top Spenders, Platform Announcement, Invoice Form, Audit 
   await page.getByRole('button', { name: 'Switch language to Thai' }).first().click();
   await expect(page.getByRole('heading', { name: 'ตั้งค่าระบบ' }).first()).toBeVisible();
 
+  // 6. Phase 20 Help Center & Expert Accountant Knowledge verification
+  await page.getByTestId('header-help-btn').click();
+  await expect(page).toHaveURL(/\/help/);
+  await expect(
+    page.getByRole('heading', { name: 'คู่มือการใช้งานทุกเมนู & ความรู้การทำบัญชีในระบบ' }),
+  ).toBeVisible();
+
+  await page.getByTestId('help-search-input').fill('2130');
+  await page.getByTestId('help-guide-item-taxinvoice').click();
+  await expect(page.getByTestId('help-guide-detail')).toContainText('1130');
+  await expect(page.getByTestId('help-guide-detail')).toContainText('2130');
+
+  await page.getByTestId('help-tab-academy').click();
+  await expect(page.getByTestId('help-academy-view')).toBeVisible();
+  await expect(page.getByText('ภ.พ. 30')).toBeVisible();
+  await expect(page.getByText('0 / 6')).toBeVisible();
+  await page.getByTestId('help-academy-view').locator('input[type="checkbox"]').first().click();
+  await expect(page.getByText('1 / 6')).toBeVisible();
+
+  await page.getByRole('button', { name: 'เปลี่ยนภาษาเป็น English' }).first().click();
+  await expect(
+    page.getByRole('heading', { name: 'Complete Menu Guides & Expert System Accounting Manual' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Switch language to Thai' }).first().click();
+  await expect(
+    page.getByRole('heading', { name: 'คู่มือการใช้งานทุกเมนู & ความรู้การทำบัญชีในระบบ' }),
+  ).toBeVisible();
+
   expect(pageErrors).toEqual([]);
 });
 
@@ -468,6 +609,42 @@ test('Payment Callback route renders paid, pending refresh & missing-reference s
   await page.goto('/payments/callback');
   await expect(page.locator('h1').first()).toBeVisible();
   await expect(page.locator('a[href="/login"]')).toBeVisible();
+
+  expect(pageErrors).toEqual([]);
+});
+
+test('Login Forgot Password / Signup Tenant and Settings SaaS Checkout Modal work E2E', async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (err) => pageErrors.push(err.message));
+
+  await setupApiMocks(page);
+
+  // 1. Login -> Forgot Password -> Self-Service Signup
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'ลืมรหัสผ่าน?' }).click();
+  await page.locator('input[type="text"]').fill('admin@senic.co.th');
+  await page.getByRole('button', { name: 'ส่งลิงก์ตั้งรหัสผ่านใหม่' }).click();
+  await expect(page.getByText(/ลิงก์ตั้งรหัสผ่านใหม่ถูกส่ง/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'กลับไปหน้าเข้าสู่ระบบ' }).click();
+  await page.getByRole('button', { name: 'สมัครเปิดใช้งานองค์กรใหม่' }).click();
+  await page.locator('form input[type="text"]').first().fill('บจก. สตาร์ทอัพ ใหม่');
+  const signupTextInputs = page.locator('form input[type="text"]');
+  await signupTextInputs.last().fill('founder1');
+  await page.locator('form input[type="password"]').fill('SecretPass123!');
+  await page.getByRole('button', { name: 'เปิดใช้งานองค์กรใหม่' }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+
+  // 2. Settings -> Open Checkout Modal -> PromptPay QR
+  await page.goto('/settings');
+  await expect(page.getByText('Pro Business')).toBeVisible();
+  await page.getByRole('button', { name: 'เลือกแพ็กเกจนี้' }).first().click();
+  await expect(page.getByText(/อัปเกรดแพ็กเกจ \/ ชำระค่าบริการ: Pro Business/)).toBeVisible();
+  await page.getByRole('button', { name: 'ดำเนินการชำระเงิน / เปิดใช้งาน' }).click();
+  await expect(page.getByAltText('PromptPay QR')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ตรวจสอบสถานะการชำระ' })).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });

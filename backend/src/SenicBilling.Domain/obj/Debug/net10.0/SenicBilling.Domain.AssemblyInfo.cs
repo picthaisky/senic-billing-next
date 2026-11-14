@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SenicBilling.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c882963dc829ac83324e043790d0e8bcc664eee7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+53447b99e3dd57ac3ead04eb83a5b3317f80ec08")]
 [assembly: System.Reflection.AssemblyProductAttribute("SenicBilling.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SenicBilling.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

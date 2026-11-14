@@ -18,6 +18,8 @@ public class TenantSubscription
     
     /// <summary>สถานะของรอบบิลนี้ (Active, Canceled, Expired)</summary>
     public string Status { get; set; } = "Active";
+    public string? PaymentMethod { get; set; }
+    public string? OmiseChargeId { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

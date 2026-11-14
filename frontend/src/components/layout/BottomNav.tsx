@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Receipt, Users, Package, Menu,
   Settings, Sun, Moon, LogOut, X, Banknote, Truck, FileText, FileCheck, Wallet,
-  ShoppingBag, Warehouse, BookOpen, FileMinus2, FilePlus2, Landmark, History
+  ShoppingBag, Warehouse, BookOpen, FileMinus2, FilePlus2, Landmark, History, HelpCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
@@ -44,6 +44,7 @@ export default function BottomNav() {
           { id: 'audit-logs', path: '/audit-logs', label: t('nav.auditLogs'), icon: History },
         ]
       : []),
+    { id: 'help', path: '/help', label: t('nav.help'), icon: HelpCircle },
   ];
 
   const moreMenuPaths = moreMenuItems.map(i => i.path);

@@ -92,6 +92,7 @@ export default function DashboardLayout() {
     if (path.startsWith('/settings')) return t('pageTitles.settings');
     if (path.startsWith('/users')) return t('pageTitles.users');
     if (path.startsWith('/audit-logs')) return t('pageTitles.auditLogs');
+    if (path.startsWith('/help')) return t('pageTitles.help');
     if (path.startsWith('/profile')) return t('pageTitles.profile');
     if (path.startsWith('/documents/receipt')) return t('pageTitles.receipt');
     if (path.startsWith('/documents/cashbill')) return t('pageTitles.cashbill');

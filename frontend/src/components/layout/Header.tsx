@@ -15,6 +15,7 @@ import {
   Receipt,
   ShoppingCart,
   Loader2,
+  HelpCircle,
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -519,6 +520,18 @@ export default function Header({ pageTitle }: HeaderProps) {
 
         {/* Divider */}
         <span className="layout-header-divider layout-header-divider-spacer hidden sm:block h-6 w-px" />
+
+        {/* Quick Help Center Link */}
+        <button
+          type="button"
+          onClick={() => navigate('/help')}
+          className="layout-icon-btn focus-ring w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105"
+          aria-label={t('nav.help')}
+          title={t('nav.help')}
+          data-testid="header-help-btn"
+        >
+          <HelpCircle size={18} />
+        </button>
 
         {/* Language Toggle */}
         <button

@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SenicBilling.Application.Interfaces;
+using SenicBilling.Domain.Interfaces;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Domain.Enums;
 using SenicBilling.Infrastructure.Data;
@@ -43,6 +45,7 @@ public class RecurringInvoiceWorker : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SenicBillingDbContext>();
+        var docNumberService = scope.ServiceProvider.GetService<IDocumentNumberGeneratorService>();
         
         var today = DateTime.UtcNow.Date;
         var generatedCount = 0;
@@ -112,6 +115,10 @@ public class RecurringInvoiceWorker : BackgroundService
             }
 
             var source = recurring.SourceDocument;
+
+            var generatedDocNumber = docNumberService is not null
+                ? await docNumberService.GenerateNextNumberAsync(recurring.TenantId, source.DocumentType, stoppingToken)
+                : $"REC-{source.DocumentNumber}-{recurring.CurrentOccurrence + 1}";
             
             // Create new document (Draft)
             var newDoc = new DocumentHeader
@@ -119,7 +126,7 @@ public class RecurringInvoiceWorker : BackgroundService
                 Id = Guid.NewGuid(),
                 TenantId = recurring.TenantId,
                 DocumentType = source.DocumentType,
-                DocumentNumber = $"REC-{source.DocumentNumber}-{recurring.CurrentOccurrence + 1}", // Simplified numbering
+                DocumentNumber = generatedDocNumber,
                 DocumentDate = DateTime.UtcNow,
                 DueDate = DateTime.UtcNow.AddDays(30), // Default 30 days term
                 CustomerId = source.CustomerId,
@@ -159,6 +166,25 @@ public class RecurringInvoiceWorker : BackgroundService
 
             dbContext.DocumentHeaders.Add(newDoc);
             generatedCount++;
+
+            var yearMonth = DateTime.UtcNow.ToString("yyyy-MM");
+            var usageStat = dbContext.TenantUsageStats.Local
+                .FirstOrDefault(u => u.TenantId == recurring.TenantId && u.YearMonth == yearMonth)
+                ?? await dbContext.TenantUsageStats
+                    .FirstOrDefaultAsync(u => u.TenantId == recurring.TenantId && u.YearMonth == yearMonth, stoppingToken);
+            if (usageStat is null)
+            {
+                dbContext.TenantUsageStats.Add(new TenantUsageStat
+                {
+                    TenantId = recurring.TenantId,
+                    YearMonth = yearMonth,
+                    DocumentsCreated = 1
+                });
+            }
+            else
+            {
+                usageStat.DocumentsCreated += 1;
+            }
 
             // Update recurring metadata
             recurring.CurrentOccurrence++;

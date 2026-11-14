@@ -11,6 +11,29 @@ namespace SenicBilling.Infrastructure.Services;
 
 public class QuestPdfService : IPdfService
 {
+    private static readonly string ThaiFontFamily = RegisterBundledFonts();
+
+    private static string RegisterBundledFonts()
+    {
+        try
+        {
+            var assembly = typeof(QuestPdfService).Assembly;
+            var registeredAny = false;
+            foreach (var resourceName in assembly.GetManifestResourceNames())
+            {
+                if (!resourceName.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase)) continue;
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream is null) continue;
+                QuestPDF.Drawing.FontManager.RegisterFont(stream);
+                registeredAny = true;
+            }
+            return registeredAny ? "Kanit" : Fonts.Tahoma;
+        }
+        catch
+        {
+            return Fonts.Tahoma;
+        }
+    }
     private const string LogoBucketName = "senic-billing-logos";
     private readonly IStorageService? _storageService;
 
@@ -41,7 +64,7 @@ public class QuestPdfService : IPdfService
                 page.Size(PageSizes.A4);
                 page.Margin(1, Unit.Centimetre);
                 page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(11).FontFamily(Fonts.Tahoma));
+                page.DefaultTextStyle(x => x.FontSize(11).FontFamily(ThaiFontFamily));
 
                 page.Header().Element(c => ComposeHeader(c, document, documentTitle));
                 page.Content().Element(c => ComposeContent(c, document));
@@ -68,7 +91,7 @@ public class QuestPdfService : IPdfService
                 page.Size(PageSizes.A4);
                 page.Margin(1.2f, Unit.Centimetre);
                 page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Tahoma));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily(ThaiFontFamily));
 
                 page.Content().Column(col =>
                 {
@@ -206,7 +229,7 @@ public class QuestPdfService : IPdfService
                 page.Size(PageSizes.A4);
                 page.Margin(1.2f, Unit.Centimetre);
                 page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Tahoma));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily(ThaiFontFamily));
 
                 page.Header().Row(row =>
                 {

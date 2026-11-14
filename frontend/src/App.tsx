@@ -21,6 +21,7 @@ const PurchaseOrdersPage = lazy(() => import('./components/purchasing/PurchaseOr
 const WarehousesPage = lazy(() => import('./components/warehouses/WarehousesPage'));
 const AccountingPage = lazy(() => import('./components/accounting/AccountingPage'));
 const BankReconciliationPage = lazy(() => import('./components/accounting/BankReconciliationPage'));
+const HelpPage = lazy(() => import('./components/help/HelpPage'));
 
 function PageLoadingFallback() {
   const { t } = useTranslation();
@@ -86,6 +87,7 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="users" element={<UsersManagementPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="help" element={<HelpPage />} />
             <Route path="staff" element={<Navigate to="/users" replace />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="documents/:type" element={<DocumentsListPage />} />

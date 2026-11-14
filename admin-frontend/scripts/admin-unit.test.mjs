@@ -68,4 +68,15 @@ test('Phase 17 Super Admin Portal provides TH/EN AdminLocaleContext across all p
   assert.doesNotMatch(packagesSource, /min=\{1\}/);
 });
 
+test('Phase 21 TenantsList supports Super Admin Create Tenant modal and bilingual TH/EN keys', () => {
+  const tenantsSource = fs.readFileSync(path.join(adminSrc, 'pages', 'TenantsList.tsx'), 'utf8');
+  assert.match(tenantsSource, /saApiClient\.post\('\/superadmin\/tenants'/);
+  assert.match(tenantsSource, /t\.tenants\.createBtn/);
+  assert.match(tenantsSource, /t\.tenants\.createModalTitle/);
+
+  const localeCtxSource = fs.readFileSync(path.join(adminSrc, 'i18n', 'AdminLocaleContext.tsx'), 'utf8');
+  assert.match(localeCtxSource, /createModalTitle/);
+  assert.match(localeCtxSource, /adminUsernameLabel/);
+});
+
 

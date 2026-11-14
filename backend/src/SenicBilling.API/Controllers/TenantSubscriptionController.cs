@@ -15,6 +15,8 @@ public class CheckoutRequest
 {
     public Guid PlanId { get; set; }
     public string CardToken { get; set; } = string.Empty;
+    public string BillingCycle { get; set; } = "Monthly";
+    public string PaymentMethod { get; set; } = "card";
 }
 
 [ApiController]
@@ -141,42 +143,223 @@ public class TenantSubscriptionController : ControllerBase
 
         try
         {
-            string chargeId = "FREE_OR_DIRECT_" + Guid.NewGuid().ToString("N")[..8];
+            var now = DateTime.UtcNow;
+            var isYearly = string.Equals(req.BillingCycle, "Yearly", StringComparison.OrdinalIgnoreCase);
+            var billingCycle = isYearly ? "Yearly" : "Monthly";
+            var extensionMonths = isYearly ? 12 : 1;
+            var chargeAmount = isYearly && plan.YearlyPrice > 0m ? plan.YearlyPrice : plan.MonthlyPrice;
+            var paymentMethod = string.IsNullOrWhiteSpace(req.PaymentMethod)
+                ? "card"
+                : req.PaymentMethod.Trim().ToLowerInvariant();
 
-            if (plan.MonthlyPrice > 0 && !string.IsNullOrWhiteSpace(req.CardToken))
+            if (paymentMethod is not ("card" or "promptpay" or "bank_transfer"))
             {
-                var customerId = await _paymentService.CreateCustomerAsync(
-                    tenant.Email ?? "no-email@example.com",
-                    $"Tenant: {tenant.CompanyName}",
-                    req.CardToken);
-
-                chargeId = await _paymentService.CreateCardChargeAsync(
-                    plan.MonthlyPrice,
-                    customerId,
-                    tenant.Id.ToString());
+                return BadRequest(new { success = false, message = "ช่องทางชำระเงินไม่ถูกต้อง (รองรับ card, promptpay, bank_transfer)" });
             }
 
-            var subscription = new TenantSubscription
+            var startDate = now;
+            var endDate = now.AddMonths(extensionMonths);
+            var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.Identity?.Name ?? "Admin";
+
+            // 1) Free plans (amount <= 0) activate immediately without payment gateway
+            if (chargeAmount <= 0m)
+            {
+                var freeChargeId = "FREE_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+                var subscription = new TenantSubscription
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    PlanId = plan.Id,
+                    BillingCycle = billingCycle,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    Status = "Active",
+                    PaymentMethod = "free",
+                    OmiseChargeId = freeChargeId,
+                    CreatedAt = now
+                };
+
+                _dbContext.TenantSubscriptions.Add(subscription);
+                var oldPlanId = tenant.CurrentPlanId;
+                tenant.SubscriptionStatus = "Active";
+                tenant.IsActive = true;
+                tenant.CurrentPlanId = plan.Id;
+                tenant.SubscriptionValidUntil = endDate;
+                tenant.UpdatedAt = now;
+
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Username = username,
+                    Action = "CheckoutSubscriptionPlan",
+                    EntityName = "TenantSubscription",
+                    EntityId = subscription.Id.ToString(),
+                    OldValues = JsonSerializer.Serialize(new { PlanId = oldPlanId }),
+                    NewValues = JsonSerializer.Serialize(new { PlanId = plan.Id, PlanName = plan.Name, BillingCycle = billingCycle, ChargeId = freeChargeId }),
+                    Timestamp = now
+                });
+
+                await _dbContext.SaveChangesAsync(ct);
+
+                return Ok(new
+                {
+                    success = true,
+                    requiresPayment = false,
+                    status = "Active",
+                    subscriptionId = subscription.Id,
+                    chargeId = freeChargeId,
+                    planName = plan.Name,
+                    billingCycle,
+                    amount = 0m,
+                    validUntil = tenant.SubscriptionValidUntil
+                });
+            }
+
+            // 2) Paid plans: PromptPay QR checkout (Pending until Omise webhook / verification)
+            if (paymentMethod == "promptpay")
+            {
+                var subscriptionId = Guid.NewGuid();
+                var (chargeId, qrCodeUrl) = await _paymentService.CreatePromptPayChargeAsync(
+                    chargeAmount,
+                    $"SUB:{tenant.Id}:{subscriptionId}");
+
+                var subscription = new TenantSubscription
+                {
+                    Id = subscriptionId,
+                    TenantId = tenant.Id,
+                    PlanId = plan.Id,
+                    BillingCycle = billingCycle,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    Status = "Pending",
+                    PaymentMethod = "promptpay",
+                    OmiseChargeId = chargeId,
+                    CreatedAt = now
+                };
+
+                _dbContext.TenantSubscriptions.Add(subscription);
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Username = username,
+                    Action = "InitiateSubscriptionPromptPay",
+                    EntityName = "TenantSubscription",
+                    EntityId = subscription.Id.ToString(),
+                    NewValues = JsonSerializer.Serialize(new { PlanId = plan.Id, PlanName = plan.Name, BillingCycle = billingCycle, Amount = chargeAmount, ChargeId = chargeId }),
+                    Timestamp = now
+                });
+
+                await _dbContext.SaveChangesAsync(ct);
+
+                return Ok(new
+                {
+                    success = true,
+                    requiresPayment = true,
+                    paymentMethod = "promptpay",
+                    status = "Pending",
+                    subscriptionId = subscription.Id,
+                    chargeId,
+                    qrCodeUrl,
+                    amount = chargeAmount,
+                    billingCycle,
+                    planName = plan.Name
+                });
+            }
+
+            // 3) Paid plans: Bank transfer invoice request (Pending until Super Admin marks paid)
+            if (paymentMethod == "bank_transfer")
+            {
+                var subscriptionId = Guid.NewGuid();
+                var bankRef = "BANK-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+
+                var subscription = new TenantSubscription
+                {
+                    Id = subscriptionId,
+                    TenantId = tenant.Id,
+                    PlanId = plan.Id,
+                    BillingCycle = billingCycle,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    Status = "Pending",
+                    PaymentMethod = "bank_transfer",
+                    OmiseChargeId = bankRef,
+                    CreatedAt = now
+                };
+
+                _dbContext.TenantSubscriptions.Add(subscription);
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Username = username,
+                    Action = "RequestSubscriptionBankTransfer",
+                    EntityName = "TenantSubscription",
+                    EntityId = subscription.Id.ToString(),
+                    NewValues = JsonSerializer.Serialize(new { PlanId = plan.Id, PlanName = plan.Name, BillingCycle = billingCycle, Amount = chargeAmount, Reference = bankRef }),
+                    Timestamp = now
+                });
+
+                await _dbContext.SaveChangesAsync(ct);
+
+                return Ok(new
+                {
+                    success = true,
+                    requiresPayment = true,
+                    paymentMethod = "bank_transfer",
+                    status = "Pending",
+                    subscriptionId = subscription.Id,
+                    chargeId = bankRef,
+                    amount = chargeAmount,
+                    billingCycle,
+                    planName = plan.Name
+                });
+            }
+
+            // 4) Paid plans: Credit/Debit card checkout (requires real Omise CardToken)
+            if (string.IsNullOrWhiteSpace(req.CardToken))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "แพ็กเกจแบบมีค่าบริการต้องระบุ CardToken หรือเลือกชำระผ่าน PromptPay / โอนเงิน"
+                });
+            }
+
+            var customerId = await _paymentService.CreateCustomerAsync(
+                tenant.Email ?? "no-email@example.com",
+                $"Tenant: {tenant.CompanyName}",
+                req.CardToken);
+
+            var cardChargeId = await _paymentService.CreateCardChargeAsync(
+                chargeAmount,
+                customerId,
+                tenant.Id.ToString());
+
+            var paidSub = new TenantSubscription
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenant.Id,
                 PlanId = plan.Id,
-                StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddMonths(1),
+                BillingCycle = billingCycle,
+                StartDate = startDate,
+                EndDate = endDate,
                 Status = "Active",
-                CreatedAt = DateTime.UtcNow
+                PaymentMethod = "card",
+                OmiseChargeId = cardChargeId,
+                CreatedAt = now
             };
 
-            _dbContext.TenantSubscriptions.Add(subscription);
+            _dbContext.TenantSubscriptions.Add(paidSub);
 
-            var oldPlanId = tenant.CurrentPlanId;
+            var previousPlanId = tenant.CurrentPlanId;
             tenant.SubscriptionStatus = "Active";
             tenant.IsActive = true;
             tenant.CurrentPlanId = plan.Id;
-            tenant.SubscriptionValidUntil = subscription.EndDate;
-            tenant.UpdatedAt = DateTime.UtcNow;
+            tenant.SubscriptionValidUntil = paidSub.EndDate;
+            tenant.UpdatedAt = now;
 
-            var username = User.FindFirst(ClaimTypes.Name)?.Value ?? User.Identity?.Name ?? "Admin";
             _dbContext.AuditLogs.Add(new AuditLog
             {
                 Id = Guid.NewGuid(),
@@ -184,10 +367,10 @@ public class TenantSubscriptionController : ControllerBase
                 Username = username,
                 Action = "CheckoutSubscriptionPlan",
                 EntityName = "TenantSubscription",
-                EntityId = subscription.Id.ToString(),
-                OldValues = JsonSerializer.Serialize(new { PlanId = oldPlanId }),
-                NewValues = JsonSerializer.Serialize(new { PlanId = plan.Id, PlanName = plan.Name, ChargeId = chargeId }),
-                Timestamp = DateTime.UtcNow
+                EntityId = paidSub.Id.ToString(),
+                OldValues = JsonSerializer.Serialize(new { PlanId = previousPlanId }),
+                NewValues = JsonSerializer.Serialize(new { PlanId = plan.Id, PlanName = plan.Name, BillingCycle = billingCycle, Amount = chargeAmount, ChargeId = cardChargeId }),
+                Timestamp = now
             });
 
             await _dbContext.SaveChangesAsync(ct);
@@ -195,8 +378,13 @@ public class TenantSubscriptionController : ControllerBase
             return Ok(new
             {
                 success = true,
-                chargeId,
+                requiresPayment = false,
+                status = "Active",
+                subscriptionId = paidSub.Id,
+                chargeId = cardChargeId,
                 planName = plan.Name,
+                billingCycle,
+                amount = chargeAmount,
                 validUntil = tenant.SubscriptionValidUntil
             });
         }
@@ -205,6 +393,82 @@ public class TenantSubscriptionController : ControllerBase
             _logger.LogError(ex, "Failed to process checkout for Tenant {TenantId}", tenantId);
             return StatusCode(500, new { success = false, message = "Payment processing failed" });
         }
+    }
+
+    [HttpGet("status/{subscriptionId:guid}")]
+    public async Task<IActionResult> GetCheckoutStatus(Guid subscriptionId, CancellationToken ct)
+    {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out var tenantId))
+            return Unauthorized();
+
+        var sub = await _dbContext.TenantSubscriptions
+            .Include(s => s.Tenant)
+            .Include(s => s.Plan)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.TenantId == tenantId, ct);
+
+        if (sub is null)
+            return NotFound(new { success = false, message = "ไม่พบรายการสมัครแพ็กเกจ" });
+
+        if (string.Equals(sub.Status, "Pending", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(sub.OmiseChargeId) &&
+            sub.OmiseChargeId.StartsWith("chrg_", StringComparison.Ordinal))
+        {
+            var paid = await _paymentService.VerifyChargeAsync(sub.OmiseChargeId);
+            if (paid && sub.Tenant is not null)
+            {
+                ActivatePendingSubscription(sub.Tenant, sub, "OmiseStatusPoll");
+                await _dbContext.SaveChangesAsync(ct);
+            }
+        }
+
+        var isCompleted = sub.Status is "Active" or "Paid";
+        return Ok(new
+        {
+            success = true,
+            status = sub.Status,
+            isPaid = isCompleted,
+            subscriptionId = sub.Id,
+            planId = sub.PlanId,
+            planName = sub.Plan?.Name,
+            billingCycle = sub.BillingCycle,
+            validUntil = sub.Tenant?.SubscriptionValidUntil
+        });
+    }
+
+    private void ActivatePendingSubscription(Tenant tenant, TenantSubscription subscription, string actor)
+    {
+        var now = DateTime.UtcNow;
+        var extensionMonths = string.Equals(subscription.BillingCycle, "Yearly", StringComparison.OrdinalIgnoreCase) ? 12 : 1;
+        var baseDate = tenant.SubscriptionValidUntil.HasValue && tenant.SubscriptionValidUntil.Value > now
+            ? tenant.SubscriptionValidUntil.Value
+            : now;
+        var newValidUntil = baseDate.AddMonths(extensionMonths);
+
+        subscription.StartDate = now;
+        subscription.EndDate = newValidUntil;
+        subscription.Status = "Active";
+        subscription.UpdatedAt = now;
+
+        var oldPlanId = tenant.CurrentPlanId;
+        tenant.CurrentPlanId = subscription.PlanId;
+        tenant.SubscriptionValidUntil = newValidUntil;
+        tenant.SubscriptionStatus = "Active";
+        tenant.IsActive = true;
+        tenant.UpdatedAt = now;
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            Username = actor,
+            Action = "RenewSubscriptionWebhook",
+            EntityName = "Tenant",
+            EntityId = tenant.Id.ToString(),
+            OldValues = JsonSerializer.Serialize(new { PlanId = oldPlanId }),
+            NewValues = JsonSerializer.Serialize(new { PlanId = tenant.CurrentPlanId, SubscriptionValidUntil = newValidUntil, Status = "Active" }),
+            Timestamp = now
+        });
     }
 
     [HttpPost("webhook/omise")]
@@ -223,61 +487,114 @@ public class TenantSubscriptionController : ControllerBase
             if (key == "charge.complete" && payload.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
             {
                 var status = data.TryGetProperty("status", out var statusEl) ? statusEl.GetString() : null;
-                _logger.LogInformation("Omise subscription webhook received. Status: {Status}", status);
+                var chargeId = data.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                _logger.LogInformation("Omise subscription webhook received. Status: {Status}, ChargeId: {ChargeId}", status, chargeId);
+
+                if (!string.IsNullOrWhiteSpace(chargeId))
+                {
+                    var isValid = await _paymentService.VerifyChargeAsync(chargeId);
+                    if (!isValid)
+                    {
+                        _logger.LogWarning("Rejected unverified Omise subscription webhook for ChargeId {ChargeId}", chargeId);
+                        return BadRequest(new { message = "Invalid or unverified Omise charge" });
+                    }
+                }
 
                 if (string.Equals(status, "successful", StringComparison.OrdinalIgnoreCase))
                 {
                     Guid tenantId = Guid.Empty;
-                    if (data.TryGetProperty("description", out var descEl) && Guid.TryParse(descEl.GetString(), out var parsedFromDesc))
+                    Guid subscriptionId = Guid.Empty;
+
+                    if (data.TryGetProperty("description", out var descEl))
                     {
-                        tenantId = parsedFromDesc;
+                        var desc = descEl.GetString();
+                        if (!string.IsNullOrWhiteSpace(desc))
+                        {
+                            if (desc.StartsWith("SUB:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var parts = desc.Split(':');
+                                if (parts.Length >= 2) Guid.TryParse(parts[1], out tenantId);
+                                if (parts.Length >= 3) Guid.TryParse(parts[2], out subscriptionId);
+                            }
+                            else
+                            {
+                                Guid.TryParse(desc, out tenantId);
+                            }
+                        }
                     }
-                    else if (data.TryGetProperty("metadata", out var metaEl) &&
-                             metaEl.ValueKind == JsonValueKind.Object &&
-                             metaEl.TryGetProperty("tenantId", out var metaTenantEl) &&
-                             Guid.TryParse(metaTenantEl.GetString(), out var parsedFromMeta))
+
+                    if (tenantId == Guid.Empty &&
+                        data.TryGetProperty("metadata", out var metaEl) &&
+                        metaEl.ValueKind == JsonValueKind.Object)
                     {
-                        tenantId = parsedFromMeta;
+                        if (metaEl.TryGetProperty("tenantId", out var metaTenantEl))
+                            Guid.TryParse(metaTenantEl.GetString(), out tenantId);
+                        if (metaEl.TryGetProperty("subscriptionId", out var metaSubEl))
+                            Guid.TryParse(metaSubEl.GetString(), out subscriptionId);
                     }
+
+                    TenantSubscription? matchedSub = null;
+                    if (subscriptionId != Guid.Empty)
+                    {
+                        matchedSub = await _dbContext.TenantSubscriptions
+                            .Include(s => s.Tenant)
+                            .FirstOrDefaultAsync(s => s.Id == subscriptionId, ct);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(chargeId))
+                    {
+                        matchedSub = await _dbContext.TenantSubscriptions
+                            .Include(s => s.Tenant)
+                            .FirstOrDefaultAsync(s => s.OmiseChargeId == chargeId, ct);
+                    }
+
+                    if (matchedSub is not null && tenantId == Guid.Empty)
+                        tenantId = matchedSub.TenantId;
 
                     if (tenantId != Guid.Empty)
                     {
-                        var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+                        var tenant = matchedSub?.Tenant ?? await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
                         if (tenant != null)
                         {
-                            var baseDate = tenant.SubscriptionValidUntil.HasValue && tenant.SubscriptionValidUntil.Value > DateTime.UtcNow
-                                ? tenant.SubscriptionValidUntil.Value
-                                : DateTime.UtcNow;
-                            var newValidUntil = baseDate.AddMonths(1);
-
-                            tenant.SubscriptionValidUntil = newValidUntil;
-                            tenant.SubscriptionStatus = "Active";
-                            tenant.IsActive = true;
-                            tenant.UpdatedAt = DateTime.UtcNow;
-
-                            var latestSub = await _dbContext.TenantSubscriptions
-                                .Where(s => s.TenantId == tenantId)
-                                .OrderByDescending(s => s.EndDate)
-                                .FirstOrDefaultAsync(ct);
-
-                            if (latestSub != null)
+                            if (matchedSub is not null)
                             {
-                                latestSub.EndDate = newValidUntil;
-                                latestSub.Status = "Active";
-                                latestSub.UpdatedAt = DateTime.UtcNow;
+                                ActivatePendingSubscription(tenant, matchedSub, "OmiseWebhook");
                             }
-
-                            _dbContext.AuditLogs.Add(new AuditLog
+                            else
                             {
-                                Id = Guid.NewGuid(),
-                                TenantId = tenant.Id,
-                                Username = "OmiseWebhook",
-                                Action = "RenewSubscriptionWebhook",
-                                EntityName = "Tenant",
-                                EntityId = tenant.Id.ToString(),
-                                NewValues = JsonSerializer.Serialize(new { SubscriptionValidUntil = newValidUntil, Status = "Active" }),
-                                Timestamp = DateTime.UtcNow
-                            });
+                                var baseDate = tenant.SubscriptionValidUntil.HasValue && tenant.SubscriptionValidUntil.Value > DateTime.UtcNow
+                                    ? tenant.SubscriptionValidUntil.Value
+                                    : DateTime.UtcNow;
+                                var newValidUntil = baseDate.AddMonths(1);
+
+                                tenant.SubscriptionValidUntil = newValidUntil;
+                                tenant.SubscriptionStatus = "Active";
+                                tenant.IsActive = true;
+                                tenant.UpdatedAt = DateTime.UtcNow;
+
+                                var latestSub = await _dbContext.TenantSubscriptions
+                                    .Where(s => s.TenantId == tenantId)
+                                    .OrderByDescending(s => s.EndDate)
+                                    .FirstOrDefaultAsync(ct);
+
+                                if (latestSub != null)
+                                {
+                                    latestSub.EndDate = newValidUntil;
+                                    latestSub.Status = "Active";
+                                    latestSub.UpdatedAt = DateTime.UtcNow;
+                                }
+
+                                _dbContext.AuditLogs.Add(new AuditLog
+                                {
+                                    Id = Guid.NewGuid(),
+                                    TenantId = tenant.Id,
+                                    Username = "OmiseWebhook",
+                                    Action = "RenewSubscriptionWebhook",
+                                    EntityName = "Tenant",
+                                    EntityId = tenant.Id.ToString(),
+                                    NewValues = JsonSerializer.Serialize(new { SubscriptionValidUntil = newValidUntil, Status = "Active" }),
+                                    Timestamp = DateTime.UtcNow
+                                });
+                            }
 
                             await _dbContext.SaveChangesAsync(ct);
                         }

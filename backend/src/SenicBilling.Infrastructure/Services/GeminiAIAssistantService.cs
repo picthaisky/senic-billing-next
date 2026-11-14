@@ -13,14 +13,22 @@ public class GeminiAIAssistantService : IAIAssistantService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
+    private readonly string _model;
     private readonly ILogger<GeminiAIAssistantService> _logger;
+
+    public string ConfiguredModel => _model;
 
     public GeminiAIAssistantService(IConfiguration configuration, ILogger<GeminiAIAssistantService> logger)
     {
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
+        var configuredModel = configuration["Gemini:Model"]?.Trim();
+        _model = string.IsNullOrWhiteSpace(configuredModel) ? "gemini-2.5-flash" : configuredModel;
         _httpClient = new HttpClient();
     }
+
+    public string BuildGenerateContentUrl() =>
+        $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
     public async Task<string> ChatAsync(string prompt, string context, CancellationToken ct = default)
     {
@@ -32,7 +40,7 @@ public class GeminiAIAssistantService : IAIAssistantService
 
         try
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={_apiKey}";
+            var url = BuildGenerateContentUrl();
 
             var systemInstruction = "คุณคือ Senic Billing Assistant ผู้ช่วยด้านบัญชีและการเงินที่ฉลาดที่สุดสำหรับธุรกิจในไทย " +
                                   "คุณต้องตอบคำถามโดยอ้างอิงจากข้อมูล Context ที่ให้ไปเท่านั้น ตอบให้กระชับ เป็นมืออาชีพ และให้คำแนะนำที่เป็นประโยชน์";
@@ -94,7 +102,7 @@ public class GeminiAIAssistantService : IAIAssistantService
 
         try
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={_apiKey}";
+            var url = BuildGenerateContentUrl();
             var instruction =
                 "คุณคือผู้ช่วยนักบัญชีไทย สกัดข้อมูลจากข้อความใบเสร็จ/ใบกำกับภาษีซื้อ แล้วตอบเป็น JSON เท่านั้น ตาม schema: " +
                 "{\"vendorName\":string|null,\"vendorTaxId\":string(13 digits)|null,\"vendorBranch\":string(5 digits, 00000=สำนักงานใหญ่)|null," +
