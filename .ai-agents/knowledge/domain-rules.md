@@ -33,9 +33,9 @@ Last reviewed: 2026-11-13
 
 - Tenant-owned data must include and enforce `TenantId`.
 - Users must not read, update, delete, export, print, or pay documents from another tenant.
-- Suspended tenants (`IsActive == false` or `SubscriptionStatus == "Suspended"`) must be blocked from active operations.
-- SaaS plans (`SubscriptionPlan`) define `MaxUsers` and `MaxDocumentsPerMonth` (`-1` = unlimited), tracked via `TenantUsageStat`.
-- SuperAdmin endpoints (`/api/superadmin/*`) must require `SystemAdmin` / `SuperAdmin` role authorization.
+- Suspended tenants (`IsActive == false` or `SubscriptionStatus == "Suspended"`) must be blocked from active operations, including background recurring document generation (`RecurringInvoiceWorker`) and overdue reminder dispatches (`OverdueMonitorWorker`).
+- SaaS plans (`SubscriptionPlan`) define `MaxUsers` and `MaxDocumentsPerMonth` (`-1` = unlimited), tracked via `TenantUsageStat` and enforced across document creation, `RecurringInvoiceWorker`, user creation/reactivation, and subscription plan checkout downgrades (`TenantSubscriptionController.Checkout`).
+- SuperAdmin endpoints (`/api/superadmin/*`) must require `SystemAdmin` / `SuperAdmin` (`PlatformAdmin` policy) role authorization, while tenant-level profile/settings/subscription mutations (`TenantsController.UpdateProfile`, `TestLineNotify`, `TenantSubscriptionController.Checkout`) require `Admin,SystemAdmin,SuperAdmin` and record `AuditLog` entries.
 
 ## Payment & Notifications
 

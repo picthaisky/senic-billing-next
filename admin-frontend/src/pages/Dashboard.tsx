@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Building2, CreditCard, Activity, Receipt } from 'lucide-react';
 import { saApiClient } from '../services/apiClient';
+import { useAdminLocale } from '../i18n/AdminLocaleContext';
 
 interface PlatformStats {
   totalTenants: number;
@@ -19,6 +20,8 @@ interface PlatformStats {
 }
 
 export default function Dashboard() {
+  const { locale, t } = useAdminLocale();
+  const dateLocale = locale === 'th' ? 'th-TH' : 'en-US';
   const [data, setData] = useState<PlatformStats>({
     totalTenants: 0,
     activeTenants: 0,
@@ -46,31 +49,31 @@ export default function Dashboard() {
 
   const stats = [
     {
-      label: 'ผู้ใช้บริการทั้งหมด (Tenants)',
-      value: loading ? '...' : data.totalTenants.toLocaleString('th-TH'),
-      change: `เปิดใช้งาน ${data.activeTenants} องค์กร`,
+      label: t.dashboard.totalTenantsLabel,
+      value: loading ? '...' : data.totalTenants.toLocaleString(dateLocale),
+      change: t.dashboard.activeTenantsChange(data.activeTenants),
       icon: Building2,
       color: 'text-blue-500',
       bg: 'bg-blue-100',
     },
     {
-      label: 'ผู้ใช้งานระบบ (Total Users)',
-      value: loading ? '...' : data.totalUsers.toLocaleString('th-TH'),
-      change: 'ทุกองค์กรรวมกัน',
+      label: t.dashboard.totalUsersLabel,
+      value: loading ? '...' : data.totalUsers.toLocaleString(dateLocale),
+      change: t.dashboard.totalUsersChange,
       icon: Users,
       color: 'text-indigo-500',
       bg: 'bg-indigo-100',
     },
     {
-      label: 'รายได้รายเดือน (MRR)',
-      value: loading ? '...' : `฿ ${data.mrr.toLocaleString('th-TH')}`,
-      change: 'จากแพ็กเกจที่เปิดใช้งาน',
+      label: t.dashboard.mrrLabel,
+      value: loading ? '...' : `฿ ${data.mrr.toLocaleString(dateLocale)}`,
+      change: t.dashboard.mrrChange,
       icon: CreditCard,
       color: 'text-emerald-500',
       bg: 'bg-emerald-100',
     },
     {
-      label: 'สถานะระบบ (System Status)',
+      label: t.dashboard.systemStatusLabel,
       value: '99.9%',
       change: 'Healthy',
       icon: Activity,
@@ -81,7 +84,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">ภาพรวมระบบ (Platform Dashboard)</h1>
+      <h1 className="text-2xl font-bold text-slate-800">{t.dashboard.title}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
@@ -101,16 +104,16 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center gap-2">
           <Receipt size={20} className="text-blue-600" />
-          <h2 className="text-lg font-bold text-slate-800">ประวัติการสมัครและต่ออายุแพ็กเกจล่าสุด (Recent SaaS Subscriptions)</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t.dashboard.recentTxTitle}</h2>
         </div>
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">องค์กร (Tenant)</th>
-              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">แพ็กเกจ</th>
-              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">วันที่เริ่ม - สิ้นสุด</th>
-              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600 text-right">ค่าบริการ (บาท)</th>
-              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600 text-center">สถานะ</th>
+              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">{t.dashboard.colTenant}</th>
+              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">{t.dashboard.colPlan}</th>
+              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600">{t.dashboard.colPeriod}</th>
+              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600 text-right">{t.dashboard.colAmount}</th>
+              <th className="py-3.5 px-6 text-sm font-semibold text-slate-600 text-center">{t.dashboard.colStatus}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -119,10 +122,10 @@ export default function Dashboard() {
                 <td className="py-4 px-6 font-medium text-slate-800">{inv.tenantName}</td>
                 <td className="py-4 px-6 text-slate-600">{inv.planName}</td>
                 <td className="py-4 px-6 text-sm text-slate-500">
-                  {new Date(inv.startDate).toLocaleDateString('th-TH')} - {new Date(inv.endDate).toLocaleDateString('th-TH')}
+                  {new Date(inv.startDate).toLocaleDateString(dateLocale)} - {new Date(inv.endDate).toLocaleDateString(dateLocale)}
                 </td>
                 <td className="py-4 px-6 text-right font-semibold text-slate-800">
-                  ฿{Number(inv.amount || 0).toLocaleString('th-TH')}
+                  ฿{Number(inv.amount || 0).toLocaleString(dateLocale)}
                 </td>
                 <td className="py-4 px-6 text-center">
                   <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
@@ -134,7 +137,7 @@ export default function Dashboard() {
             {data.recentInvoices.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-slate-500 text-sm">
-                  {loading ? 'กำลังโหลดข้อมูล...' : 'ยังไม่มีรายการสมัครแพ็กเกจ'}
+                  {loading ? t.dashboard.loading : t.dashboard.noRecentTx}
                 </td>
               </tr>
             )}

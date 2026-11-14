@@ -31,8 +31,8 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
             return;
         }
 
-        // Admin has all permissions
-        if (roleClaim == "Admin")
+        // Admin / Platform Admin has all permissions
+        if (roleClaim is "Admin" or "SystemAdmin" or "SuperAdmin")
         {
             context.Succeed(requirement);
             return;

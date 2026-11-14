@@ -8,7 +8,7 @@ export const saApiClient = axios.create({
 });
 
 saApiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sa_token') || localStorage.getItem('senic_token');
+  const token = localStorage.getItem('sa_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

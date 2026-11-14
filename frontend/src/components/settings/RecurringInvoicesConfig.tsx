@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarClock, Trash2, Power, Plus, X, Save } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/errorUtils';
 
@@ -25,11 +26,11 @@ type SourceDocumentOption = {
   documentTypeLabel: string;
 };
 
-const FREQUENCY_LABELS: Record<string, string> = {
-  Daily: 'รายวัน (Daily)',
-  Weekly: 'รายสัปดาห์ (Weekly)',
-  Monthly: 'รายเดือน (Monthly)',
-  Yearly: 'รายปี (Yearly)',
+const FREQUENCY_LABEL_KEYS: Record<string, string> = {
+  Daily: 'recurring.freqDaily',
+  Weekly: 'recurring.freqWeekly',
+  Monthly: 'recurring.freqMonthly',
+  Yearly: 'recurring.freqYearly',
 };
 
 const getDefaultNextRunDate = () => {
@@ -39,6 +40,8 @@ const getDefaultNextRunDate = () => {
 };
 
 export default function RecurringInvoicesConfig() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
   const [invoices, setInvoices] = useState<RecurringInvoiceDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -98,10 +101,10 @@ export default function RecurringInvoicesConfig() {
     try {
       setLoadingDocs(true);
       const sources: Array<{ endpoint: string; label: string }> = [
-        { endpoint: '/tax-invoices?pageSize=50', label: 'ใบกำกับภาษี' },
-        { endpoint: '/receipts?pageSize=50', label: 'ใบเสร็จรับเงิน' },
-        { endpoint: '/quotations?pageSize=50', label: 'ใบเสนอราคา' },
-        { endpoint: '/cashbills?pageSize=50', label: 'บิลเงินสด' },
+        { endpoint: '/tax-invoices?pageSize=50', label: t('recurring.docTypeTaxInvoice') },
+        { endpoint: '/receipts?pageSize=50', label: t('recurring.docTypeReceipt') },
+        { endpoint: '/quotations?pageSize=50', label: t('recurring.docTypeQuotation') },
+        { endpoint: '/cashbills?pageSize=50', label: t('recurring.docTypeCashBill') },
       ];
       const results = await Promise.all(sources.map((s) => apiClient.get(s.endpoint)));
       const merged: SourceDocumentOption[] = [];
@@ -139,7 +142,7 @@ export default function RecurringInvoicesConfig() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.sourceDocumentId) {
-      alert('กรุณาเลือกเอกสารต้นฉบับ');
+      alert(t('recurring.selectSourceRequired'));
       return;
     }
 
@@ -154,7 +157,7 @@ export default function RecurringInvoicesConfig() {
       setIsModalOpen(false);
       await fetchRecurring();
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถสร้างกำหนดการออกเอกสารอัตโนมัติได้'));
+      alert(getApiErrorMessage(err, t('recurring.createError')));
     } finally {
       setIsSaving(false);
     }
@@ -170,17 +173,17 @@ export default function RecurringInvoicesConfig() {
       });
       await fetchRecurring();
     } catch {
-      alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
+      alert(t('recurring.toggleError'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('ยืนยันการลบกำหนดการนี้?')) return;
+    if (!confirm(t('recurring.confirmDelete'))) return;
     try {
       await apiClient.delete(`/RecurringInvoice/${id}`);
       await fetchRecurring();
     } catch {
-      alert('เกิดข้อผิดพลาดในการลบ');
+      alert(t('recurring.deleteError'));
     }
   };
 
@@ -190,40 +193,40 @@ export default function RecurringInvoicesConfig() {
         <div>
           <h3 className="settings-section-title-md font-bold text-lg flex items-center gap-2">
             <CalendarClock size={20} className="text-[var(--color-primary)]" />
-            การออกเอกสารอัตโนมัติ (Recurring Invoices)
+            {t('recurring.title')}
           </h3>
           <p className="settings-section-subtitle text-sm text-[var(--color-text-muted)]">
-            จัดการกำหนดการออกเอกสารรายเดือน/รายปี อัตโนมัติจากเอกสารต้นฉบับ
+            {t('recurring.subtitle')}
           </p>
         </div>
         <button type="button" onClick={() => void openCreateModal()} className="btn btn-primary self-start sm:self-auto">
-          <Plus size={16} /> สร้างกำหนดการอัตโนมัติ
+          <Plus size={16} /> {t('recurring.createBtn')}
         </button>
       </div>
 
       {loading ? (
-        <div className="p-4 text-center text-sm text-[var(--color-text-muted)]">กำลังโหลด...</div>
+        <div className="p-4 text-center text-sm text-[var(--color-text-muted)]">{t('recurring.loading')}</div>
       ) : (
         <div className="mt-4 border border-[var(--color-border)] rounded-xl overflow-hidden bg-[var(--color-surface-solid)]">
           <div className="table-responsive">
             <table className="data-table w-full">
               <thead>
                 <tr>
-                  <th>เอกสารต้นฉบับ</th>
-                  <th>ลูกค้า</th>
-                  <th>ความถี่</th>
-                  <th>รอบถัดไป</th>
-                  <th>จำนวนครั้ง</th>
-                  <th>สถานะ</th>
-                  <th className="text-right">จัดการ</th>
+                  <th>{t('recurring.colSourceDoc')}</th>
+                  <th>{t('recurring.colCustomer')}</th>
+                  <th>{t('recurring.colFrequency')}</th>
+                  <th>{t('recurring.colNextRun')}</th>
+                  <th>{t('recurring.colOccurrences')}</th>
+                  <th>{t('recurring.colStatus')}</th>
+                  <th className="text-right">{t('recurring.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center text-[var(--color-text-muted)] py-8">
-                      ยังไม่มีการตั้งค่าออกเอกสารอัตโนมัติ<br />
-                      <span className="text-xs">คลิก "สร้างกำหนดการอัตโนมัติ" เพื่อเลือกเอกสารต้นฉบับ</span>
+                      {t('recurring.emptyTitle')}<br />
+                      <span className="text-xs">{t('recurring.emptyHint')}</span>
                     </td>
                   </tr>
                 ) : (
@@ -233,14 +236,14 @@ export default function RecurringInvoicesConfig() {
                         {inv.sourceDocumentNumber || inv.sourceDocumentId.slice(0, 8)}
                       </td>
                       <td>{inv.customerName || '-'}</td>
-                      <td>{FREQUENCY_LABELS[inv.frequency] || inv.frequency}</td>
-                      <td>{new Date(inv.nextRunDate).toLocaleDateString('th-TH')}</td>
+                      <td>{FREQUENCY_LABEL_KEYS[inv.frequency] ? t(FREQUENCY_LABEL_KEYS[inv.frequency]) : inv.frequency}</td>
+                      <td>{new Date(inv.nextRunDate).toLocaleDateString(locale)}</td>
                       <td className="tabular-nums">
                         {inv.currentOccurrence} / {inv.maxOccurrences ?? '∞'}
                       </td>
                       <td>
                         <span className={`badge ${inv.isActive ? 'badge-success' : 'badge-neutral'}`}>
-                          {inv.isActive ? 'ทำงานอยู่' : 'ปิดใช้งาน'}
+                          {inv.isActive ? t('recurring.statusActive') : t('recurring.statusInactive')}
                         </span>
                       </td>
                       <td className="text-right">
@@ -249,7 +252,7 @@ export default function RecurringInvoicesConfig() {
                             type="button"
                             onClick={() => void toggleActive(inv.id, inv)}
                             className={`p-1.5 rounded-md hover:bg-[var(--color-surface)] ${inv.isActive ? 'text-orange-500' : 'text-green-600'}`}
-                            title={inv.isActive ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}
+                            title={inv.isActive ? t('recurring.disableTitle') : t('recurring.enableTitle')}
                           >
                             <Power size={16} />
                           </button>
@@ -257,7 +260,7 @@ export default function RecurringInvoicesConfig() {
                             type="button"
                             onClick={() => void handleDelete(inv.id)}
                             className="p-1.5 rounded-md hover:bg-red-50 text-red-500"
-                            title="ลบ"
+                            title={t('recurring.deleteTitle')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -276,14 +279,14 @@ export default function RecurringInvoicesConfig() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
           <div className="rounded-2xl shadow-xl w-full max-w-lg border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)]">
             <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg">สร้างกำหนดการออกเอกสารอัตโนมัติ</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label="ปิดหน้าต่าง">
+              <h3 className="font-bold text-lg">{t('recurring.modalTitle')}</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]" aria-label={t('recurring.closeModalAria')}>
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleCreate} className="form-modal-content form-stack-md">
               <div>
-                <label className="layout-form-label-sm block text-sm font-medium">เอกสารต้นฉบับ *</label>
+                <label className="layout-form-label-sm block text-sm font-medium">{t('recurring.sourceDocLabel')}</label>
                 <select
                   required
                   className="input-field"
@@ -292,13 +295,13 @@ export default function RecurringInvoicesConfig() {
                   disabled={loadingDocs}
                 >
                   {loadingDocs ? (
-                    <option value="">กำลังโหลดเอกสาร...</option>
+                    <option value="">{t('recurring.loadingDocs')}</option>
                   ) : sourceDocs.length === 0 ? (
-                    <option value="">ไม่พบเอกสารต้นฉบับ (กรุณาสร้างเอกสารก่อน)</option>
+                    <option value="">{t('recurring.noSourceDocs')}</option>
                   ) : (
                     sourceDocs.map((d) => (
                       <option key={d.id} value={d.id}>
-                        [{d.documentTypeLabel}] {d.documentNumber} — {d.customerName} (฿{d.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })})
+                        [{d.documentTypeLabel}] {d.documentNumber} — {d.customerName} (฿{d.grandTotal.toLocaleString(locale, { minimumFractionDigits: 2 })})
                       </option>
                     ))
                   )}
@@ -306,20 +309,20 @@ export default function RecurringInvoicesConfig() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="layout-form-label-sm block text-sm font-medium">ความถี่ *</label>
+                  <label className="layout-form-label-sm block text-sm font-medium">{t('recurring.frequencyLabel')}</label>
                   <select
                     className="input-field"
                     value={formData.frequency}
                     onChange={(e) => setFormData((prev) => ({ ...prev, frequency: e.target.value }))}
                   >
-                    <option value="Monthly">รายเดือน (Monthly)</option>
-                    <option value="Weekly">รายสัปดาห์ (Weekly)</option>
-                    <option value="Daily">รายวัน (Daily)</option>
-                    <option value="Yearly">รายปี (Yearly)</option>
+                    <option value="Monthly">{t('recurring.freqMonthly')}</option>
+                    <option value="Weekly">{t('recurring.freqWeekly')}</option>
+                    <option value="Daily">{t('recurring.freqDaily')}</option>
+                    <option value="Yearly">{t('recurring.freqYearly')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="layout-form-label-sm block text-sm font-medium">วันที่เริ่มรอบถัดไป *</label>
+                  <label className="layout-form-label-sm block text-sm font-medium">{t('recurring.nextRunLabel')}</label>
                   <input
                     type="date"
                     required
@@ -330,20 +333,20 @@ export default function RecurringInvoicesConfig() {
                 </div>
               </div>
               <div>
-                <label className="layout-form-label-sm block text-sm font-medium">จำนวนครั้งสูงสุด (เว้นว่าง = ไม่จำกัด)</label>
+                <label className="layout-form-label-sm block text-sm font-medium">{t('recurring.maxOccurrencesLabel')}</label>
                 <input
                   type="number"
                   min={1}
                   className="input-field"
-                  placeholder="เช่น 12"
+                  placeholder={t('recurring.maxOccurrencesPlaceholder')}
                   value={formData.maxOccurrences}
                   onChange={(e) => setFormData((prev) => ({ ...prev, maxOccurrences: e.target.value }))}
                 />
               </div>
               <div className="form-modal-actions">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-ghost">ยกเลิก</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-ghost">{t('recurring.cancel')}</button>
                 <button type="submit" disabled={isSaving || sourceDocs.length === 0} className="btn btn-primary">
-                  <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกกำหนดการ'}
+                  <Save size={16} /> {isSaving ? t('recurring.saving') : t('recurring.saveBtn')}
                 </button>
               </div>
             </form>

@@ -27,7 +27,7 @@ public class RecurringInvoiceWorker : BackgroundService
         {
             try
             {
-                await ProcessRecurringInvoicesAsync(stoppingToken);
+                await ProcessDueRecurringInvoicesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
@@ -39,12 +39,13 @@ public class RecurringInvoiceWorker : BackgroundService
         }
     }
 
-    private async Task ProcessRecurringInvoicesAsync(CancellationToken stoppingToken)
+    public async Task<int> ProcessDueRecurringInvoicesAsync(CancellationToken stoppingToken = default)
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SenicBillingDbContext>();
         
         var today = DateTime.UtcNow.Date;
+        var generatedCount = 0;
 
         var dueInvoices = await dbContext.RecurringInvoices
             .Include(r => r.SourceDocument)
@@ -52,12 +53,62 @@ public class RecurringInvoiceWorker : BackgroundService
             .Where(r => r.IsActive && r.NextRunDate.Date <= today)
             .ToListAsync(stoppingToken);
 
+        var tenantLookup = await dbContext.Tenants
+            .AsNoTracking()
+            .Include(t => t.CurrentPlan)
+            .ToDictionaryAsync(t => t.Id, stoppingToken);
+
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var currentMonthDocCounts = new Dictionary<Guid, int>();
+
         foreach (var recurring in dueInvoices)
         {
             if (recurring.MaxOccurrences.HasValue && recurring.CurrentOccurrence >= recurring.MaxOccurrences.Value)
             {
                 recurring.IsActive = false;
                 continue;
+            }
+
+            if (recurring.SourceDocument is null || recurring.SourceDocument.Status == DocumentStatus.Cancelled)
+            {
+                recurring.IsActive = false;
+                continue;
+            }
+
+            if (tenantLookup.TryGetValue(recurring.TenantId, out var tenant))
+            {
+                if (!tenant.IsActive || string.Equals(tenant.SubscriptionStatus, "Suspended", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Skipping recurring invoice {RecurringId} because Tenant {TenantId} is suspended/inactive.", recurring.Id, recurring.TenantId);
+                    continue;
+                }
+
+                if (tenant.CurrentPlan is { MaxDocumentsPerMonth: > 0 } plan)
+                {
+                    if (!currentMonthDocCounts.TryGetValue(recurring.TenantId, out var currentCount))
+                    {
+                        currentCount = await dbContext.DocumentHeaders
+                            .CountAsync(
+                                d => d.TenantId == recurring.TenantId &&
+                                     d.CreatedAt >= startOfMonth &&
+                                     d.Status != DocumentStatus.Cancelled,
+                                stoppingToken);
+                        currentMonthDocCounts[recurring.TenantId] = currentCount;
+                    }
+
+                    if (currentCount >= plan.MaxDocumentsPerMonth)
+                    {
+                        _logger.LogInformation(
+                            "Skipping recurring invoice {RecurringId} for Tenant {TenantId}: monthly document quota reached ({Current}/{Max}).",
+                            recurring.Id,
+                            recurring.TenantId,
+                            currentCount,
+                            plan.MaxDocumentsPerMonth);
+                        continue;
+                    }
+
+                    currentMonthDocCounts[recurring.TenantId] = currentCount + 1;
+                }
             }
 
             var source = recurring.SourceDocument;
@@ -107,6 +158,7 @@ public class RecurringInvoiceWorker : BackgroundService
             }
 
             dbContext.DocumentHeaders.Add(newDoc);
+            generatedCount++;
 
             // Update recurring metadata
             recurring.CurrentOccurrence++;
@@ -133,5 +185,7 @@ public class RecurringInvoiceWorker : BackgroundService
         {
             await dbContext.SaveChangesAsync(stoppingToken);
         }
+
+        return generatedCount;
     }
 }

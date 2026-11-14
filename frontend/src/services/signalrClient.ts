@@ -42,6 +42,12 @@ class SignalRClient {
       useSystemStore.getState().updateHealthStatus(data.status, data.components);
     });
 
+    this.connection.on('NotificationReceived', (data) => {
+      if (typeof window !== 'undefined' && data) {
+        window.dispatchEvent(new CustomEvent('senic:notification', { detail: data }));
+      }
+    });
+
     this.connection.on('UserPresenceChanged', (_userId: string, isOnline: boolean) => {
       // Basic presence count logic
       const state = useSystemStore.getState();

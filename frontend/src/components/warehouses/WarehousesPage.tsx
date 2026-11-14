@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Warehouse, Plus, ArrowRightLeft, SlidersHorizontal, History, AlertTriangle, X, Save, Edit2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 
 const getApiError = (err: unknown, fallback: string) =>
@@ -50,6 +51,8 @@ interface ProductDto {
 }
 
 export default function WarehousesPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
   const [tab, setTab] = useState<'stocks' | 'movements'>('stocks');
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [stocks, setStocks] = useState<StockItemDto[]>([]);
@@ -99,8 +102,8 @@ export default function WarehousesPage() {
         <div className="flex items-center gap-3">
           <div className="w-1.5 h-10 rounded-full bg-[var(--color-primary)]" />
           <div>
-            <h2 className="text-lg font-bold text-[var(--color-text)]">คลังสินค้าหลายสาขา (Multi-Warehouse &amp; Stock Ledger)</h2>
-            <p className="text-sm text-[var(--color-text-muted)]">ตรวจสอบสต็อกแยกคลัง โอนย้ายสินค้าระหว่างสาขา ปรับยอดตรวจนับ และดู Stock Card</p>
+            <h2 className="text-lg font-bold text-[var(--color-text)]">{t('warehouses.title')}</h2>
+            <p className="text-sm text-[var(--color-text-muted)]">{t('warehouses.subtitle')}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -118,7 +121,7 @@ export default function WarehousesPage() {
             }}
             className="btn btn-secondary text-xs flex items-center gap-1.5"
           >
-            <SlidersHorizontal size={14} /> ปรับยอดสต็อก
+            <SlidersHorizontal size={14} /> {t('warehouses.adjustBtn')}
           </button>
           <button
             type="button"
@@ -134,7 +137,7 @@ export default function WarehousesPage() {
             }}
             className="btn btn-secondary text-xs flex items-center gap-1.5"
           >
-            <ArrowRightLeft size={14} /> โอนย้ายระหว่างคลัง
+            <ArrowRightLeft size={14} /> {t('warehouses.transferBtn')}
           </button>
           <button
             type="button"
@@ -145,7 +148,7 @@ export default function WarehousesPage() {
             }}
             className="btn btn-primary flex items-center gap-1.5"
           >
-            <Plus size={16} /> เพิ่มคลังสินค้า
+            <Plus size={16} /> {t('warehouses.addWarehouseBtn')}
           </button>
         </div>
       </div>
@@ -161,7 +164,7 @@ export default function WarehousesPage() {
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs font-bold text-[var(--color-primary)]">{w.code}</span>
               <div className="flex items-center gap-1.5">
-                {w.isDefault && <span className="badge badge-success text-[10px]">คลังหลัก</span>}
+                {w.isDefault && <span className="badge badge-success text-[10px]">{t('warehouses.defaultBadge')}</span>}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -176,7 +179,7 @@ export default function WarehousesPage() {
                     setWhModal(true);
                   }}
                   className="p-1 rounded hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
-                  title="แก้ไขข้อมูลคลัง"
+                  title={t('warehouses.editWarehouseTitle')}
                 >
                   <Edit2 size={13} />
                 </button>
@@ -184,7 +187,7 @@ export default function WarehousesPage() {
             </div>
             <h4 className="font-bold text-sm mt-1 flex items-center gap-1.5"><Warehouse size={15} /> {w.name}</h4>
             <p className="text-xs text-[var(--color-text-muted)] mt-2">
-              {w.productCount} รายการ • คงเหลือ {w.totalUnits.toLocaleString('th-TH')} หน่วย
+              {t('warehouses.summaryStats', { count: w.productCount, units: w.totalUnits.toLocaleString(locale) })}
             </p>
           </div>
         ))}
@@ -194,16 +197,16 @@ export default function WarehousesPage() {
       <div className="card p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <button type="button" onClick={() => setTab('stocks')} className={`btn text-xs ${tab === 'stocks' ? 'btn-primary' : 'btn-secondary'}`}>
-            สต็อกคงเหลือแยกคลัง ({stocks.length})
+            {t('warehouses.tabStocks', { count: stocks.length })}
           </button>
           <button type="button" onClick={() => setTab('movements')} className={`btn text-xs ${tab === 'movements' ? 'btn-primary' : 'btn-secondary'}`}>
-            <History size={14} /> ประวัติความเคลื่อนไหว ({movements.length})
+            <History size={14} /> {t('warehouses.tabMovements', { count: movements.length })}
           </button>
         </div>
         {tab === 'stocks' && (
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input type="checkbox" checked={lowStockOnly} onChange={(e) => setLowStockOnly(e.target.checked)} />
-            แสดงเฉพาะสินค้าต่ำกว่าจุดสั่งซื้อ (Low Stock)
+            {t('warehouses.lowStockFilter')}
           </label>
         )}
       </div>
@@ -213,33 +216,33 @@ export default function WarehousesPage() {
           <table className="data-table table-responsive">
             <thead>
               <tr>
-                <th>คลังสินค้า</th>
-                <th>SKU</th>
-                <th>สินค้า</th>
-                <th className="text-right">คงเหลือ</th>
-                <th className="text-right">จุดสั่งซื้อ</th>
-                <th className="text-center">สถานะ</th>
-                <th className="text-center">จัดการ</th>
+                <th>{t('warehouses.colWarehouse')}</th>
+                <th>{t('warehouses.colSku')}</th>
+                <th>{t('warehouses.colProduct')}</th>
+                <th className="text-right">{t('warehouses.colRemaining')}</th>
+                <th className="text-right">{t('warehouses.colReorderLevel')}</th>
+                <th className="text-center">{t('warehouses.colStatus')}</th>
+                <th className="text-center">{t('warehouses.colActions')}</th>
               </tr>
             </thead>
             <tbody>
               {stocks.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-[var(--color-text-muted)]">ยังไม่มีข้อมูลสต็อกแยกคลัง</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-[var(--color-text-muted)]">{t('warehouses.emptyStocks')}</td></tr>
               ) : (
                 stocks.map((s) => (
                   <tr key={`${s.warehouseId}-${s.productId}`}>
                     <td className="text-sm font-medium">{s.warehouseName} ({s.warehouseCode})</td>
                     <td className="font-mono text-xs">{s.sku || '-'}</td>
                     <td className="text-sm">{s.productName}</td>
-                    <td className="text-right font-mono font-bold text-sm">{s.quantity.toLocaleString('th-TH')} {s.unit}</td>
-                    <td className="text-right font-mono text-xs text-[var(--color-text-muted)]">{s.reorderLevel.toLocaleString('th-TH')}</td>
+                    <td className="text-right font-mono font-bold text-sm">{s.quantity.toLocaleString(locale)} {s.unit}</td>
+                    <td className="text-right font-mono text-xs text-[var(--color-text-muted)]">{s.reorderLevel.toLocaleString(locale)}</td>
                     <td className="text-center">
                       {s.isLowStock ? (
                         <span className="badge badge-danger inline-flex items-center gap-1 text-[10px]">
-                          <AlertTriangle size={12} /> ใกล้หมด
+                          <AlertTriangle size={12} /> {t('warehouses.lowStockBadge')}
                         </span>
                       ) : (
-                        <span className="badge badge-success text-[10px]">ปกติ</span>
+                        <span className="badge badge-success text-[10px]">{t('warehouses.normalBadge')}</span>
                       )}
                     </td>
                     <td>
@@ -257,7 +260,7 @@ export default function WarehousesPage() {
                             setAdjModal(true);
                           }}
                           className="p-1.5 rounded-lg text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]"
-                          title="ปรับยอด / ตั้งจุดสั่งซื้อ"
+                          title={t('warehouses.rowAdjustTitle')}
                         >
                           <SlidersHorizontal size={14} />
                         </button>
@@ -275,7 +278,7 @@ export default function WarehousesPage() {
                             setTrfModal(true);
                           }}
                           className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-500/10"
-                          title="โอนย้ายไปคลังอื่น"
+                          title={t('warehouses.rowTransferTitle')}
                         >
                           <ArrowRightLeft size={14} />
                         </button>
@@ -292,22 +295,22 @@ export default function WarehousesPage() {
           <table className="data-table table-responsive">
             <thead>
               <tr>
-                <th>วันที่/เวลา</th>
-                <th>คลัง</th>
-                <th>สินค้า</th>
-                <th>ประเภท</th>
-                <th className="text-right">เปลี่ยนแปลง</th>
-                <th className="text-right">คงเหลือหลังทำรายการ</th>
-                <th>อ้างอิง / หมายเหตุ</th>
+                <th>{t('warehouses.colDateTime')}</th>
+                <th>{t('warehouses.colWhShort')}</th>
+                <th>{t('warehouses.colProduct')}</th>
+                <th>{t('warehouses.colType')}</th>
+                <th className="text-right">{t('warehouses.colDelta')}</th>
+                <th className="text-right">{t('warehouses.colBalanceAfter')}</th>
+                <th>{t('warehouses.colRefNotes')}</th>
               </tr>
             </thead>
             <tbody>
               {movements.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-[var(--color-text-muted)]">ยังไม่มีความเคลื่อนไหวสต็อก</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-[var(--color-text-muted)]">{t('warehouses.emptyMovements')}</td></tr>
               ) : (
                 movements.map((m) => (
                   <tr key={m.id}>
-                    <td className="text-xs">{new Date(m.createdAt).toLocaleString('th-TH')}</td>
+                    <td className="text-xs">{new Date(m.createdAt).toLocaleString(locale)}</td>
                     <td className="text-sm">{m.warehouseName}</td>
                     <td className="text-sm font-medium">{m.productName}</td>
                     <td><span className="badge badge-info text-[10px]">{m.movementType}</span></td>
@@ -330,7 +333,7 @@ export default function WarehousesPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="card w-full max-w-md p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                <h3 className="font-bold">{editingWhId ? 'แก้ไขคลังสินค้า / สาขา' : 'เพิ่มคลังสินค้า / สาขา'}</h3>
+                <h3 className="font-bold">{editingWhId ? t('warehouses.modalEditWh') : t('warehouses.modalAddWh')}</h3>
                 <button type="button" onClick={() => setWhModal(false)}><X size={18} /></button>
               </div>
               <form
@@ -347,21 +350,21 @@ export default function WarehousesPage() {
                     setWhForm({ code: '', name: '', address: '', isDefault: false });
                     await fetchData();
                   } catch (err: unknown) {
-                    alert(getApiError(err, 'ไม่สามารถบันทึกคลังสินค้าได้'));
+                    alert(getApiError(err, t('warehouses.saveWhError')));
                   }
                 }}
                 className="space-y-3"
               >
-                <input required className="input-field font-mono" placeholder="รหัสคลัง เช่น WH-BKK2" value={whForm.code} onChange={(e) => setWhForm({ ...whForm, code: e.target.value })} />
-                <input required className="input-field" placeholder="ชื่อคลัง เช่น สาขาพระราม 9" value={whForm.name} onChange={(e) => setWhForm({ ...whForm, name: e.target.value })} />
-                <input className="input-field" placeholder="ที่อยู่ (ถ้ามี)" value={whForm.address} onChange={(e) => setWhForm({ ...whForm, address: e.target.value })} />
+                <input required className="input-field font-mono" placeholder={t('warehouses.whCodePlaceholder')} value={whForm.code} onChange={(e) => setWhForm({ ...whForm, code: e.target.value })} />
+                <input required className="input-field" placeholder={t('warehouses.whNamePlaceholder')} value={whForm.name} onChange={(e) => setWhForm({ ...whForm, name: e.target.value })} />
+                <input className="input-field" placeholder={t('warehouses.whAddressPlaceholder')} value={whForm.address} onChange={(e) => setWhForm({ ...whForm, address: e.target.value })} />
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
                   <input type="checkbox" checked={whForm.isDefault} onChange={(e) => setWhForm({ ...whForm, isDefault: e.target.checked })} />
-                  ตั้งเป็นคลังสินค้าหลัก (Default)
+                  {t('warehouses.setDefaultLabel')}
                 </label>
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => setWhModal(false)} className="btn btn-secondary">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary"><Save size={15} /> บันทึก</button>
+                  <button type="button" onClick={() => setWhModal(false)} className="btn btn-secondary">{t('warehouses.cancel')}</button>
+                  <button type="submit" className="btn btn-primary"><Save size={15} /> {t('warehouses.save')}</button>
                 </div>
               </form>
             </div>
@@ -375,7 +378,7 @@ export default function WarehousesPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="card w-full max-w-md p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                <h3 className="font-bold">โอนย้ายสินค้าระหว่างคลัง</h3>
+                <h3 className="font-bold">{t('warehouses.modalTransferTitle')}</h3>
                 <button type="button" onClick={() => setTrfModal(false)}><X size={18} /></button>
               </div>
               <form
@@ -386,7 +389,7 @@ export default function WarehousesPage() {
                     setTrfModal(false);
                     await fetchData();
                   } catch (err: unknown) {
-                    alert(getApiError(err, 'ไม่สามารถโอนย้ายสินค้าได้'));
+                    alert(getApiError(err, t('warehouses.transferError')));
                   }
                 }}
                 className="space-y-3"
@@ -395,16 +398,16 @@ export default function WarehousesPage() {
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <select required className="input-field" value={trfForm.fromWarehouseId} onChange={(e) => setTrfForm({ ...trfForm, fromWarehouseId: e.target.value })}>
-                  {warehouses.map((w) => <option key={w.id} value={w.id}>จาก: {w.name}</option>)}
+                  {warehouses.map((w) => <option key={w.id} value={w.id}>{t('warehouses.fromPrefix')} {w.name}</option>)}
                 </select>
                 <select required className="input-field" value={trfForm.toWarehouseId} onChange={(e) => setTrfForm({ ...trfForm, toWarehouseId: e.target.value })}>
-                  {warehouses.map((w) => <option key={w.id} value={w.id}>ไปยัง: {w.name}</option>)}
+                  {warehouses.map((w) => <option key={w.id} value={w.id}>{t('warehouses.toPrefix')} {w.name}</option>)}
                 </select>
-                <input required type="number" min="0.01" step="0.01" className="input-field" placeholder="จำนวน" value={trfForm.quantity} onChange={(e) => setTrfForm({ ...trfForm, quantity: Number(e.target.value) })} />
-                <input className="input-field" placeholder="หมายเหตุ" value={trfForm.notes} onChange={(e) => setTrfForm({ ...trfForm, notes: e.target.value })} />
+                <input required type="number" min="0.01" step="0.01" className="input-field" placeholder={t('warehouses.qtyPlaceholder')} value={trfForm.quantity} onChange={(e) => setTrfForm({ ...trfForm, quantity: Number(e.target.value) })} />
+                <input className="input-field" placeholder={t('warehouses.notesPlaceholder')} value={trfForm.notes} onChange={(e) => setTrfForm({ ...trfForm, notes: e.target.value })} />
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => setTrfModal(false)} className="btn btn-secondary">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary">ยืนยันโอนย้าย</button>
+                  <button type="button" onClick={() => setTrfModal(false)} className="btn btn-secondary">{t('warehouses.cancel')}</button>
+                  <button type="submit" className="btn btn-primary">{t('warehouses.confirmTransfer')}</button>
                 </div>
               </form>
             </div>
@@ -418,7 +421,7 @@ export default function WarehousesPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="card w-full max-w-md p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                <h3 className="font-bold">ปรับปรุงยอดสต็อก (Stock Adjustment)</h3>
+                <h3 className="font-bold">{t('warehouses.modalAdjustTitle')}</h3>
                 <button type="button" onClick={() => setAdjModal(false)}><X size={18} /></button>
               </div>
               <form
@@ -429,7 +432,7 @@ export default function WarehousesPage() {
                     setAdjModal(false);
                     await fetchData();
                   } catch (err: unknown) {
-                    alert(getApiError(err, 'ไม่สามารถปรับยอดสต็อกได้'));
+                    alert(getApiError(err, t('warehouses.adjustError')));
                   }
                 }}
                 className="space-y-3"
@@ -440,12 +443,12 @@ export default function WarehousesPage() {
                 <select required className="input-field" value={adjForm.warehouseId} onChange={(e) => setAdjForm({ ...adjForm, warehouseId: e.target.value })}>
                   {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
-                <input required type="number" min="0" step="0.01" className="input-field" placeholder="จำนวนตรวจนับจริง" value={adjForm.newQuantity} onChange={(e) => setAdjForm({ ...adjForm, newQuantity: Number(e.target.value) })} />
-                <input type="number" min="0" step="1" className="input-field" placeholder="จุดแจ้งเตือนสั่งซื้อ (Reorder Level)" value={adjForm.reorderLevel} onChange={(e) => setAdjForm({ ...adjForm, reorderLevel: Number(e.target.value) })} />
-                <input className="input-field" placeholder="เหตุผลการปรับยอด" value={adjForm.notes} onChange={(e) => setAdjForm({ ...adjForm, notes: e.target.value })} />
+                <input required type="number" min="0" step="0.01" className="input-field" placeholder={t('warehouses.countedQtyPlaceholder')} value={adjForm.newQuantity} onChange={(e) => setAdjForm({ ...adjForm, newQuantity: Number(e.target.value) })} />
+                <input type="number" min="0" step="1" className="input-field" placeholder={t('warehouses.reorderPlaceholder')} value={adjForm.reorderLevel} onChange={(e) => setAdjForm({ ...adjForm, reorderLevel: Number(e.target.value) })} />
+                <input className="input-field" placeholder={t('warehouses.adjustReasonPlaceholder')} value={adjForm.notes} onChange={(e) => setAdjForm({ ...adjForm, notes: e.target.value })} />
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => setAdjModal(false)} className="btn btn-secondary">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary">บันทึกยอดใหม่</button>
+                  <button type="button" onClick={() => setAdjModal(false)} className="btn btn-secondary">{t('warehouses.cancel')}</button>
+                  <button type="submit" className="btn btn-primary">{t('warehouses.saveNewBalance')}</button>
                 </div>
               </form>
             </div>

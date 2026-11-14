@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { X, CheckCircle, Clock } from 'lucide-react';
 import { useAppSystem } from '../../hooks/useAppSystem';
 import { signalRClient } from '../../services/signalrClient';
@@ -25,11 +26,12 @@ type SignalRConnectionLike = {
 };
 
 export default function PaymentModal({ documentId, documentNumber, amount, isOpen, onClose, onSuccess }: PaymentModalProps) {
+  const { t, i18n } = useTranslation();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaid, setIsPaid] = useState(false);
-  
+
   const { isConnected } = useAppSystem();
 
   const createCharge = useCallback(async () => {
@@ -41,14 +43,14 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
     } catch (err: unknown) {
       console.error(err);
       if (axios.isAxiosError(err)) {
-        setError((err.response?.data as string | undefined) || 'ไม่สามารถสร้างรายการชำระเงินได้');
+        setError((err.response?.data as string | undefined) || t('paymentModal.createError'));
       } else {
-        setError('ไม่สามารถสร้างรายการชำระเงินได้');
+        setError(t('paymentModal.createError'));
       }
     } finally {
       setLoading(false);
     }
-  }, [documentId]);
+  }, [documentId, t]);
 
   // Create Charge when modal opens
   useEffect(() => {
@@ -96,13 +98,13 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
         
         {/* Header */}
         <div className="layout-payment-modal-header layout-payment-modal-header-shell border-b flex justify-between items-center">
-          <h3 className="font-bold text-lg text-[var(--color-primary)]">ชำระเงินออนไลน์ (PromptPay)</h3>
+          <h3 className="font-bold text-lg text-[var(--color-primary)]">{t('paymentModal.title')}</h3>
           {!isPaid && (
-            <button 
-              onClick={onClose} 
-              className="layout-payment-modal-close p-1 rounded-full transition-colors text-[var(--color-text-secondary)]" 
-              aria-label="ปิดหน้าต่างชำระเงิน"
-              title="ปิด"
+            <button
+              onClick={onClose}
+              className="layout-payment-modal-close p-1 rounded-full transition-colors text-[var(--color-text-secondary)]"
+              aria-label={t('paymentModal.closeAria')}
+              title={t('paymentModal.closeTitle')}
             >
               <X size={20} />
             </button>
@@ -112,14 +114,14 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
         {/* Body */}
         <div className="form-modal-content form-stack-xl text-center">
           <div>
-            <p className="layout-payment-modal-field-label text-[var(--color-text-muted)] text-sm">หมายเลขเอกสาร</p>
+            <p className="layout-payment-modal-field-label text-[var(--color-text-muted)] text-sm">{t('paymentModal.docNoLabel')}</p>
             <p className="font-semibold text-lg">{documentNumber}</p>
           </div>
-          
+
           <div>
-            <p className="layout-payment-modal-field-label text-[var(--color-text-muted)] text-sm">ยอดชำระสุทธิ</p>
+            <p className="layout-payment-modal-field-label text-[var(--color-text-muted)] text-sm">{t('paymentModal.netAmountLabel')}</p>
             <p className="text-3xl font-bold text-[var(--color-primary)]">
-              ฿{amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+              ฿{amount.toLocaleString(i18n.language === 'en' ? 'en-US' : 'th-TH', { minimumFractionDigits: 2 })}
             </p>
           </div>
 
@@ -127,28 +129,28 @@ export default function PaymentModal({ documentId, documentNumber, amount, isOpe
             {isPaid ? (
               <div className="flex flex-col items-center gap-4 text-green-500 animate-fade-in-up">
                 <CheckCircle size={80} className="text-green-500" />
-                <h4 className="text-xl font-bold">ชำระเงินเสร็จสมบูรณ์!</h4>
-                <p className="text-sm text-[var(--color-text-muted)]">ระบบกำลังอัปเดตสถานะบิล...</p>
+                <h4 className="text-xl font-bold">{t('paymentModal.paidTitle')}</h4>
+                <p className="text-sm text-[var(--color-text-muted)]">{t('paymentModal.paidSubtitle')}</p>
               </div>
             ) : loading ? (
               <div className="flex flex-col items-center gap-4 text-[var(--color-text-muted)]">
                 <div className="layout-payment-modal-spinner w-10 h-10 border-4 rounded-full animate-spin"></div>
-                <p>กำลังสร้าง QR Code...</p>
+                <p>{t('paymentModal.creatingQr')}</p>
               </div>
             ) : error ? (
               <div className="text-red-500">
                 <X size={40} className="layout-payment-modal-error-icon" />
                 <p>{error}</p>
-                <button onClick={createCharge} className="layout-payment-modal-retry text-sm underline">ลองใหม่อีกครั้ง</button>
+                <button onClick={createCharge} className="layout-payment-modal-retry text-sm underline">{t('paymentModal.retry')}</button>
               </div>
             ) : qrCodeUrl ? (
               <div className="flex flex-col items-center gap-2 animate-fade-in">
                 <img src={qrCodeUrl} alt="PromptPay QR Code" className="w-48 h-48 rounded-lg shadow-sm bg-white p-2" />
                 <div className="layout-payment-modal-hint flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
                   {isConnected ? (
-                    <span className="flex items-center gap-1 text-green-500"><CheckCircle size={14} /> ระบบกำลังรอการชำระเงิน</span>
+                    <span className="flex items-center gap-1 text-green-500"><CheckCircle size={14} /> {t('paymentModal.waitingPayment')}</span>
                   ) : (
-                    <span className="flex items-center gap-1 text-yellow-500"><Clock size={14} /> ขาดการเชื่อมต่อเซิร์ฟเวอร์ (รีเฟรชอีกครั้งหลังชำระ)</span>
+                    <span className="flex items-center gap-1 text-yellow-500"><Clock size={14} /> {t('paymentModal.disconnectedHint')}</span>
                   )}
                 </div>
               </div>

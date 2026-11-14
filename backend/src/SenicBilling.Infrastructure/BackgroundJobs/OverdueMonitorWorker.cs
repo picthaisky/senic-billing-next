@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,7 @@ public class OverdueMonitorWorker : BackgroundService
         {
             try
             {
-                await CheckOverdueAndSendRemindersAsync(stoppingToken);
+                await RunOverdueCheckAsync(stoppingToken);
             }
             catch (Exception ex)
             {
@@ -39,47 +40,73 @@ public class OverdueMonitorWorker : BackgroundService
         }
     }
 
-    private async Task CheckOverdueAndSendRemindersAsync(CancellationToken stoppingToken)
+    public async Task<int> RunOverdueCheckAsync(CancellationToken stoppingToken = default)
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SenicBillingDbContext>();
         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
         var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+        var lineNotify = scope.ServiceProvider.GetService<ILineNotifyService>();
+        var configuration = scope.ServiceProvider.GetService<IConfiguration>();
+        var frontendBaseUrl = (configuration?["App:FrontendBaseUrl"] ?? "http://localhost:5173").Trim().TrimEnd('/');
 
-        var today = DateTime.UtcNow.Date;
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+        var upcomingWindow = today.AddDays(3);
+        var cooldownCutoff = now.AddHours(-24);
 
-        var documentsToCheck = await dbContext.DocumentHeaders
+        var tenantLookup = await dbContext.Tenants
+            .AsNoTracking()
+            .ToDictionaryAsync(t => t.Id, stoppingToken);
+
+        var candidateDocs = await dbContext.DocumentHeaders
             .Include(d => d.Customer)
-            .Where(d => 
-                (d.Status == DocumentStatus.Issued || d.Status == DocumentStatus.Sent || d.Status == DocumentStatus.Viewed) &&
-                d.DueDate.HasValue && 
-                d.DueDate.Value.Date < today &&
+            .Where(d =>
+                (d.Status == DocumentStatus.Issued || d.Status == DocumentStatus.Sent || d.Status == DocumentStatus.Viewed || d.Status == DocumentStatus.Overdue) &&
+                d.DueDate.HasValue &&
+                d.DueDate.Value.Date <= upcomingWindow &&
                 d.DocumentType != DocumentType.Quotation &&
                 d.DocumentType != DocumentType.DeliveryNote &&
-                d.DocumentType != DocumentType.Receipt)
+                d.DocumentType != DocumentType.Receipt &&
+                d.DocumentType != DocumentType.CreditNote)
             .ToListAsync(stoppingToken);
 
-        foreach (var doc in documentsToCheck)
+        var anyChanged = false;
+        var processedCount = 0;
+        foreach (var doc in candidateDocs)
         {
-            doc.Status = DocumentStatus.Overdue;
-            doc.UpdatedAt = DateTime.UtcNow;
+            if (tenantLookup.TryGetValue(doc.TenantId, out var docTenant) &&
+                (!docTenant.IsActive || string.Equals(docTenant.SubscriptionStatus, "Suspended", StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
 
-            _logger.LogInformation("Document {DocNumber} marked as Overdue.", doc.DocumentNumber);
+            var isPastDue = doc.DueDate!.Value.Date < today;
+            if (isPastDue && doc.Status != DocumentStatus.Overdue)
+            {
+                doc.Status = DocumentStatus.Overdue;
+                doc.UpdatedAt = now;
+                anyChanged = true;
+                _logger.LogInformation("Document {DocNumber} marked as Overdue.", doc.DocumentNumber);
+            }
 
-            // Send Auto-Reminder if customer has email
+            if (doc.LastReminderSentAt.HasValue && doc.LastReminderSentAt.Value > cooldownCutoff)
+            {
+                continue;
+            }
+
             var customerEmail = doc.Customer?.Email;
             if (!string.IsNullOrEmpty(customerEmail))
             {
-                // Create payment link dynamically for reminder
                 var link = await paymentService.CreatePaymentLinkAsync(
-                    doc.GrandTotal, 
-                    $"Invoice {doc.DocumentNumber}", 
-                    $"Overdue Payment for {doc.CustomerName}", 
+                    doc.GrandTotal,
+                    $"Invoice {doc.DocumentNumber}",
+                    $"Payment Reminder for {doc.CustomerName}",
                     doc.Id.ToString());
 
                 if (string.IsNullOrEmpty(link))
                 {
-                    link = $"http://localhost:5173/payment/{doc.Id}"; // Fallback
+                    link = $"{frontendBaseUrl}/print/{doc.Id}";
                 }
 
                 await emailService.SendPaymentReminderAsync(
@@ -89,14 +116,30 @@ public class OverdueMonitorWorker : BackgroundService
                     doc.GrandTotal,
                     doc.DueDate!.Value,
                     link,
-                    stoppingToken
-                );
+                    stoppingToken);
             }
+
+            if (lineNotify is not null &&
+                tenantLookup.TryGetValue(doc.TenantId, out var tenant) &&
+                tenant.HasAnyLineChannel())
+            {
+                var statusLabel = isPastDue ? "เกินกำหนดชำระแล้ว" : $"ครบกำหนดวันที่ {doc.DueDate:dd/MM/yyyy}";
+                await lineNotify.NotifyTenantAsync(
+                    tenant,
+                    $"\nแจ้งเตือนวางบิล/ตามหนี้ ({statusLabel})\nเลขที่เอกสาร: {doc.DocumentNumber}\nลูกค้า: {doc.CustomerName ?? "-"}\nยอดรวม: {doc.GrandTotal:N2} บาท",
+                    stoppingToken);
+            }
+
+            doc.LastReminderSentAt = now;
+            anyChanged = true;
+            processedCount++;
         }
 
-        if (documentsToCheck.Any())
+        if (anyChanged)
         {
             await dbContext.SaveChangesAsync(stoppingToken);
         }
+
+        return processedCount;
     }
 }

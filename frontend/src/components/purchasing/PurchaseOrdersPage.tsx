@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   ShoppingBag, Plus, Building, PackageCheck, FileText, Ban, X, Save, Trash2, Search, Edit2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 
 interface VendorDto {
@@ -65,18 +66,20 @@ interface PurchaseOrderDto {
   }>;
 }
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  Draft: { label: 'ฉบับร่าง', cls: 'badge-info' },
-  Sent: { label: 'สั่งซื้อแล้ว', cls: 'badge-warning' },
-  PartiallyReceived: { label: 'รับบางส่วน', cls: 'badge-info' },
-  Received: { label: 'รับครบแล้ว', cls: 'badge-success' },
-  Cancelled: { label: 'ยกเลิก', cls: 'badge-danger' },
+const STATUS_BADGE: Record<string, { labelKey: string; cls: string }> = {
+  Draft: { labelKey: 'purchasing.statusDraft', cls: 'badge-info' },
+  Sent: { labelKey: 'purchasing.statusSent', cls: 'badge-warning' },
+  PartiallyReceived: { labelKey: 'purchasing.statusPartiallyReceived', cls: 'badge-info' },
+  Received: { labelKey: 'purchasing.statusReceived', cls: 'badge-success' },
+  Cancelled: { labelKey: 'purchasing.statusCancelled', cls: 'badge-danger' },
 };
 
-const formatCurrency = (v: number) =>
-  `฿${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (v: number, locale: string) =>
+  `฿${v.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function PurchaseOrdersPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
   const [tab, setTab] = useState<'po' | 'vendors'>('po');
   const [orders, setOrders] = useState<PurchaseOrderDto[]>([]);
   const [vendors, setVendors] = useState<VendorDto[]>([]);
@@ -185,7 +188,7 @@ export default function PurchaseOrdersPage() {
         ...lines[idx],
         productId,
         description: p?.name || lines[idx].description,
-        unit: p?.unit || 'ชิ้น',
+        unit: p?.unit || t('purchasing.defaultUnit'),
         unitPrice: p?.unitPrice || lines[idx].unitPrice,
       };
       return { ...prev, lines };
@@ -220,7 +223,7 @@ export default function PurchaseOrdersPage() {
       setPoModalOpen(false);
       await fetchAll();
     } catch (err: unknown) {
-      alert(getApiError(err, 'ไม่สามารถสร้างใบสั่งซื้อได้'));
+      alert(getApiError(err, t('purchasing.createPoError')));
     }
   };
 
@@ -262,10 +265,10 @@ export default function PurchaseOrdersPage() {
           .map((l) => ({ lineId: l.lineId, receiveQuantity: Number(l.receiveQuantity) })),
       });
       setReceiveModalPo(null);
-      alert(`รับสินค้า ${receiveModalPo.poNumber} เข้าคลังสำเร็จ`);
+      alert(t('purchasing.receiveSuccess', { poNumber: receiveModalPo.poNumber }));
       await fetchAll();
     } catch (err: unknown) {
-      alert(getApiError(err, 'ไม่สามารถรับสินค้าได้'));
+      alert(getApiError(err, t('purchasing.receiveError')));
     }
   };
 
@@ -282,7 +285,7 @@ export default function PurchaseOrdersPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('ไม่สามารถดาวน์โหลด PDF ใบสั่งซื้อได้');
+      alert(t('purchasing.poPdfError'));
     }
   };
 
@@ -297,7 +300,7 @@ export default function PurchaseOrdersPage() {
       setVendorModalOpen(false);
       await fetchAll();
     } catch (err: unknown) {
-      alert(getApiError(err, 'ไม่สามารถบันทึกผู้ขายได้'));
+      alert(getApiError(err, t('purchasing.saveVendorError')));
     }
   };
 
@@ -307,8 +310,8 @@ export default function PurchaseOrdersPage() {
         <div className="flex items-center gap-3">
           <div className="w-1.5 h-10 rounded-full bg-[var(--color-primary)]" />
           <div>
-            <h2 className="text-lg font-bold text-[var(--color-text)]">จัดซื้อ &amp; ใบสั่งซื้อ (Purchase Orders &amp; Vendors)</h2>
-            <p className="text-sm text-[var(--color-text-muted)]">ออกใบสั่งซื้อ PO รับสินค้าเข้าคลัง และสร้างใบสำคัญจ่าย/ภาษีซื้ออัตโนมัติ</p>
+            <h2 className="text-lg font-bold text-[var(--color-text)]">{t('purchasing.title')}</h2>
+            <p className="text-sm text-[var(--color-text-muted)]">{t('purchasing.subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -332,7 +335,7 @@ export default function PurchaseOrdersPage() {
             }}
             className="btn btn-secondary flex items-center gap-1.5 text-xs"
           >
-            <Building size={15} /> เพิ่มผู้ขาย
+            <Building size={15} /> {t('purchasing.addVendorBtn')}
           </button>
           <button
             type="button"
@@ -345,7 +348,7 @@ export default function PurchaseOrdersPage() {
             }}
             className="btn btn-primary flex items-center gap-1.5"
           >
-            <Plus size={16} /> สร้างใบสั่งซื้อ (PO)
+            <Plus size={16} /> {t('purchasing.createPoBtn')}
           </button>
         </div>
       </div>
@@ -358,14 +361,14 @@ export default function PurchaseOrdersPage() {
             onClick={() => setTab('po')}
             className={`btn text-xs ${tab === 'po' ? 'btn-primary' : 'btn-secondary'}`}
           >
-            <ShoppingBag size={14} /> ใบสั่งซื้อ ({orders.length})
+            <ShoppingBag size={14} /> {t('purchasing.tabOrders', { count: orders.length })}
           </button>
           <button
             type="button"
             onClick={() => setTab('vendors')}
             className={`btn text-xs ${tab === 'vendors' ? 'btn-primary' : 'btn-secondary'}`}
           >
-            <Building size={14} /> ทะเบียนผู้ขาย ({vendors.length})
+            <Building size={14} /> {t('purchasing.tabVendors', { count: vendors.length })}
           </button>
         </div>
         <div className="relative w-full sm:w-72">
@@ -373,7 +376,7 @@ export default function PurchaseOrdersPage() {
           <input
             type="text"
             className="input-field pl-9"
-            placeholder="ค้นหาเลขที่ PO หรือชื่อผู้ขาย..."
+            placeholder={t('purchasing.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -386,34 +389,34 @@ export default function PurchaseOrdersPage() {
             <table className="data-table table-responsive">
               <thead>
                 <tr>
-                  <th>เลขที่ PO</th>
-                  <th>วันที่สั่งซื้อ</th>
-                  <th>ผู้ขาย / ซัพพลายเออร์</th>
-                  <th>คลังรับสินค้า</th>
-                  <th className="text-right">ยอดสุทธิ</th>
-                  <th className="text-center">สถานะ</th>
-                  <th className="text-center">จัดการ</th>
+                  <th>{t('purchasing.colPoNumber')}</th>
+                  <th>{t('purchasing.colOrderDate')}</th>
+                  <th>{t('purchasing.colVendor')}</th>
+                  <th>{t('purchasing.colDestWarehouse')}</th>
+                  <th className="text-right">{t('purchasing.colGrandTotal')}</th>
+                  <th className="text-center">{t('purchasing.colStatus')}</th>
+                  <th className="text-center">{t('purchasing.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-8 text-[var(--color-text-muted)]">กำลังโหลด...</td></tr>
+                  <tr><td colSpan={7} className="text-center py-8 text-[var(--color-text-muted)]">{t('purchasing.loading')}</td></tr>
                 ) : orders.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-10 text-[var(--color-text-muted)]">ยังไม่มีใบสั่งซื้อ</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10 text-[var(--color-text-muted)]">{t('purchasing.emptyOrders')}</td></tr>
                 ) : (
                   orders.map((po) => {
-                    const st = STATUS_BADGE[po.status] ?? { label: po.status, cls: 'badge-info' };
+                    const st = STATUS_BADGE[po.status];
                     return (
                       <tr key={po.id}>
                         <td className="font-mono font-semibold text-sm">{po.poNumber}</td>
-                        <td className="text-sm">{new Date(po.orderDate).toLocaleDateString('th-TH')}</td>
+                        <td className="text-sm">{new Date(po.orderDate).toLocaleDateString(locale)}</td>
                         <td>
                           <div className="font-medium text-sm">{po.vendorName}</div>
                           {po.vendorTaxId && <div className="text-xs font-mono text-[var(--color-text-muted)]">{po.vendorTaxId}</div>}
                         </td>
-                        <td className="text-sm">{po.warehouseName || 'คลังสินค้าหลัก'}</td>
-                        <td className="text-right font-mono font-semibold text-sm">{formatCurrency(po.grandTotal)}</td>
-                        <td className="text-center"><span className={`badge ${st.cls}`}>{st.label}</span></td>
+                        <td className="text-sm">{po.warehouseName || t('purchasing.defaultWarehouseName')}</td>
+                        <td className="text-right font-mono font-semibold text-sm">{formatCurrency(po.grandTotal, locale)}</td>
+                        <td className="text-center"><span className={`badge ${st?.cls ?? 'badge-info'}`}>{st ? t(st.labelKey) : po.status}</span></td>
                         <td>
                           <div className="flex items-center justify-center gap-1">
                             {(po.status === 'Sent' || po.status === 'PartiallyReceived' || po.status === 'Draft') && (
@@ -421,7 +424,7 @@ export default function PurchaseOrdersPage() {
                                 type="button"
                                 onClick={() => openReceiveModal(po)}
                                 className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-500/10"
-                                title="รับสินค้าเข้าคลัง"
+                                title={t('purchasing.receiveTitle')}
                               >
                                 <PackageCheck size={16} />
                               </button>
@@ -430,7 +433,7 @@ export default function PurchaseOrdersPage() {
                               type="button"
                               onClick={() => void handleDownloadPoPdf(po)}
                               className="p-1.5 rounded-lg text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]"
-                              title="พิมพ์ใบสั่งซื้อ (PDF)"
+                              title={t('purchasing.printPoTitle')}
                             >
                               <FileText size={16} />
                             </button>
@@ -438,12 +441,12 @@ export default function PurchaseOrdersPage() {
                               <button
                                 type="button"
                                 onClick={async () => {
-                                  if (!window.confirm(`ยกเลิกใบสั่งซื้อ ${po.poNumber}?`)) return;
-                                  await apiClient.post(`/purchase-orders/${po.id}/cancel`, { reason: 'ยกเลิกโดยผู้ใช้' });
+                                  if (!window.confirm(t('purchasing.cancelPoConfirm', { poNumber: po.poNumber }))) return;
+                                  await apiClient.post(`/purchase-orders/${po.id}/cancel`, { reason: t('purchasing.cancelPoReason') });
                                   await fetchAll();
                                 }}
                                 className="p-1.5 rounded-lg text-red-600 hover:bg-red-500/10"
-                                title="ยกเลิก"
+                                title={t('purchasing.cancelTitle')}
                               >
                                 <Ban size={16} />
                               </button>
@@ -464,16 +467,16 @@ export default function PurchaseOrdersPage() {
             <table className="data-table table-responsive">
               <thead>
                 <tr>
-                  <th>ชื่อผู้ขาย / ซัพพลายเออร์</th>
-                  <th>เลขผู้เสียภาษี (สาขา)</th>
-                  <th>ผู้ติดต่อ / โทรศัพท์</th>
-                  <th className="text-center">เครดิต (วัน)</th>
-                  <th className="text-center">จัดการ</th>
+                  <th>{t('purchasing.colVendorName')}</th>
+                  <th>{t('purchasing.colVendorTaxIdBranch')}</th>
+                  <th>{t('purchasing.colContactPhone')}</th>
+                  <th className="text-center">{t('purchasing.colCreditDays')}</th>
+                  <th className="text-center">{t('purchasing.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {vendors.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-10 text-[var(--color-text-muted)]">ยังไม่มีผู้ขายในทะเบียน</td></tr>
+                  <tr><td colSpan={5} className="text-center py-10 text-[var(--color-text-muted)]">{t('purchasing.emptyVendors')}</td></tr>
                 ) : (
                   vendors.map((v) => (
                     <tr key={v.id}>
@@ -502,19 +505,19 @@ export default function PurchaseOrdersPage() {
                               setVendorModalOpen(true);
                             }}
                             className="p-1.5 rounded-lg text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]"
-                            title="แก้ไข"
+                            title={t('purchasing.editTitle')}
                           >
                             <Edit2 size={15} />
                           </button>
                           <button
                             type="button"
                             onClick={async () => {
-                              if (!window.confirm(`ลบผู้ขาย ${v.name}?`)) return;
+                              if (!window.confirm(t('purchasing.deleteVendorConfirm', { name: v.name }))) return;
                               await apiClient.delete(`/vendors/${v.id}`);
                               await fetchAll();
                             }}
                             className="p-1.5 rounded-lg text-red-600 hover:bg-red-500/10"
-                            title="ลบ"
+                            title={t('purchasing.deleteTitle')}
                           >
                             <Trash2 size={15} />
                           </button>
@@ -535,24 +538,24 @@ export default function PurchaseOrdersPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="card w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                <h3 className="font-bold text-lg">สร้างใบสั่งซื้อใหม่ (Purchase Order)</h3>
+                <h3 className="font-bold text-lg">{t('purchasing.poModalTitle')}</h3>
                 <button type="button" onClick={() => setPoModalOpen(false)}><X size={20} /></button>
               </div>
               <form onSubmit={(e) => void handleCreatePo(e)} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">วันที่สั่งซื้อ *</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.poOrderDateLabel')}</label>
                     <input required type="date" className="input-field" value={poForm.orderDate} onChange={(e) => setPoForm({ ...poForm, orderDate: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เลือกผู้ขายจากทะเบียน</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.poSelectVendorLabel')}</label>
                     <select className="input-field" value={poForm.vendorId} onChange={(e) => handleSelectVendor(e.target.value)}>
-                      <option value="">-- กรอกเองหรือเลือกผู้ขาย --</option>
+                      <option value="">{t('purchasing.poVendorSelectPlaceholder')}</option>
                       {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">คลังสินค้าปลายทาง</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.poWarehouseLabel')}</label>
                     <select className="input-field" value={poForm.warehouseId} onChange={(e) => setPoForm({ ...poForm, warehouseId: e.target.value })}>
                       {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.code})</option>)}
                     </select>
@@ -560,24 +563,24 @@ export default function PurchaseOrdersPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium mb-1">ชื่อผู้ขาย *</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.poVendorNameLabel')}</label>
                     <input required type="text" className="input-field" value={poForm.vendorName} onChange={(e) => setPoForm({ ...poForm, vendorName: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เลขผู้เสียภาษี</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.poVendorTaxIdLabel')}</label>
                     <input type="text" className="input-field font-mono" value={poForm.vendorTaxId} onChange={(e) => setPoForm({ ...poForm, vendorTaxId: e.target.value })} />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold">รายการสินค้าที่สั่งซื้อ</span>
+                    <span className="text-xs font-bold">{t('purchasing.poLinesHeading')}</span>
                     <button
                       type="button"
-                      onClick={() => setPoForm((p) => ({ ...p, lines: [...p.lines, { productId: '', description: '', unit: 'ชิ้น', quantity: 1, unitPrice: 0, discountAmount: 0 }] }))}
+                      onClick={() => setPoForm((p) => ({ ...p, lines: [...p.lines, { productId: '', description: '', unit: t('purchasing.defaultUnit'), quantity: 1, unitPrice: 0, discountAmount: 0 }] }))}
                       className="btn btn-secondary text-xs py-1 px-2"
                     >
-                      + เพิ่มรายการ
+                      {t('purchasing.poAddLineBtn')}
                     </button>
                   </div>
                   {poForm.lines.map((line, idx) => (
@@ -587,14 +590,14 @@ export default function PurchaseOrdersPage() {
                         value={line.productId}
                         onChange={(e) => handleSelectProduct(idx, e.target.value)}
                       >
-                        <option value="">-- สินค้าในคลัง --</option>
+                        <option value="">{t('purchasing.poProductSelectPlaceholder')}</option>
                         {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                       <input
                         required
                         type="text"
                         className="input-field col-span-3 text-xs"
-                        placeholder="รายละเอียด"
+                        placeholder={t('purchasing.poLineDescPlaceholder')}
                         value={line.description}
                         onChange={(e) => {
                           const lines = [...poForm.lines];
@@ -641,8 +644,8 @@ export default function PurchaseOrdersPage() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <button type="button" onClick={() => setPoModalOpen(false)} className="btn btn-secondary">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary flex items-center gap-1.5"><Save size={16} /> บันทึกใบสั่งซื้อ</button>
+                  <button type="button" onClick={() => setPoModalOpen(false)} className="btn btn-secondary">{t('purchasing.cancelBtn')}</button>
+                  <button type="submit" className="btn btn-primary flex items-center gap-1.5"><Save size={16} /> {t('purchasing.poSaveBtn')}</button>
                 </div>
               </form>
             </div>
@@ -656,47 +659,47 @@ export default function PurchaseOrdersPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="card w-full max-w-lg p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                <h3 className="font-bold text-lg">{editingVendorId ? 'แก้ไขข้อมูลผู้ขาย / ซัพพลายเออร์' : 'เพิ่มผู้ขาย / ซัพพลายเออร์'}</h3>
+                <h3 className="font-bold text-lg">{editingVendorId ? t('purchasing.vendorModalEditTitle') : t('purchasing.vendorModalAddTitle')}</h3>
                 <button type="button" onClick={() => setVendorModalOpen(false)}><X size={20} /></button>
               </div>
               <form onSubmit={(e) => void handleSaveVendor(e)} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1">ชื่อผู้ขาย *</label>
+                  <label className="block text-xs font-medium mb-1">{t('purchasing.vendorNameLabel')}</label>
                   <input required type="text" className="input-field" value={vendorForm.name} onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">เลขประจำตัวผู้เสียภาษี</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorTaxIdLabel')}</label>
                     <input type="text" maxLength={13} className="input-field font-mono" value={vendorForm.taxId} onChange={(e) => setVendorForm({ ...vendorForm, taxId: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">สาขา</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorBranchLabel')}</label>
                     <input type="text" className="input-field font-mono" value={vendorForm.branch} onChange={(e) => setVendorForm({ ...vendorForm, branch: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">ผู้ติดต่อ</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorContactLabel')}</label>
                     <input type="text" className="input-field" value={vendorForm.contactPerson} onChange={(e) => setVendorForm({ ...vendorForm, contactPerson: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เบอร์โทรศัพท์</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorPhoneLabel')}</label>
                     <input type="text" className="input-field" value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">อีเมล</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorEmailLabel')}</label>
                     <input type="email" className="input-field" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เครดิตการชำระเงิน (วัน)</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorCreditLabel')}</label>
                     <input type="number" min={0} className="input-field" value={vendorForm.paymentTermsDays} onChange={(e) => setVendorForm({ ...vendorForm, paymentTermsDays: parseInt(e.target.value, 10) || 0 })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">หัก ณ ที่จ่ายเริ่มต้น (%)</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorWhtLabel')}</label>
                     <select
                       className="input-field"
                       value={vendorForm.defaultWhtRate}
@@ -709,34 +712,34 @@ export default function PurchaseOrdersPage() {
                         });
                       }}
                     >
-                      <option value={0}>ไม่หัก (0%)</option>
-                      <option value={1}>1% (ค่าขนส่ง)</option>
-                      <option value={2}>2% (ค่าโฆษณา)</option>
-                      <option value={3}>3% (ค่าบริการ/จ้างทำของ)</option>
-                      <option value={5}>5% (ค่าเช่า)</option>
+                      <option value={0}>{t('purchasing.wht0')}</option>
+                      <option value={1}>{t('purchasing.wht1')}</option>
+                      <option value={2}>{t('purchasing.wht2')}</option>
+                      <option value={3}>{t('purchasing.wht3')}</option>
+                      <option value={5}>{t('purchasing.wht5')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">แบบ ภ.ง.ด. เริ่มต้น</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.vendorPndLabel')}</label>
                     <select
                       className="input-field"
                       disabled={vendorForm.defaultWhtRate <= 0}
                       value={vendorForm.defaultPndType}
                       onChange={(e) => setVendorForm({ ...vendorForm, defaultPndType: e.target.value as 'None' | 'PND3' | 'PND53' })}
                     >
-                      <option value="None">ไม่ระบุ</option>
-                      <option value="PND3">ภ.ง.ด.3 (บุคคลธรรมดา)</option>
-                      <option value="PND53">ภ.ง.ด.53 (นิติบุคคล)</option>
+                      <option value="None">{t('purchasing.pndNone')}</option>
+                      <option value="PND3">{t('purchasing.pnd3Detail')}</option>
+                      <option value="PND53">{t('purchasing.pnd53Detail')}</option>
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">ที่อยู่</label>
+                  <label className="block text-xs font-medium mb-1">{t('purchasing.vendorAddressLabel')}</label>
                   <textarea rows={2} className="input-field" value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
-                  <button type="button" onClick={() => setVendorModalOpen(false)} className="btn btn-secondary">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary flex items-center gap-1.5"><Save size={16} /> บันทึก</button>
+                  <button type="button" onClick={() => setVendorModalOpen(false)} className="btn btn-secondary">{t('purchasing.cancelBtn')}</button>
+                  <button type="submit" className="btn btn-primary flex items-center gap-1.5"><Save size={16} /> {t('purchasing.saveBtn')}</button>
                 </div>
               </form>
             </div>
@@ -751,15 +754,15 @@ export default function PurchaseOrdersPage() {
             <div className="card w-full max-w-2xl max-h-[92vh] overflow-y-auto p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div>
-                  <h3 className="font-bold text-lg">รับสินค้าเข้าคลัง — {receiveModalPo.poNumber}</h3>
-                  <p className="text-xs text-[var(--color-text-muted)]">ผู้ขาย: {receiveModalPo.vendorName}</p>
+                  <h3 className="font-bold text-lg">{t('purchasing.receiveModalTitle', { poNumber: receiveModalPo.poNumber })}</h3>
+                  <p className="text-xs text-[var(--color-text-muted)]">{t('purchasing.receiveVendorSub', { vendorName: receiveModalPo.vendorName })}</p>
                 </div>
                 <button type="button" onClick={() => setReceiveModalPo(null)}><X size={20} /></button>
               </div>
               <form onSubmit={(e) => void handleSubmitReceivePo(e)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">คลังสินค้ารับเข้า</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.receiveWarehouseLabel')}</label>
                     <select
                       className="input-field"
                       value={receiveForm.warehouseId}
@@ -771,17 +774,17 @@ export default function PurchaseOrdersPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เลขที่ใบกำกับภาษีผู้ขาย</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.receiveVendorTaxNoLabel')}</label>
                     <input
                       type="text"
                       className="input-field font-mono"
-                      placeholder="เช่น TAX-2026-001"
+                      placeholder={t('purchasing.receiveVendorTaxNoPlaceholder')}
                       value={receiveForm.vendorTaxInvoiceNumber}
                       onChange={(e) => setReceiveForm({ ...receiveForm, vendorTaxInvoiceNumber: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">วันที่ใบกำกับภาษีผู้ขาย</label>
+                    <label className="block text-xs font-medium mb-1">{t('purchasing.receiveVendorTaxDateLabel')}</label>
                     <input
                       type="date"
                       className="input-field"
@@ -795,10 +798,10 @@ export default function PurchaseOrdersPage() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]">
-                        <th className="p-2 text-left">รายการ</th>
-                        <th className="p-2 text-right">สั่งซื้อ</th>
-                        <th className="p-2 text-right">รับแล้ว</th>
-                        <th className="p-2 text-right w-28">รับครั้งนี้</th>
+                        <th className="p-2 text-left">{t('purchasing.receiveColItem')}</th>
+                        <th className="p-2 text-right">{t('purchasing.receiveColOrdered')}</th>
+                        <th className="p-2 text-right">{t('purchasing.receiveColReceived')}</th>
+                        <th className="p-2 text-right w-28">{t('purchasing.receiveColNow')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -840,12 +843,12 @@ export default function PurchaseOrdersPage() {
                       checked={receiveForm.createExpenseRecord}
                       onChange={(e) => setReceiveForm({ ...receiveForm, createExpenseRecord: e.target.checked })}
                     />
-                    สร้างใบสำคัญจ่าย / ภาษีซื้ออัตโนมัติ (เมื่อรับสินค้าครบตาม PO)
+                    {t('purchasing.receiveCreateExpenseLabel')}
                   </label>
                   {receiveForm.createExpenseRecord && (
                     <div className="grid grid-cols-2 gap-3 pt-1">
                       <div>
-                        <label className="block text-[11px] text-[var(--color-text-muted)] mb-1">หัก ณ ที่จ่าย (%)</label>
+                        <label className="block text-[11px] text-[var(--color-text-muted)] mb-1">{t('purchasing.receiveWhtLabel')}</label>
                         <select
                           className="input-field text-xs"
                           value={receiveForm.whtRate}
@@ -858,7 +861,7 @@ export default function PurchaseOrdersPage() {
                             });
                           }}
                         >
-                          <option value={0}>ไม่หัก (0%)</option>
+                          <option value={0}>{t('purchasing.wht0')}</option>
                           <option value={1}>1%</option>
                           <option value={2}>2%</option>
                           <option value={3}>3%</option>
@@ -866,16 +869,16 @@ export default function PurchaseOrdersPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] text-[var(--color-text-muted)] mb-1">แบบ ภ.ง.ด.</label>
+                        <label className="block text-[11px] text-[var(--color-text-muted)] mb-1">{t('purchasing.receivePndLabel')}</label>
                         <select
                           className="input-field text-xs"
                           disabled={receiveForm.whtRate <= 0}
                           value={receiveForm.pndType}
                           onChange={(e) => setReceiveForm({ ...receiveForm, pndType: e.target.value as 'None' | 'PND3' | 'PND53' })}
                         >
-                          <option value="None">ไม่ระบุ</option>
-                          <option value="PND3">ภ.ง.ด.3</option>
-                          <option value="PND53">ภ.ง.ด.53</option>
+                          <option value="None">{t('purchasing.pndNone')}</option>
+                          <option value="PND3">{t('purchasing.pnd3Short')}</option>
+                          <option value="PND53">{t('purchasing.pnd53Short')}</option>
                         </select>
                       </div>
                     </div>
@@ -883,8 +886,8 @@ export default function PurchaseOrdersPage() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <button type="button" onClick={() => setReceiveModalPo(null)} className="btn btn-secondary">ยกเลิก</button>
-                  <button type="submit" className="btn btn-primary flex items-center gap-1.5"><PackageCheck size={16} /> ยืนยันรับสินค้าเข้าคลัง</button>
+                  <button type="button" onClick={() => setReceiveModalPo(null)} className="btn btn-secondary">{t('purchasing.cancelBtn')}</button>
+                  <button type="submit" className="btn btn-primary flex items-center gap-1.5"><PackageCheck size={16} /> {t('purchasing.receiveConfirmBtn')}</button>
                 </div>
               </form>
             </div>

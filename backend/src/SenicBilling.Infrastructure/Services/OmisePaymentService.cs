@@ -12,10 +12,15 @@ public class OmisePaymentService : IPaymentService
     private readonly ILogger<OmisePaymentService> _logger;
     private readonly string _publicKey;
     private readonly string _secretKey;
+    private readonly string _defaultReturnUri;
     private readonly HttpClient _httpClient;
+
+    public string DefaultReturnUri => _defaultReturnUri;
 
     public OmisePaymentService(IConfiguration configuration, ILogger<OmisePaymentService> logger)
     {
+        var frontendBaseUrl = (configuration["App:FrontendBaseUrl"] ?? "http://localhost:5173").Trim().TrimEnd('/');
+        _defaultReturnUri = $"{frontendBaseUrl}/payments/callback";
         _logger = logger;
         _publicKey = configuration["Omise:PublicKey"] ?? string.Empty;
         _secretKey = configuration["Omise:SecretKey"] ?? string.Empty;
@@ -56,7 +61,7 @@ public class OmisePaymentService : IPaymentService
                 new KeyValuePair<string, string>("amount", amountInSubunits.ToString()),
                 new KeyValuePair<string, string>("currency", "THB"),
                 new KeyValuePair<string, string>("source", sourceId),
-                new KeyValuePair<string, string>("return_uri", string.IsNullOrEmpty(returnUrl) ? "http://localhost:5173/payments/callback" : returnUrl),
+                new KeyValuePair<string, string>("return_uri", string.IsNullOrEmpty(returnUrl) ? _defaultReturnUri : returnUrl),
                 new KeyValuePair<string, string>("metadata[DocumentId]", referenceId)
             });
 

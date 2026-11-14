@@ -12,6 +12,12 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - senic-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-senic_billing}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
     networks:
       - senic-network
@@ -40,11 +46,24 @@ services:
       Minio__Endpoint: minio:9000
       Minio__AccessKey: ${MINIO_ROOT_USER:-admin}
       Minio__SecretKey: ${MINIO_ROOT_PASSWORD:-password123}
+      Minio__BucketName: ${MINIO_BUCKET_NAME:-senic-billing}
+      App__FrontendBaseUrl: ${APP_FRONTEND_BASE_URL:-http://localhost:8810}
+      App__AdminBaseUrl: ${APP_ADMIN_BASE_URL:-http://localhost:8811}
+    volumes:
+      - senic-app-data:/app/App_Data
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
-      - database
-      - minio
+      database:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
     networks:
       - senic-network
@@ -55,7 +74,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-8810}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - senic-network
@@ -66,7 +86,8 @@ services:
     ports:
       - "${ADMIN_FRONTEND_PORT:-8811}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - senic-network
@@ -85,6 +106,12 @@ services:
       - "9081:9001"
     volumes:
       - senic-minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
     networks:
       - senic-network
@@ -110,6 +137,7 @@ services:
 volumes:
   senic-pgdata:
   senic-minio-data:
+  senic-app-data:
 
 networks:
   senic-network:

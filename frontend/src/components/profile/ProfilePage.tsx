@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/useAuthStore';
 import { apiClient } from '../../services/apiClient';
 import { User, Lock, Mail, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const user = useAuthStore(state => state.user);
   const { setAuth, token } = useAuthStore();
   
@@ -49,7 +51,7 @@ export default function ProfilePage() {
       setLoading(true);
       const res = await apiClient.put('/user/profile', { displayName, email });
       if (res.data.success) {
-        showMessage('อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว');
+        showMessage(t('profile.updateSuccess'));
         if (user && token) {
           // Update local auth store user (simplified for UI)
           const updatedUser = {
@@ -64,9 +66,9 @@ export default function ProfilePage() {
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        showMessage((err.response?.data as { message?: string } | undefined)?.message || 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล', true);
+        showMessage((err.response?.data as { message?: string } | undefined)?.message || t('profile.updateError'), true);
       } else {
-        showMessage('เกิดข้อผิดพลาดในการอัปเดตข้อมูล', true);
+        showMessage(t('profile.updateError'), true);
       }
     } finally {
       setLoading(false);
@@ -76,23 +78,23 @@ export default function ProfilePage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      showMessage('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน', true);
+      showMessage(t('profile.passwordMismatch'), true);
       return;
     }
     try {
       setLoading(true);
       const res = await apiClient.put('/user/change-password', { currentPassword, newPassword });
       if (res.data.success) {
-        showMessage('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+        showMessage(t('profile.passwordSuccess'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        showMessage((err.response?.data as { message?: string } | undefined)?.message || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน', true);
+        showMessage((err.response?.data as { message?: string } | undefined)?.message || t('profile.passwordError'), true);
       } else {
-        showMessage('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน', true);
+        showMessage(t('profile.passwordError'), true);
       }
     } finally {
       setLoading(false);
@@ -118,7 +120,7 @@ export default function ProfilePage() {
             Admin • Senic Corp
           </p>
           <div className="profile-verified-badge inline-flex items-center gap-2 rounded-full text-xs font-medium bg-[var(--color-success-bg)] text-[var(--color-success)]">
-            <CheckCircle2 size={14} /> บัญชีได้รับการยืนยันแล้ว
+            <CheckCircle2 size={14} /> {t('profile.verifiedBadge')}
           </div>
         </div>
       </div>
@@ -148,7 +150,7 @@ export default function ProfilePage() {
                 : 'text-[var(--color-text-secondary)] border border-transparent bg-transparent'
             }`}
           >
-            <User size={18} /> ข้อมูลทั่วไป
+            <User size={18} /> {t('profile.tabGeneral')}
           </button>
           <button
             onClick={() => setActiveTab('security')}
@@ -158,7 +160,7 @@ export default function ProfilePage() {
                 : 'text-[var(--color-text-secondary)] border border-transparent bg-transparent'
             }`}
           >
-            <Lock size={18} /> ความปลอดภัย
+            <Lock size={18} /> {t('profile.tabSecurity')}
           </button>
         </div>
 
@@ -167,12 +169,12 @@ export default function ProfilePage() {
           
           {activeTab === 'general' && (
             <div className="card form-section-card animate-fade-in">
-              <h3 className="profile-section-title text-lg font-bold text-[var(--color-text)]">ข้อมูลทั่วไป (General Information)</h3>
+              <h3 className="profile-section-title text-lg font-bold text-[var(--color-text)]">{t('profile.generalTitle')}</h3>
               <form onSubmit={handleUpdateProfile} className="form-stack-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="sm:col-span-2">
                   <label htmlFor="profile-username" className="block text-sm font-medium layout-form-label-tight text-[var(--color-text-secondary)]">
-                    ชื่อผู้ใช้งาน (Email)
+                    {t('profile.usernameLabel')}
                   </label>
                   <input
                     id="profile-username"
@@ -180,13 +182,13 @@ export default function ProfilePage() {
                     className="input-field bg-[var(--color-bg-secondary)] cursor-not-allowed"
                     value={user?.email || ''}
                     disabled
-                    title="ชื่อผู้ใช้งาน"
+                    title={t('profile.usernameLabel')}
                   />
-                  <p className="profile-helper-text text-xs text-[var(--color-text-muted)]">* ไม่สามารถเปลี่ยนชื่อผู้ใช้งานระบบได้</p>
+                  <p className="profile-helper-text text-xs text-[var(--color-text-muted)]">{t('profile.usernameHint')}</p>
                 </div>
                 <div>
                   <label htmlFor="profile-displayname" className="block text-sm font-medium layout-form-label-tight text-[var(--color-text-secondary)]">
-                    ชื่อที่แสดง (Display Name)
+                    {t('profile.displayNameLabel')}
                   </label>
                   <div className="relative">
                     <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -197,13 +199,13 @@ export default function ProfilePage() {
                       value={displayName}
                       onChange={e => setDisplayNameDraft(e.target.value)}
                       required
-                      title="ชื่อที่แสดง"
+                      title={t('profile.displayNameLabel')}
                     />
                   </div>
                 </div>
                 <div>
                   <label htmlFor="profile-email" className="block text-sm font-medium layout-form-label-tight text-[var(--color-text-secondary)]">
-                    อีเมล (Email)
+                    {t('profile.emailLabel')}
                   </label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -213,7 +215,7 @@ export default function ProfilePage() {
                       className="input-field profile-input-with-icon" 
                       value={email}
                       onChange={e => setEmailDraft(e.target.value)}
-                      title="อีเมล"
+                      title={t('profile.emailLabel')}
                     />
                   </div>
                 </div>
@@ -221,7 +223,7 @@ export default function ProfilePage() {
 
                 <div className="profile-form-actions">
                   <button type="submit" disabled={loading} className="btn btn-primary">
-                    {loading ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                    {loading ? t('profile.saving') : t('profile.saveProfile')}
                   </button>
                 </div>
               </form>
@@ -230,12 +232,12 @@ export default function ProfilePage() {
 
           {activeTab === 'security' && (
             <div className="card form-section-card animate-fade-in">
-              <h3 className="profile-section-title text-lg font-bold text-[var(--color-text)]">เปลี่ยนรหัสผ่าน (Change Password)</h3>
+              <h3 className="profile-section-title text-lg font-bold text-[var(--color-text)]">{t('profile.securityTitle')}</h3>
               <form onSubmit={handleChangePassword} className="form-stack-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="sm:col-span-2">
                   <label htmlFor="profile-current-password" className="block text-sm font-medium layout-form-label-tight text-[var(--color-text-secondary)]">
-                    รหัสผ่านปัจจุบัน (Current Password)
+                    {t('profile.currentPassword')}
                   </label>
                   <input
                     id="profile-current-password"
@@ -244,12 +246,12 @@ export default function ProfilePage() {
                     value={currentPassword}
                     onChange={e => setCurrentPassword(e.target.value)}
                     required
-                    title="รหัสผ่านปัจจุบัน"
+                    title={t('profile.currentPassword')}
                   />
                 </div>
                 <div>
                   <label htmlFor="profile-new-password" className="block text-sm font-medium layout-form-label-tight text-[var(--color-text-secondary)]">
-                    รหัสผ่านใหม่ (New Password)
+                    {t('profile.newPassword')}
                   </label>
                   <input 
                     id="profile-new-password"
@@ -259,12 +261,12 @@ export default function ProfilePage() {
                     onChange={e => setNewPassword(e.target.value)}
                     required
                     minLength={6}
-                    title="รหัสผ่านใหม่"
+                    title={t('profile.newPassword')}
                   />
                 </div>
                 <div>
                   <label htmlFor="profile-confirm-password" className="block text-sm font-medium layout-form-label-tight text-[var(--color-text-secondary)]">
-                    ยืนยันรหัสผ่านใหม่ (Confirm New Password)
+                    {t('profile.confirmPassword')}
                   </label>
                   <input 
                     id="profile-confirm-password"
@@ -274,14 +276,14 @@ export default function ProfilePage() {
                     onChange={e => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
-                    title="ยืนยันรหัสผ่านใหม่"
+                    title={t('profile.confirmPassword')}
                   />
                 </div>
                 </div>
 
                 <div className="profile-form-actions">
                   <button type="submit" disabled={loading} className="btn btn-primary">
-                    {loading ? 'กำลังบันทึก...' : 'อัปเดตรหัสผ่าน'}
+                    {loading ? t('profile.saving') : t('profile.updatePassword')}
                   </button>
                 </div>
               </form>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SenicBilling.API.Extensions;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Infrastructure.Data;
@@ -9,9 +10,13 @@ namespace SenicBilling.API.Controllers;
 
 [ApiController]
 [Route("api/admin/roles")]
-[Authorize(Roles = "Admin,SystemAdmin")]
+[Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
 public class AdminRolesController(SenicBillingDbContext dbContext) : ControllerBase
 {
+    private static bool IsReservedPlatformRole(string? role) =>
+        string.Equals(role?.Trim(), "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(role?.Trim(), "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
     [HttpGet("permissions")]
     public async Task<ActionResult<ApiResponse<List<PermissionDto>>>> GetPermissions(CancellationToken ct)
     {
@@ -62,11 +67,17 @@ public class AdminRolesController(SenicBillingDbContext dbContext) : ControllerB
             return BadRequest(new ApiResponse<RoleWithPermissionsDto>(false, "ชื่อ Role ไม่ถูกต้อง", null));
         }
 
+        if (IsReservedPlatformRole(request.RoleName) && !User.IsPlatformAdmin())
+        {
+            return Forbid();
+        }
+
         var tenantId = GetTenantId();
+        var roleName = request.RoleName.Trim();
 
         // 1. Delete existing
         var existing = await dbContext.Set<RolePermission>()
-            .Where(rp => rp.TenantId == tenantId && rp.RoleName == request.RoleName)
+            .Where(rp => rp.TenantId == tenantId && rp.RoleName == roleName)
             .ToListAsync(ct);
         
         dbContext.Set<RolePermission>().RemoveRange(existing);
@@ -76,21 +87,17 @@ public class AdminRolesController(SenicBillingDbContext dbContext) : ControllerB
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            RoleName = request.RoleName,
+            RoleName = roleName,
             PermissionId = pid
         }).ToList();
 
         dbContext.Set<RolePermission>().AddRange(newPermissions);
         await dbContext.SaveChangesAsync(ct);
 
-        return Ok(new ApiResponse<RoleWithPermissionsDto>(true, "บันทึกสิทธิ์สำเร็จ", new RoleWithPermissionsDto(request.RoleName, request.PermissionIds)));
+        return Ok(new ApiResponse<RoleWithPermissionsDto>(true, "บันทึกสิทธิ์สำเร็จ", new RoleWithPermissionsDto(roleName, request.PermissionIds)));
     }
 
-    private Guid GetTenantId()
-    {
-        var claim = User.FindFirst("tenantId")?.Value;
-        return claim is not null ? Guid.Parse(claim) : throw new UnauthorizedAccessException("Tenant ID claim not found");
-    }
+    private Guid GetTenantId() => User.GetTenantId();
 }
 
 public record PermissionDto(Guid Id, string Name, string Description, string Category);

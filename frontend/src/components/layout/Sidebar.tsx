@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Receipt, Banknote, Truck, FileText, FileCheck, FileMinus2, FilePlus2,
   Users, Package, Settings, ChevronLeft, ChevronRight, User, Wallet,
-  ShoppingBag, Warehouse, BookOpen
+  ShoppingBag, Warehouse, BookOpen, Landmark, History
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -26,28 +26,30 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
     { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
     { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
-    { id: 'creditnote', path: '/documents/creditnote', label: 'ใบลดหนี้ (CN)', icon: FileMinus2 },
-    { id: 'debitnote', path: '/documents/debitnote', label: 'ใบเพิ่มหนี้ (DN)', icon: FilePlus2 },
-    { id: 'expenses', path: '/expenses', label: 'ค่าใช้จ่าย / ภาษีซื้อ', icon: Wallet },
-    { id: 'purchase-orders', path: '/purchase-orders', label: 'ใบสั่งซื้อ (PO)', icon: ShoppingBag },
-    { id: 'accounting', path: '/accounting', label: 'บัญชีอัตโนมัติ', icon: BookOpen },
+    { id: 'creditnote', path: '/documents/creditnote', label: t('nav.creditnote'), icon: FileMinus2 },
+    { id: 'debitnote', path: '/documents/debitnote', label: t('nav.debitnote'), icon: FilePlus2 },
+    { id: 'expenses', path: '/expenses', label: t('nav.expenses'), icon: Wallet },
+    { id: 'purchase-orders', path: '/purchase-orders', label: t('nav.purchaseOrders'), icon: ShoppingBag },
+    { id: 'accounting', path: '/accounting', label: t('nav.accounting'), icon: BookOpen },
+    { id: 'bank-reconciliation', path: '/bank-reconciliation', label: t('nav.bankReconciliation'), icon: Landmark },
     { id: 'divider-2', divider: true, label: t('nav.masters') },
     { id: 'customers', path: '/customers', label: t('nav.customers'), icon: Users },
     { id: 'products', path: '/products', label: t('nav.products'), icon: Package },
-    { id: 'warehouses', path: '/warehouses', label: 'คลังสินค้า', icon: Warehouse },
+    { id: 'warehouses', path: '/warehouses', label: t('nav.warehouses'), icon: Warehouse },
     { id: 'divider-3', divider: true, label: t('nav.system') },
     { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
-  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
-  
+  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin' || user?.role === 'SuperAdmin';
+
   if (isAdmin) {
-    navItems.push({ id: 'users', path: '/users', label: 'จัดการผู้ใช้งาน', icon: Users });
+    navItems.push({ id: 'users', path: '/users', label: t('nav.users'), icon: Users });
+    navItems.push({ id: 'audit-logs', path: '/audit-logs', label: t('nav.auditLogs'), icon: History });
   }
 
   const fullName = user
-    ? user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'ผู้ดูแลระบบ'
-    : 'ผู้ดูแลระบบ';
+    ? user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || t('header.defaultUserName')
+    : t('header.defaultUserName');
 
   const initials = user
     ? (
@@ -118,7 +120,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         type="button"
         onClick={onToggleCollapse}
         className="layout-sidebar-collapse-btn focus-ring absolute -right-3 top-[calc(var(--layout-header-height)+14px)] w-7 h-7 rounded-full border flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-200 z-10"
-        aria-label={collapsed ? 'ขยายแถบเมนูด้านข้าง' : 'ย่อแถบเมนูด้านข้าง'}
+        aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
       >
         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
@@ -133,7 +135,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             <div className="layout-sidebar-user-meta min-w-0 flex-1 animate-fade-in">
               <p className="text-xs font-semibold text-white truncate">{fullName}</p>
               <p className="text-[10px] text-[var(--sidebar-text)] opacity-60 truncate">
-                {user?.email || user?.tenantName || 'บริษัท เซนิค'}
+                {user?.email || user?.tenantName || t('header.defaultCompanyName')}
               </p>
             </div>
           )}

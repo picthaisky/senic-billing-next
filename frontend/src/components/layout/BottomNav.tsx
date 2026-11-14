@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Receipt, Users, Package, Menu,
   Settings, Sun, Moon, LogOut, X, Banknote, Truck, FileText, FileCheck, Wallet,
-  ShoppingBag, Warehouse, BookOpen, FileMinus2, FilePlus2
+  ShoppingBag, Warehouse, BookOpen, FileMinus2, FilePlus2, Landmark, History
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
@@ -23,21 +23,27 @@ export default function BottomNav() {
   ];
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
+  const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin' || user?.role === 'SuperAdmin';
 
   const moreMenuItems = [
     { id: 'cashbill', path: '/documents/cashbill', label: t('nav.cashbill'), icon: Banknote },
     { id: 'delivery', path: '/documents/delivery', label: t('nav.delivery'), icon: Truck },
     { id: 'quotation', path: '/documents/quotation', label: t('nav.quotation'), icon: FileText },
     { id: 'taxinvoice', path: '/documents/taxinvoice', label: t('nav.taxinvoice'), icon: FileCheck },
-    { id: 'creditnote', path: '/documents/creditnote', label: 'ใบลดหนี้ (CN)', icon: FileMinus2 },
-    { id: 'debitnote', path: '/documents/debitnote', label: 'ใบเพิ่มหนี้ (DN)', icon: FilePlus2 },
-    { id: 'expenses', path: '/expenses', label: 'ค่าใช้จ่าย / ภาษีซื้อ', icon: Wallet },
-    { id: 'purchase-orders', path: '/purchase-orders', label: 'ใบสั่งซื้อ (PO)', icon: ShoppingBag },
-    { id: 'warehouses', path: '/warehouses', label: 'คลังสินค้า', icon: Warehouse },
-    { id: 'accounting', path: '/accounting', label: 'บัญชีอัตโนมัติ', icon: BookOpen },
+    { id: 'creditnote', path: '/documents/creditnote', label: t('nav.creditnote'), icon: FileMinus2 },
+    { id: 'debitnote', path: '/documents/debitnote', label: t('nav.debitnote'), icon: FilePlus2 },
+    { id: 'expenses', path: '/expenses', label: t('nav.expenses'), icon: Wallet },
+    { id: 'purchase-orders', path: '/purchase-orders', label: t('nav.purchaseOrders'), icon: ShoppingBag },
+    { id: 'warehouses', path: '/warehouses', label: t('nav.warehouses'), icon: Warehouse },
+    { id: 'accounting', path: '/accounting', label: t('nav.accounting'), icon: BookOpen },
+    { id: 'bank-reconciliation', path: '/bank-reconciliation', label: t('nav.bankReconciliation'), icon: Landmark },
     { id: 'settings', path: '/settings', label: t('nav.settings'), icon: Settings },
-    ...(isAdmin ? [{ id: 'users', path: '/users', label: 'จัดการผู้ใช้งาน', icon: Users }] : []),
+    ...(isAdmin
+      ? [
+          { id: 'users', path: '/users', label: t('nav.users'), icon: Users },
+          { id: 'audit-logs', path: '/audit-logs', label: t('nav.auditLogs'), icon: History },
+        ]
+      : []),
   ];
 
   const moreMenuPaths = moreMenuItems.map(i => i.path);
@@ -104,8 +110,8 @@ export default function BottomNav() {
               <button
                 onClick={() => setShowMore(false)}
                 className="layout-bottom-sheet-close rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] transition-colors"
-                aria-label="ปิดเมนูเพิ่มเติม"
-                title="ปิดเมนูเพิ่มเติม"
+                aria-label={t('nav.closeMore')}
+                title={t('nav.closeMore')}
               >
                 <X size={20} />
               </button>

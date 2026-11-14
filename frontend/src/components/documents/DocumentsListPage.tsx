@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 import {
   Plus, Printer, Search, FileText, Edit, Clock, Share2, FileSpreadsheet,
-  FileCode, Download, CheckCircle2, Ban, FileDiff, X
+  FileCode, Download, CheckCircle2, Ban, FileDiff, X, BellRing
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getApiErrorMessage } from '../../utils/errorUtils';
@@ -31,6 +32,9 @@ interface DocumentHeader {
   grandTotal: number;
   status: string;
   deliveryStatus?: string | null;
+  customerApprovalStatus?: string;
+  approvedByName?: string | null;
+  lastReminderSentAt?: string | null;
   vatMode?: string;
   vatRate?: number;
   whtRate?: number;
@@ -59,6 +63,7 @@ interface CnDnDraftState {
 const DELIVERY_STATUS_OPTIONS = ['รอส่ง', 'กำลังจัดส่ง', 'ส่งสำเร็จแล้ว'] as const;
 
 export default function DocumentsListPage() {
+  const { t, i18n } = useTranslation();
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentHeader[]>([]);
@@ -74,17 +79,17 @@ export default function DocumentsListPage() {
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role === 'Admin' || user?.role === 'SystemAdmin';
 
-  const titles: Record<string, string> = {
-    taxinvoice: 'ใบกำกับภาษี',
-    receipt: 'ใบเสร็จรับเงิน',
-    cashbill: 'บิลเงินสด',
-    delivery: 'ใบส่งของ',
-    quotation: 'ใบเสนอราคา',
-    creditnote: 'ใบลดหนี้',
-    debitnote: 'ใบเพิ่มหนี้',
+  const docTypeKeyMap: Record<string, string> = {
+    taxinvoice: t('docType.taxinvoice'),
+    receipt: t('docType.receipt'),
+    cashbill: t('docType.cashbill'),
+    delivery: t('docType.delivery'),
+    quotation: t('docType.quotation'),
+    creditnote: t('docType.creditnote'),
+    debitnote: t('docType.debitnote'),
   };
 
-  const title = titles[type || ''] || 'เอกสาร';
+  const title = docTypeKeyMap[type || ''] || t('forms.genericDocument');
 
   const getEndpoint = useCallback((t: string) => {
     switch (t) {
@@ -136,12 +141,22 @@ export default function DocumentsListPage() {
   }, [loadDocuments]);
 
   const handleMarkAsPaid = async (docId: string, docNumber: string) => {
-    if (!window.confirm(`ยืนยันบันทึกการรับชำระเงินสำหรับ ${docNumber} หรือไม่?`)) return;
+    if (!window.confirm(t('documentsList.confirmMarkPaid', { docNumber }))) return;
     try {
       await apiClient.patch(`${getEndpoint(type || '')}/${docId}/mark-paid`);
       await fetchDocuments(search);
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถบันทึกการชำระเงินได้'));
+      alert(getApiErrorMessage(err, t('documentsList.markPaidError')));
+    }
+  };
+
+  const handleSendReminder = async (docId: string, docNumber: string) => {
+    try {
+      const res = await apiClient.post(`/documents/${docId}/send-reminder`);
+      alert(res.data?.message || t('documentsList.remindSuccess', { docNumber }));
+      await fetchDocuments(search);
+    } catch (err: unknown) {
+      alert(getApiErrorMessage(err, t('documentsList.remindError')));
     }
   };
 
@@ -152,8 +167,15 @@ export default function DocumentsListPage() {
       });
       await fetchDocuments(search);
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถอัปเดตสถานะจัดส่งได้'));
+      alert(getApiErrorMessage(err, t('documentsList.deliveryStatusError')));
     }
+  };
+
+  const getDeliveryStatusLabel = (status: string) => {
+    if (status === 'รอส่ง') return t('documentsList.deliveryPending');
+    if (status === 'กำลังจัดส่ง') return t('documentsList.deliveryShipping');
+    if (status === 'ส่งสำเร็จแล้ว') return t('documentsList.deliveryDelivered');
+    return status;
   };
 
   const handleOpenCreditDebitModal = async (docId: string) => {
@@ -166,7 +188,7 @@ export default function DocumentsListPage() {
         sourceDocNumber: detail.documentNumber,
         customerName: detail.customerName || '-',
         noteType: 'CreditNote',
-        reason: 'ปรับลดราคาสินค้า / รับคืนสินค้าบางส่วน',
+        reason: t('documentsList.defaultCnReason'),
         vatMode: detail.vatMode || 'Exclusive',
         vatRate: Number(detail.vatRate ?? 7),
         whtRate: Number(detail.whtRate ?? 0),
@@ -174,13 +196,13 @@ export default function DocumentsListPage() {
           productId: line.productId ?? null,
           description: line.description,
           quantity: Number(line.quantity ?? 1),
-          unit: line.unit || 'รายการ',
+          unit: line.unit || t('documentsList.defaultLineUnit'),
           unitPrice: Number(line.unitPrice ?? line.lineTotal ?? 0),
           discountAmount: Number(line.discountAmount ?? 0),
         })),
       });
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถโหลดรายละเอียดเอกสารต้นฉบับได้'));
+      alert(getApiErrorMessage(err, t('documentsList.loadSourceError')));
     }
   };
 
@@ -189,7 +211,7 @@ export default function DocumentsListPage() {
     if (!cnDnDraft) return;
     const trimmedReason = cnDnDraft.reason.trim();
     if (!trimmedReason) {
-      alert('กรุณาระบุเหตุผลการออกเอกสาร');
+      alert(t('documentsList.reasonRequired'));
       return;
     }
 
@@ -200,14 +222,14 @@ export default function DocumentsListPage() {
         productId: l.productId ?? null,
         description: l.description.trim(),
         quantity: l.quantity,
-        unit: l.unit || 'รายการ',
+        unit: l.unit || t('documentsList.defaultLineUnit'),
         unitPrice: l.unitPrice,
         discountAmount: l.discountAmount,
         lineTotal: Math.max(0, l.quantity * l.unitPrice - l.discountAmount),
       }));
 
     if (validLines.length === 0) {
-      alert('กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ');
+      alert(t('documentsList.lineRequired'));
       return;
     }
 
@@ -233,22 +255,22 @@ export default function DocumentsListPage() {
       const targetRoute = cnDnDraft.noteType === 'CreditNote' ? '/documents/creditnote' : '/documents/debitnote';
       setCnDnDraft(null);
       if (created?.id) {
-        alert(`ออกเอกสาร ${created.documentNumber} สำเร็จ`);
+        alert(t('documentsList.createNoteSuccess', { docNumber: created.documentNumber }));
       }
       navigate(targetRoute);
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถออกใบลดหนี้/เพิ่มหนี้ได้'));
+      alert(getApiErrorMessage(err, t('documentsList.createNoteError')));
     } finally {
       setIsCreatingNote(false);
     }
   };
 
   const handleCancelDocument = async (docId: string, docNumber: string) => {
-    const reason = window.prompt(`ระบุเหตุผลในการยกเลิกเอกสาร ${docNumber}:`, 'ข้อมูลไม่ถูกต้อง');
+    const reason = window.prompt(t('documentsList.cancelPrompt', { docNumber }), t('documentsList.cancelDefaultReason'));
     if (reason === null) return;
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
-      alert('กรุณาระบุเหตุผลการยกเลิกเอกสาร');
+      alert(t('documentsList.cancelReasonRequired'));
       return;
     }
     try {
@@ -257,7 +279,7 @@ export default function DocumentsListPage() {
       });
       await fetchDocuments(search);
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถยกเลิกเอกสารได้'));
+      alert(getApiErrorMessage(err, t('documentsList.cancelError')));
     }
   };
 
@@ -277,13 +299,13 @@ export default function DocumentsListPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `รายงานภาษีขาย_${reportYear}_${String(reportMonth).padStart(2, '0')}.xlsx`;
+      a.download = `OutputTax_${reportYear}_${String(reportMonth).padStart(2, '0')}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('ไม่สามารถส่งออกรายงานภาษีขายได้');
+      alert(t('documentsList.exportTaxError'));
     }
   };
 
@@ -302,7 +324,7 @@ export default function DocumentsListPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('ไม่สามารถดาวน์โหลดไฟล์ e-Tax XML ได้');
+      alert(t('documentsList.exportEtaxError'));
     }
   };
 
@@ -331,12 +353,12 @@ export default function DocumentsListPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'draft': return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">ร่าง</span>;
-      case 'issued': return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">ออกแล้ว</span>;
-      case 'sent': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">ส่งแล้ว</span>;
-      case 'viewed': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">เปิดอ่านแล้ว</span>;
-      case 'paid': return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">ชำระแล้ว</span>;
-      case 'cancelled': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">ยกเลิก</span>;
+      case 'draft': return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{t('documentsList.statusDraft')}</span>;
+      case 'issued': return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{t('documentsList.statusIssued')}</span>;
+      case 'sent': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{t('documentsList.statusSent')}</span>;
+      case 'viewed': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{t('documentsList.statusViewed')}</span>;
+      case 'paid': return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">{t('documentsList.statusPaid')}</span>;
+      case 'cancelled': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">{t('documentsList.statusCancelled')}</span>;
       default: return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{status}</span>;
     }
   };
@@ -348,28 +370,28 @@ export default function DocumentsListPage() {
     <div className="flex flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">รายการ{title}</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">{t('documentsList.pageTitle', { docTitle: title })}</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            จัดการและดูประวัติ{title}ทั้งหมดของคุณ
+            {t('documentsList.pageSubtitle', { docTitle: title })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
           {type === 'taxinvoice' && (
             <div className="flex items-center gap-2">
               <select
-                aria-label="เลือกเดือนรายงานภาษีขาย"
+                aria-label={t('documentsList.selectTaxMonthAria')}
                 className="input-field py-2 px-3 text-sm"
                 value={reportMonth}
                 onChange={(e) => setReportMonth(Number(e.target.value))}
               >
                 {Array.from({ length: 12 }, (_, idx) => idx + 1).map((m) => (
                   <option key={m} value={m}>
-                    เดือน {m}
+                    {t('documentsList.monthLabel', { m })}
                   </option>
                 ))}
               </select>
               <select
-                aria-label="เลือกปีรายงานภาษีขาย"
+                aria-label={t('documentsList.selectTaxYearAria')}
                 className="input-field py-2 px-3 text-sm"
                 value={reportYear}
                 onChange={(e) => setReportYear(Number(e.target.value))}
@@ -384,14 +406,14 @@ export default function DocumentsListPage() {
                 type="button"
                 onClick={handleExportTaxExcel}
                 className="btn btn-secondary whitespace-nowrap flex items-center gap-1.5"
-                title="ดาวน์โหลดรายงานภาษีขายประจำเดือน (Excel)"
+                title={t('documentsList.taxExcelBtn')}
               >
-                <FileSpreadsheet size={16} /> รายงานภาษีขาย (Excel)
+                <FileSpreadsheet size={16} /> {t('documentsList.taxExcelBtn')}
               </button>
             </div>
           )}
           <Link to={`/documents/${type}/create`} className="btn btn-primary whitespace-nowrap">
-            <Plus size={18} className="mr-1" /> สร้าง{title}
+            <Plus size={18} className="mr-1" /> {t('documentsList.createBtn', { docTitle: title })}
           </Link>
         </div>
       </div>
@@ -401,7 +423,7 @@ export default function DocumentsListPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input
             type="text"
-            placeholder="ค้นหาเลขที่เอกสาร หรือชื่อลูกค้า..."
+            placeholder={t('documentsList.searchPlaceholder')}
             className="input-field pl-10 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -419,13 +441,13 @@ export default function DocumentsListPage() {
           <table className="data-table w-full text-sm text-left">
             <thead>
               <tr>
-                <th className="whitespace-nowrap">วันที่</th>
-                <th className="whitespace-nowrap">เลขที่เอกสาร</th>
-                <th className="whitespace-nowrap">ลูกค้า</th>
-                <th className="text-right whitespace-nowrap">ยอดรวม (บาท)</th>
-                <th className="text-center whitespace-nowrap">สถานะ</th>
-                {type === 'delivery' && <th className="text-center whitespace-nowrap">สถานะจัดส่ง</th>}
-                <th className="text-right whitespace-nowrap">จัดการ</th>
+                <th className="whitespace-nowrap">{t('documentsList.colDate')}</th>
+                <th className="whitespace-nowrap">{t('documentsList.colDocNumber')}</th>
+                <th className="whitespace-nowrap">{t('documentsList.colCustomer')}</th>
+                <th className="text-right whitespace-nowrap">{t('documentsList.colTotal')}</th>
+                <th className="text-center whitespace-nowrap">{t('documentsList.colStatus')}</th>
+                {type === 'delivery' && <th className="text-center whitespace-nowrap">{t('documentsList.colDeliveryStatus')}</th>}
+                <th className="text-right whitespace-nowrap">{t('documentsList.colActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
@@ -433,22 +455,22 @@ export default function DocumentsListPage() {
                 <tr>
                   <td colSpan={colCount} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent mb-2"></div>
-                    <p>กำลังโหลดข้อมูล...</p>
+                    <p>{t('documentsList.loading')}</p>
                   </td>
                 </tr>
               ) : documents.length === 0 ? (
                 <tr>
                   <td colSpan={colCount} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
                     <FileText size={32} className="mx-auto mb-3 opacity-20" />
-                    <p>ไม่พบรายการ{title}</p>
-                    {search && <p className="text-xs mt-1 opacity-70">ลองค้นหาด้วยคำอื่น</p>}
+                    <p>{t('documentsList.empty', { docTitle: title })}</p>
+                    {search && <p className="text-xs mt-1 opacity-70">{t('documentsList.emptySearchHint')}</p>}
                   </td>
                 </tr>
               ) : (
                 documents.map((doc) => (
                   <tr key={doc.id} className="hover:bg-[var(--color-bg-secondary)]/30 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-[var(--color-text)]">
-                      {new Date(doc.documentDate).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      {new Date(doc.documentDate).toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-[var(--color-primary)]">
                       {doc.documentNumber}
@@ -460,7 +482,19 @@ export default function DocumentsListPage() {
                       {formatNumber(doc.grandTotal)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {getStatusBadge(doc.status)}
+                      <div className="flex flex-col items-center gap-1">
+                        {getStatusBadge(doc.status)}
+                        {doc.customerApprovalStatus === 'Approved' && (
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-medium">
+                            {t('documentsList.customerApproved')}
+                          </span>
+                        )}
+                        {doc.customerApprovalStatus === 'Rejected' && (
+                          <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full text-[10px] font-medium">
+                            {t('documentsList.customerRejected')}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {type === 'delivery' && (
                       <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -468,16 +502,16 @@ export default function DocumentsListPage() {
                           <span className="text-xs text-[var(--color-text-muted)]">-</span>
                         ) : (
                           <select
-                            aria-label={`อัปเดตสถานะจัดส่งสำหรับ ${doc.documentNumber}`}
+                            aria-label={t('documentsList.updateDeliveryAria', { docNumber: doc.documentNumber })}
                             className="input-field py-1 px-2 text-xs"
                             value={doc.deliveryStatus || 'รอส่ง'}
                             onChange={(e) => void handleDeliveryStatusChange(doc.id, e.target.value)}
                           >
                             {DELIVERY_STATUS_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>{opt}</option>
+                              <option key={opt} value={opt}>{getDeliveryStatusLabel(opt)}</option>
                             ))}
                             {doc.deliveryStatus && !DELIVERY_STATUS_OPTIONS.includes(doc.deliveryStatus as typeof DELIVERY_STATUS_OPTIONS[number]) && (
-                              <option value={doc.deliveryStatus}>{doc.deliveryStatus}</option>
+                              <option value={doc.deliveryStatus}>{getDeliveryStatusLabel(doc.deliveryStatus)}</option>
                             )}
                           </select>
                         )}
@@ -489,7 +523,7 @@ export default function DocumentsListPage() {
                           <button
                             onClick={() => window.open(`/documents/${type || 'receipt'}/edit/${doc.id}`, '_self')}
                             className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-md transition-colors"
-                            title="แก้ไข"
+                            title={t('documentsList.actionEdit')}
                           >
                             <Edit size={16} />
                           </button>
@@ -498,16 +532,25 @@ export default function DocumentsListPage() {
                           <button
                             onClick={() => void handleMarkAsPaid(doc.id, doc.documentNumber)}
                             className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                            title="บันทึกชำระเงินแล้ว"
+                            title={t('documentsList.actionMarkPaid')}
                           >
                             <CheckCircle2 size={16} />
+                          </button>
+                        )}
+                        {!['creditnote', 'delivery'].includes(type || '') && ['issued', 'sent', 'viewed', 'overdue'].includes(doc.status?.toLowerCase()) && (
+                          <button
+                            onClick={() => void handleSendReminder(doc.id, doc.documentNumber)}
+                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                            title={t('documentsList.actionRemind')}
+                          >
+                            <BellRing size={16} />
                           </button>
                         )}
                         {canIssueCreditDebit && doc.status?.toLowerCase() !== 'draft' && doc.status?.toLowerCase() !== 'cancelled' && (
                           <button
                             onClick={() => void handleOpenCreditDebitModal(doc.id)}
                             className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                            title="ออกใบลดหนี้ / ใบเพิ่มหนี้"
+                            title={t('documentsList.actionCnDn')}
                           >
                             <FileDiff size={16} />
                           </button>
@@ -516,7 +559,7 @@ export default function DocumentsListPage() {
                           <button
                             onClick={() => handleDownloadETaxXml(doc.id, doc.documentNumber)}
                             className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
-                            title="ดาวน์โหลด e-Tax XML"
+                            title={t('documentsList.actionEtax')}
                           >
                             <FileCode size={16} />
                           </button>
@@ -524,28 +567,28 @@ export default function DocumentsListPage() {
                         <button
                           onClick={() => handleDownloadPdf(doc.id, doc.documentNumber)}
                           className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                          title="ดาวน์โหลด PDF"
+                          title={t('documentsList.actionPdf')}
                         >
                           <Download size={16} />
                         </button>
                         <button
                           onClick={() => setShareDoc({ id: doc.id, num: doc.documentNumber })}
                           className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                          title="แชร์เอกสาร"
+                          title={t('documentsList.actionShare')}
                         >
                           <Share2 size={16} />
                         </button>
                         <button
                           onClick={() => setHistoryDoc({ id: doc.id, num: doc.documentNumber })}
                           className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
-                          title="ประวัติการแก้ไข"
+                          title={t('documentsList.actionHistory')}
                         >
                           <Clock size={16} />
                         </button>
                         <button
                           onClick={() => window.open(`/print/${doc.id}`, '_blank')}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="ดู/พิมพ์"
+                          title={t('documentsList.actionPrint')}
                         >
                           <Printer size={16} />
                         </button>
@@ -553,7 +596,7 @@ export default function DocumentsListPage() {
                           <button
                             onClick={() => void handleCancelDocument(doc.id, doc.documentNumber)}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="ยกเลิกเอกสาร"
+                            title={t('documentsList.actionCancel')}
                           >
                             <Ban size={16} />
                           </button>
@@ -586,16 +629,16 @@ export default function DocumentsListPage() {
           <div className="rounded-2xl shadow-xl w-full max-w-2xl border overflow-hidden bg-[var(--color-surface-solid)] text-[var(--color-text)] border-[var(--color-border)]">
             <div className="layout-entity-modal-head flex items-center justify-between border-b border-[var(--color-border)]">
               <div>
-                <h3 className="font-bold text-lg">ออกใบลดหนี้ / ใบเพิ่มหนี้</h3>
+                <h3 className="font-bold text-lg">{t('documentsList.cnDnModalTitle')}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  อ้างอิงเอกสาร {cnDnDraft.sourceDocNumber} — {cnDnDraft.customerName}
+                  {t('documentsList.cnDnReference', { docNumber: cnDnDraft.sourceDocNumber, customer: cnDnDraft.customerName })}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setCnDnDraft(null)}
                 className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                aria-label="ปิดหน้าต่าง"
+                aria-label={t('documentsList.closeWindow')}
               >
                 <X size={20} />
               </button>
@@ -603,7 +646,7 @@ export default function DocumentsListPage() {
             <form onSubmit={handleSubmitCreditDebitNote} className="form-modal-content form-stack-md">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="layout-form-label-sm block text-sm font-medium">ประเภทเอกสาร *</label>
+                  <label className="layout-form-label-sm block text-sm font-medium">{t('documentsList.cnDnType')}</label>
                   <select
                     className="input-field"
                     value={cnDnDraft.noteType}
@@ -612,23 +655,23 @@ export default function DocumentsListPage() {
                       setCnDnDraft((prev) => prev ? {
                         ...prev,
                         noteType,
-                        reason: noteType === 'CreditNote' ? 'ปรับลดราคาสินค้า / รับคืนสินค้าบางส่วน' : 'คิดค่าสินค้า/บริการเพิ่มเติม',
+                        reason: noteType === 'CreditNote' ? t('documentsList.defaultCnReason') : t('documentsList.defaultDnReason'),
                       } : null);
                     }}
                   >
-                    <option value="CreditNote">ใบลดหนี้ (Credit Note - CN)</option>
-                    <option value="DebitNote">ใบเพิ่มหนี้ (Debit Note - DN)</option>
+                    <option value="CreditNote">{t('documentsList.cnOption')}</option>
+                    <option value="DebitNote">{t('documentsList.dnOption')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="layout-form-label-sm block text-sm font-medium">เหตุผลในการออกเอกสาร *</label>
+                  <label className="layout-form-label-sm block text-sm font-medium">{t('documentsList.cnDnReason')}</label>
                   <input
                     type="text"
                     required
                     className="input-field"
                     value={cnDnDraft.reason}
                     onChange={(e) => setCnDnDraft((prev) => prev ? { ...prev, reason: e.target.value } : null)}
-                    placeholder="ระบุเหตุผล"
+                    placeholder={t('documentsList.cnDnReasonPlaceholder')}
                   />
                 </div>
               </div>
@@ -637,10 +680,10 @@ export default function DocumentsListPage() {
                 <table className="data-table w-full text-xs">
                   <thead>
                     <tr>
-                      <th>รายการ</th>
-                      <th className="w-24 text-right">จำนวน</th>
-                      <th className="w-28 text-right">ราคา/หน่วย</th>
-                      <th className="w-28 text-right">รวม (บาท)</th>
+                      <th>{t('documentsList.colItem')}</th>
+                      <th className="w-24 text-right">{t('documentsList.colQty')}</th>
+                      <th className="w-28 text-right">{t('documentsList.colUnitPrice')}</th>
+                      <th className="w-28 text-right">{t('documentsList.colLineTotal')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -694,12 +737,12 @@ export default function DocumentsListPage() {
 
               <div className="form-modal-actions">
                 <button type="button" onClick={() => setCnDnDraft(null)} className="btn btn-ghost">
-                  ยกเลิก
+                  {t('documentsList.cancel')}
                 </button>
                 <button type="submit" disabled={isCreatingNote} className="btn btn-primary">
                   {isCreatingNote
-                    ? 'กำลังบันทึก...'
-                    : cnDnDraft.noteType === 'CreditNote' ? 'บันทึกใบลดหนี้ (CN)' : 'บันทึกใบเพิ่มหนี้ (DN)'}
+                    ? t('documentsList.saving')
+                    : cnDnDraft.noteType === 'CreditNote' ? t('documentsList.saveCn') : t('documentsList.saveDn')}
                 </button>
               </div>
             </form>

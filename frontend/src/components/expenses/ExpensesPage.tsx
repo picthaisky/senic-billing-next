@@ -4,6 +4,7 @@ import {
   Wallet, Plus, Search, Download, FileSpreadsheet, FileText,
   Sparkles, Edit2, Ban, X, Save, CheckCircle2, ReceiptText
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/errorUtils';
 
@@ -83,20 +84,20 @@ interface ExpenseFormState {
   notes: string;
 }
 
-const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  CostOfGoods: 'ต้นทุนสินค้า / วัตถุดิบ',
-  RentAndUtilities: 'ค่าเช่าและสาธารณูปโภค',
-  ProfessionalService: 'ค่าบริการวิชาชีพ / จ้างทำของ',
-  Marketing: 'ค่าโฆษณา / การตลาด',
-  OfficeSupplies: 'อุปกรณ์สำนักงาน',
-  Transportation: 'ค่าขนส่ง / เดินทาง',
-  Other: 'อื่น ๆ',
+const CATEGORY_LABEL_KEYS: Record<ExpenseCategory, string> = {
+  CostOfGoods: 'expenses.catCostOfGoods',
+  RentAndUtilities: 'expenses.catRentAndUtilities',
+  ProfessionalService: 'expenses.catProfessionalService',
+  Marketing: 'expenses.catMarketing',
+  OfficeSupplies: 'expenses.catOfficeSupplies',
+  Transportation: 'expenses.catTransportation',
+  Other: 'expenses.catOther',
 };
 
 const WHT_RATES = [0, 1, 1.5, 2, 3, 5, 10, 15];
 
-const formatCurrency = (val: number) =>
-  `฿${val.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (val: number, locale: string) =>
+  `฿${val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const toDateInput = (iso?: string | null) => {
   if (!iso) return '';
@@ -129,6 +130,8 @@ const emptyForm = (): ExpenseFormState => {
 };
 
 export default function ExpensesPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -309,10 +312,10 @@ export default function ExpensesPage() {
           whtRate: data.suggestedWhtRate ?? prev.whtRate,
           pndType: data.suggestedPndType ?? prev.pndType,
         }));
-        setAiNotice(res.data?.message || 'สกัดข้อมูลจากใบเสร็จสำเร็จ');
+        setAiNotice(res.data?.message || t('expenses.aiSuccessFallback'));
       }
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถวิเคราะห์ข้อความใบเสร็จได้'));
+      alert(getApiErrorMessage(err, t('expenses.aiParseError')));
     } finally {
       setIsParsingAi(false);
     }
@@ -352,20 +355,23 @@ export default function ExpensesPage() {
       setIsModalOpen(false);
       await fetchExpenses();
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถบันทึกใบสำคัญจ่ายได้'));
+      alert(getApiErrorMessage(err, t('expenses.saveError')));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCancelExpense = async (item: ExpenseRecordDto) => {
-    const reason = window.prompt(`ระบุเหตุผลในการยกเลิกใบสำคัญจ่าย ${item.voucherNumber}:`, 'บันทึกข้อมูลผิดพลาด');
+    const reason = window.prompt(
+      t('expenses.cancelPrompt', { voucherNumber: item.voucherNumber }),
+      t('expenses.cancelDefaultReason')
+    );
     if (reason === null) return;
     try {
       await apiClient.post(`/expenses/${item.id}/cancel`, { reason });
       await fetchExpenses();
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถยกเลิกใบสำคัญจ่ายได้'));
+      alert(getApiErrorMessage(err, t('expenses.cancelError')));
     }
   };
 
@@ -382,7 +388,7 @@ export default function ExpensesPage() {
       a.remove();
       window.URL.revokeObjectURL(objUrl);
     } catch (err: unknown) {
-      alert(getApiErrorMessage(err, 'ไม่สามารถดาวน์โหลดไฟล์ได้'));
+      alert(getApiErrorMessage(err, t('expenses.downloadError')));
     }
   };
 
@@ -394,10 +400,10 @@ export default function ExpensesPage() {
           <div className="w-1.5 h-10 rounded-full bg-[var(--color-primary)]" />
           <div>
             <h2 className="text-lg font-bold leading-tight text-[var(--color-text)]">
-              ค่าใช้จ่าย &amp; ภาษีซื้อ (Expenses &amp; Input VAT)
+              {t('expenses.title')}
             </h2>
             <p className="text-sm text-[var(--color-text-muted)]">
-              บันทึกใบสำคัญจ่าย ใบกำกับภาษีซื้อ หัก ณ ที่จ่าย (50 ทวิ) และรายงาน ภ.พ.30 / ภ.ง.ด.3 / ภ.ง.ด.53
+              {t('expenses.subtitle')}
             </p>
           </div>
         </div>
@@ -408,29 +414,29 @@ export default function ExpensesPage() {
             onClick={() =>
               void downloadBlob(
                 `/reports/input-tax/export?year=${year}&month=${month}`,
-                `รายงานภาษีซื้อ_${year}_${String(month).padStart(2, '0')}.xlsx`,
+                t('expenses.exportInputTaxFilename', { year, month: String(month).padStart(2, '0') }),
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
               )
             }
             className="btn btn-secondary text-xs flex items-center gap-1.5"
           >
-            <FileSpreadsheet size={15} /> รายงานภาษีซื้อ + ภ.พ.30
+            <FileSpreadsheet size={15} /> {t('expenses.exportInputTaxBtn')}
           </button>
           <button
             type="button"
             onClick={() =>
               void downloadBlob(
                 `/reports/wht/export?year=${year}&month=${month}`,
-                `รายงานหักณที่จ่าย_ภงด3_53_${year}_${String(month).padStart(2, '0')}.xlsx`,
+                t('expenses.exportWhtFilename', { year, month: String(month).padStart(2, '0') }),
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
               )
             }
             className="btn btn-secondary text-xs flex items-center gap-1.5"
           >
-            <Download size={15} /> รายงาน ภ.ง.ด.3 / 53
+            <Download size={15} /> {t('expenses.exportWhtBtn')}
           </button>
           <button type="button" onClick={openCreateModal} className="btn btn-primary flex items-center gap-1.5">
-            <Plus size={16} /> บันทึกค่าใช้จ่าย
+            <Plus size={16} /> {t('expenses.createBtn')}
           </button>
         </div>
       </div>
@@ -438,26 +444,26 @@ export default function ExpensesPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-5">
-          <p className="text-xs text-[var(--color-text-muted)]">ยอดค่าใช้จ่ายรวม (เดือน {month}/{year})</p>
-          <p className="text-2xl font-bold text-[var(--color-text)] mt-1">{formatCurrency(summary.totalGrandTotal)}</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">ก่อนภาษี: {formatCurrency(summary.totalBeforeVat)}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{t('expenses.kpiTotalTitle', { month, year })}</p>
+          <p className="text-2xl font-bold text-[var(--color-text)] mt-1">{formatCurrency(summary.totalGrandTotal, locale)}</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">{t('expenses.kpiBeforeVat')} {formatCurrency(summary.totalBeforeVat, locale)}</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs text-[var(--color-text-muted)]">ภาษีซื้อขอคืนได้ (Claimable Input VAT)</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{formatCurrency(summary.totalRefundableInputVat)}</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">ภาษีซื้อทั้งหมด: {formatCurrency(summary.totalInputVat)}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{t('expenses.kpiClaimableVatTitle')}</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{formatCurrency(summary.totalRefundableInputVat, locale)}</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">{t('expenses.kpiAllVat')} {formatCurrency(summary.totalInputVat, locale)}</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs text-[var(--color-text-muted)]">ภาษีหัก ณ ที่จ่ายรอนำส่ง (WHT)</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{formatCurrency(summary.totalWht)}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{t('expenses.kpiWhtTitle')}</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">{formatCurrency(summary.totalWht, locale)}</p>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            ภ.ง.ด.3: {formatCurrency(summary.totalPnd3Wht)} | ภ.ง.ด.53: {formatCurrency(summary.totalPnd53Wht)}
+            {t('expenses.kpiWhtBreakdown', { pnd3: formatCurrency(summary.totalPnd3Wht, locale), pnd53: formatCurrency(summary.totalPnd53Wht, locale) })}
           </p>
         </div>
         <div className="card p-5">
-          <p className="text-xs text-[var(--color-text-muted)]">จำนวนใบสำคัญจ่ายที่ใช้งาน</p>
-          <p className="text-2xl font-bold text-[var(--color-primary)] mt-1">{summary.count} รายการ</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">จ่ายสุทธิรวม: {formatCurrency(summary.totalNetPaid)}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{t('expenses.kpiActiveCountTitle')}</p>
+          <p className="text-2xl font-bold text-[var(--color-primary)] mt-1">{t('expenses.kpiCountUnit', { count: summary.count })}</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">{t('expenses.kpiNetPaid')} {formatCurrency(summary.totalNetPaid, locale)}</p>
         </div>
       </div>
 
@@ -468,7 +474,7 @@ export default function ExpensesPage() {
           <input
             type="text"
             className="input-field pl-9"
-            placeholder="ค้นหาเลขที่ EXP, ชื่อผู้ขาย, เลขผู้เสียภาษี, เลขที่ใบกำกับภาษี..."
+            placeholder={t('expenses.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -476,20 +482,20 @@ export default function ExpensesPage() {
 
         <select
           className="input-field w-28"
-          aria-label="เดือน"
+          aria-label={t('expenses.monthAria')}
           value={month}
           onChange={(e) => setMonth(Number(e.target.value))}
         >
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
             <option key={m} value={m}>
-              เดือน {m}
+              {t('expenses.monthOption', { month: m })}
             </option>
           ))}
         </select>
 
         <select
           className="input-field w-28"
-          aria-label="ปี"
+          aria-label={t('expenses.yearAria')}
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
         >
@@ -502,27 +508,27 @@ export default function ExpensesPage() {
 
         <select
           className="input-field w-48"
-          aria-label="หมวดหมู่ค่าใช้จ่าย"
+          aria-label={t('expenses.categoryAria')}
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
         >
-          <option value="">ทุกหมวดหมู่</option>
-          {Object.entries(CATEGORY_LABELS).map(([k, label]) => (
+          <option value="">{t('expenses.allCategories')}</option>
+          {Object.entries(CATEGORY_LABEL_KEYS).map(([k, key]) => (
             <option key={k} value={k}>
-              {label}
+              {t(key)}
             </option>
           ))}
         </select>
 
         <select
           className="input-field w-36"
-          aria-label="แบบ ภ.ง.ด."
+          aria-label={t('expenses.pndAria')}
           value={pndFilter}
           onChange={(e) => setPndFilter(e.target.value)}
         >
-          <option value="">ทุกแบบ ภ.ง.ด.</option>
-          <option value="PND3">ภ.ง.ด.3</option>
-          <option value="PND53">ภ.ง.ด.53</option>
+          <option value="">{t('expenses.allPnd')}</option>
+          <option value="PND3">{t('expenses.pnd3Label')}</option>
+          <option value="PND53">{t('expenses.pnd53Label')}</option>
         </select>
       </div>
 
@@ -532,28 +538,28 @@ export default function ExpensesPage() {
           <table className="data-table table-responsive">
             <thead>
               <tr>
-                <th>เลขที่เอกสาร</th>
-                <th>วันที่</th>
-                <th>ผู้ขาย / เลขผู้เสียภาษี</th>
-                <th>หมวดหมู่ / รายละเอียด</th>
-                <th className="text-right">ก่อนภาษี</th>
-                <th className="text-right">ภาษีซื้อ (VAT)</th>
-                <th className="text-right">หัก ณ ที่จ่าย</th>
-                <th className="text-right">จ่ายสุทธิ</th>
-                <th className="text-center">จัดการ</th>
+                <th>{t('expenses.colDocNo')}</th>
+                <th>{t('expenses.colDate')}</th>
+                <th>{t('expenses.colVendor')}</th>
+                <th>{t('expenses.colCategoryDesc')}</th>
+                <th className="text-right">{t('expenses.colBeforeVat')}</th>
+                <th className="text-right">{t('expenses.colInputVat')}</th>
+                <th className="text-right">{t('expenses.colWht')}</th>
+                <th className="text-right">{t('expenses.colNetPaid')}</th>
+                <th className="text-center">{t('expenses.colActions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]">
-                    กำลังโหลดข้อมูลค่าใช้จ่าย...
+                    {t('expenses.loading')}
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-10 text-[var(--color-text-muted)]">
-                    ยังไม่มีรายการค่าใช้จ่ายในเดือนที่เลือก
+                    {t('expenses.empty')}
                   </td>
                 </tr>
               ) : (
@@ -561,19 +567,19 @@ export default function ExpensesPage() {
                   const isCancelled = item.status === 'Cancelled';
                   return (
                     <tr key={item.id} className={isCancelled ? 'opacity-50' : ''}>
-                      <td data-label="เลขที่เอกสาร">
+                      <td data-label={t('expenses.colDocNo')}>
                         <div className="font-mono font-semibold text-sm flex items-center gap-1.5">
                           <ReceiptText size={14} className="text-[var(--color-primary)]" />
                           {item.voucherNumber}
                         </div>
                         {item.taxInvoiceNumber && (
-                          <div className="text-xs text-[var(--color-text-muted)]">ใบกำกับฯ: {item.taxInvoiceNumber}</div>
+                          <div className="text-xs text-[var(--color-text-muted)]">{t('expenses.taxInvPrefix')} {item.taxInvoiceNumber}</div>
                         )}
                       </td>
-                      <td data-label="วันที่" className="text-sm">
-                        {new Date(item.expenseDate).toLocaleDateString('th-TH')}
+                      <td data-label={t('expenses.colDate')} className="text-sm">
+                        {new Date(item.expenseDate).toLocaleDateString(locale)}
                       </td>
-                      <td data-label="ผู้ขาย">
+                      <td data-label={t('expenses.dataVendor')}>
                         <div className="font-medium text-sm">{item.vendorName}</div>
                         {item.vendorTaxId && (
                           <div className="text-xs font-mono text-[var(--color-text-muted)]">
@@ -581,40 +587,40 @@ export default function ExpensesPage() {
                           </div>
                         )}
                       </td>
-                      <td data-label="หมวดหมู่">
-                        <span className="badge badge-info text-xs">{CATEGORY_LABELS[item.category]}</span>
+                      <td data-label={t('expenses.dataCategory')}>
+                        <span className="badge badge-info text-xs">{t(CATEGORY_LABEL_KEYS[item.category])}</span>
                         <div className="text-xs text-[var(--color-text-secondary)] mt-1 max-w-[220px] truncate">
                           {item.description}
                         </div>
                       </td>
-                      <td data-label="ก่อนภาษี" className="text-right font-mono text-sm">
-                        {formatCurrency(item.totalBeforeVat)}
+                      <td data-label={t('expenses.colBeforeVat')} className="text-right font-mono text-sm">
+                        {formatCurrency(item.totalBeforeVat, locale)}
                       </td>
-                      <td data-label="ภาษีซื้อ" className="text-right font-mono text-sm">
-                        <div>{formatCurrency(item.vatAmount)}</div>
+                      <td data-label={t('expenses.colInputVat')} className="text-right font-mono text-sm">
+                        <div>{formatCurrency(item.vatAmount, locale)}</div>
                         {item.vatAmount > 0 && (
                           <span className={`text-[10px] ${item.isRefundableVat ? 'text-emerald-600' : 'text-amber-600'}`}>
-                            {item.isRefundableVat ? 'ขอคืนได้' : 'ต้องห้าม'}
+                            {item.isRefundableVat ? t('expenses.refundableVat') : t('expenses.nonRefundableVat')}
                           </span>
                         )}
                       </td>
-                      <td data-label="หัก ณ ที่จ่าย" className="text-right font-mono text-sm">
+                      <td data-label={t('expenses.colWht')} className="text-right font-mono text-sm">
                         {item.whtAmount > 0 ? (
                           <div>
-                            <div className="text-amber-600 font-semibold">{formatCurrency(item.whtAmount)}</div>
+                            <div className="text-amber-600 font-semibold">{formatCurrency(item.whtAmount, locale)}</div>
                             <span className="text-[10px] text-[var(--color-text-muted)]">
-                              {item.pndType === 'PND3' ? 'ภ.ง.ด.3' : 'ภ.ง.ด.53'} ({item.whtRate}%)
+                              {item.pndType === 'PND3' ? t('expenses.pnd3Label') : t('expenses.pnd53Label')} ({item.whtRate}%)
                             </span>
                           </div>
                         ) : (
                           '-'
                         )}
                       </td>
-                      <td data-label="จ่ายสุทธิ" className="text-right font-mono font-semibold text-sm">
-                        {formatCurrency(item.netPaidAmount)}
-                        {isCancelled && <div className="text-[10px] text-red-600">ยกเลิกแล้ว</div>}
+                      <td data-label={t('expenses.colNetPaid')} className="text-right font-mono font-semibold text-sm">
+                        {formatCurrency(item.netPaidAmount, locale)}
+                        {isCancelled && <div className="text-[10px] text-red-600">{t('expenses.cancelledLabel')}</div>}
                       </td>
-                      <td data-label="จัดการ">
+                      <td data-label={t('expenses.colActions')}>
                         <div className="flex items-center justify-center gap-1">
                           {!isCancelled && item.whtAmount > 0 && item.pndType !== 'None' && (
                             <button
@@ -622,12 +628,12 @@ export default function ExpensesPage() {
                               onClick={() =>
                                 void downloadBlob(
                                   `/expenses/${item.id}/wht-certificate-pdf`,
-                                  `50ทวิ_${item.voucherNumber}.pdf`,
+                                  `50Tawi_${item.voucherNumber}.pdf`,
                                   'application/pdf'
                                 )
                               }
                               className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-500/10"
-                              title="พิมพ์หนังสือรับรอง 50 ทวิ (PDF)"
+                              title={t('expenses.printWhtTitle')}
                             >
                               <FileText size={16} />
                             </button>
@@ -638,7 +644,7 @@ export default function ExpensesPage() {
                                 type="button"
                                 onClick={() => openEditModal(item)}
                                 className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary)]"
-                                title="แก้ไข"
+                                title={t('expenses.editTitle')}
                               >
                                 <Edit2 size={16} />
                               </button>
@@ -646,7 +652,7 @@ export default function ExpensesPage() {
                                 type="button"
                                 onClick={() => void handleCancelExpense(item)}
                                 className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-red-500/10 hover:text-red-600"
-                                title="ยกเลิก"
+                                title={t('expenses.cancelTitle')}
                               >
                                 <Ban size={16} />
                               </button>
@@ -671,7 +677,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <h3 className="font-bold text-lg flex items-center gap-2">
                   <Wallet size={20} className="text-[var(--color-primary)]" />
-                  {editingId ? 'แก้ไขใบสำคัญจ่าย' : 'บันทึกใบสำคัญจ่าย / ภาษีซื้อใหม่'}
+                  {editingId ? t('expenses.modalEditTitle') : t('expenses.modalCreateTitle')}
                 </h3>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="p-1 rounded-lg hover:bg-[var(--color-surface-hover)]">
                   <X size={20} />
@@ -683,7 +689,7 @@ export default function ExpensesPage() {
                 <div className="p-4 rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold flex items-center gap-1.5 text-[var(--color-primary)]">
-                      <Sparkles size={16} /> กรอกอัตโนมัติด้วย AI (Smart Receipt Parser)
+                      <Sparkles size={16} /> {t('expenses.aiTitle')}
                     </span>
                     <button
                       type="button"
@@ -691,13 +697,13 @@ export default function ExpensesPage() {
                       onClick={() => void handleParseAi()}
                       className="btn btn-primary text-xs py-1.5 px-3"
                     >
-                      {isParsingAi ? 'กำลังวิเคราะห์...' : 'วิเคราะห์ข้อความใบเสร็จ'}
+                      {isParsingAi ? t('expenses.aiParsing') : t('expenses.aiParseBtn')}
                     </button>
                   </div>
                   <textarea
                     rows={3}
                     className="input-field text-xs"
-                    placeholder="วางข้อความจากใบเสร็จ/ใบกำกับภาษีซื้อ เช่น ชื่อบริษัท เลขผู้เสียภาษี 13 หลัก เลขที่ใบกำกับฯ วันที่ และยอดเงิน..."
+                    placeholder={t('expenses.aiPlaceholder')}
                     value={receiptText}
                     onChange={(e) => setReceiptText(e.target.value)}
                   />
@@ -712,7 +718,7 @@ export default function ExpensesPage() {
               <form onSubmit={(e) => void handleSave(e)} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-medium mb-1">วันที่จ่าย *</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.expenseDateLabel')}</label>
                     <input
                       required
                       type="date"
@@ -722,17 +728,17 @@ export default function ExpensesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เลขที่ใบกำกับภาษีซื้อ</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.taxInvoiceNoLabel')}</label>
                     <input
                       type="text"
                       className="input-field"
-                      placeholder="เช่น TIV-2026-001"
+                      placeholder={t('expenses.taxInvoiceNoPlaceholder')}
                       value={form.taxInvoiceNumber}
                       onChange={(e) => setForm({ ...form, taxInvoiceNumber: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">วันที่ในใบกำกับภาษี</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.taxInvoiceDateLabel')}</label>
                     <input
                       type="date"
                       className="input-field"
@@ -744,18 +750,18 @@ export default function ExpensesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-1">
-                    <label className="block text-xs font-medium mb-1">ชื่อผู้ขาย / ผู้รับเงิน *</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.vendorNameLabel')}</label>
                     <input
                       required
                       type="text"
                       className="input-field"
-                      placeholder="บจก. ... หรือ ชื่อบุคคล"
+                      placeholder={t('expenses.vendorNamePlaceholder')}
                       value={form.vendorName}
                       onChange={(e) => setForm({ ...form, vendorName: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">เลขผู้เสียภาษี 13 หลัก</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.vendorTaxIdLabel')}</label>
                     <input
                       type="text"
                       maxLength={13}
@@ -766,7 +772,7 @@ export default function ExpensesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">สาขา (00000 = สนญ.)</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.vendorBranchLabel')}</label>
                     <input
                       type="text"
                       maxLength={10}
@@ -779,26 +785,26 @@ export default function ExpensesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium mb-1">หมวดหมู่ค่าใช้จ่าย</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.categoryLabel')}</label>
                     <select
                       className="input-field"
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value as ExpenseCategory })}
                     >
-                      {Object.entries(CATEGORY_LABELS).map(([k, label]) => (
+                      {Object.entries(CATEGORY_LABEL_KEYS).map(([k, key]) => (
                         <option key={k} value={k}>
-                          {label}
+                          {t(key)}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">รายละเอียดค่าใช้จ่าย *</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.descriptionLabel')}</label>
                     <input
                       required
                       type="text"
                       className="input-field"
-                      placeholder="เช่น ค่าเช่าสำนักงาน, ค่าบริการคลาวด์"
+                      placeholder={t('expenses.descriptionPlaceholder')}
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                     />
@@ -807,7 +813,7 @@ export default function ExpensesPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium mb-1">จำนวนเงิน *</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.amountLabel')}</label>
                     <input
                       required
                       type="number"
@@ -819,25 +825,25 @@ export default function ExpensesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">วิธีคิด VAT</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.vatModeLabel')}</label>
                     <select
                       className="input-field"
                       value={form.vatMode}
                       onChange={(e) => setForm({ ...form, vatMode: e.target.value as VatMode })}
                     >
-                      <option value="Exclusive">แยก VAT 7%</option>
-                      <option value="Inclusive">รวม VAT 7% แล้ว</option>
+                      <option value="Exclusive">{t('expenses.vatExclusive')}</option>
+                      <option value="Inclusive">{t('expenses.vatInclusive')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">อัตรา VAT (%)</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.vatRateLabel')}</label>
                     <select
                       className="input-field"
                       value={form.vatRate}
                       onChange={(e) => setForm({ ...form, vatRate: Number(e.target.value) })}
                     >
-                      <option value={7}>VAT 7%</option>
-                      <option value={0}>ไม่มี VAT (0%)</option>
+                      <option value={7}>{t('expenses.vat7')}</option>
+                      <option value={0}>{t('expenses.vat0')}</option>
                     </select>
                   </div>
                   <div className="flex items-end pb-2">
@@ -848,14 +854,14 @@ export default function ExpensesPage() {
                         disabled={form.vatRate === 0}
                         onChange={(e) => setForm({ ...form, isRefundableVat: e.target.checked })}
                       />
-                      ภาษีซื้อขอคืนได้
+                      {t('expenses.refundableCheckbox')}
                     </label>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-medium mb-1">หัก ณ ที่จ่าย (WHT %)</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.whtRateLabel')}</label>
                     <select
                       className="input-field"
                       value={form.whtRate}
@@ -870,31 +876,31 @@ export default function ExpensesPage() {
                     >
                       {WHT_RATES.map((r) => (
                         <option key={r} value={r}>
-                          {r === 0 ? 'ไม่หัก ณ ที่จ่าย' : `หัก ${r}%`}
+                          {r === 0 ? t('expenses.whtZero') : t('expenses.whtPercent', { rate: r })}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">ประเภทแบบยื่น (50 ทวิ)</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.pndTypeLabel')}</label>
                     <select
                       className="input-field"
                       disabled={form.whtRate === 0}
                       value={form.pndType}
                       onChange={(e) => setForm({ ...form, pndType: e.target.value as PndType })}
                     >
-                      <option value="None">ไม่ระบุ</option>
-                      <option value="PND3">ภ.ง.ด.3 (บุคคลธรรมดา)</option>
-                      <option value="PND53">ภ.ง.ด.53 (นิติบุคคล)</option>
+                      <option value="None">{t('expenses.pndNone')}</option>
+                      <option value="PND3">{t('expenses.pnd3Detail')}</option>
+                      <option value="PND53">{t('expenses.pnd53Detail')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">ประเภทเงินได้ใน 50 ทวิ</label>
+                    <label className="block text-xs font-medium mb-1">{t('expenses.incomeTypeLabel')}</label>
                     <input
                       type="text"
                       disabled={form.whtRate === 0}
                       className="input-field"
-                      placeholder="เช่น ค่าบริการ, ค่าจ้างทำของ"
+                      placeholder={t('expenses.incomeTypePlaceholder')}
                       value={form.incomeTypeDescription}
                       onChange={(e) => setForm({ ...form, incomeTypeDescription: e.target.value })}
                     />
@@ -904,35 +910,35 @@ export default function ExpensesPage() {
                 {/* Live summary */}
                 <div className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                   <div>
-                    <span className="text-[var(--color-text-muted)]">ก่อนภาษี</span>
-                    <div className="font-mono font-bold text-sm">{formatCurrency(preview.beforeVat)}</div>
+                    <span className="text-[var(--color-text-muted)]">{t('expenses.previewBeforeVat')}</span>
+                    <div className="font-mono font-bold text-sm">{formatCurrency(preview.beforeVat, locale)}</div>
                   </div>
                   <div>
-                    <span className="text-[var(--color-text-muted)]">ภาษีซื้อ ({form.vatRate}%)</span>
-                    <div className="font-mono font-bold text-sm text-emerald-600">{formatCurrency(preview.vatAmount)}</div>
+                    <span className="text-[var(--color-text-muted)]">{t('expenses.previewInputVat', { rate: form.vatRate })}</span>
+                    <div className="font-mono font-bold text-sm text-emerald-600">{formatCurrency(preview.vatAmount, locale)}</div>
                   </div>
                   <div>
-                    <span className="text-[var(--color-text-muted)]">รวมใบกำกับฯ</span>
-                    <div className="font-mono font-bold text-sm">{formatCurrency(preview.grandTotal)}</div>
+                    <span className="text-[var(--color-text-muted)]">{t('expenses.previewGrandTotal')}</span>
+                    <div className="font-mono font-bold text-sm">{formatCurrency(preview.grandTotal, locale)}</div>
                   </div>
                   <div>
-                    <span className="text-[var(--color-text-muted)]">หัก ณ ที่จ่าย ({form.whtRate}%)</span>
-                    <div className="font-mono font-bold text-sm text-amber-600">-{formatCurrency(preview.whtAmount)}</div>
+                    <span className="text-[var(--color-text-muted)]">{t('expenses.previewWht', { rate: form.whtRate })}</span>
+                    <div className="font-mono font-bold text-sm text-amber-600">-{formatCurrency(preview.whtAmount, locale)}</div>
                   </div>
                   <div>
-                    <span className="text-[var(--color-text-muted)]">ยอดจ่ายสุทธิ</span>
+                    <span className="text-[var(--color-text-muted)]">{t('expenses.previewNetPaid')}</span>
                     <div className="font-mono font-bold text-base text-[var(--color-primary)]">
-                      {formatCurrency(preview.netPaid)}
+                      {formatCurrency(preview.netPaid, locale)}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">
-                    ยกเลิก
+                    {t('expenses.cancelBtn')}
                   </button>
                   <button type="submit" disabled={isSaving} className="btn btn-primary flex items-center gap-1.5">
-                    <Save size={16} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกใบสำคัญจ่าย'}
+                    <Save size={16} /> {isSaving ? t('expenses.savingBtn') : t('expenses.saveBtn')}
                   </button>
                 </div>
               </form>

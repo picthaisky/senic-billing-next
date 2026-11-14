@@ -30,7 +30,7 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
         var items = await query
             .OrderBy(p => p.Name)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(p => new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive))
+            .Select(p => new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive, p.CostPrice))
             .ToListAsync(ct);
 
         return Ok(new ApiResponse<PaginatedResponse<ProductDto>>(true, "สำเร็จ",
@@ -44,7 +44,7 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
         var p = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
         if (p is null) return NotFound(new ApiResponse<ProductDto>(false, "ไม่พบสินค้า", null));
         return Ok(new ApiResponse<ProductDto>(true, "สำเร็จ",
-            new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive)));
+            new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive, p.CostPrice)));
     }
 
     [HttpGet("barcode/{code}")]
@@ -59,7 +59,7 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
         if (p is null) return NotFound(new ApiResponse<ProductDto>(false, "ไม่พบสินค้าตามบาร์โค้ด/รหัสนี้", null));
 
         return Ok(new ApiResponse<ProductDto>(true, "สำเร็จ",
-            new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive)));
+            new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive, p.CostPrice)));
     }
 
     [HttpPost]
@@ -69,14 +69,14 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
         var product = new Product
         {
             Id = Guid.NewGuid(), TenantId = tenantId, Sku = req.Sku, Barcode = req.Barcode, Name = req.Name,
-            Description = req.Description, Unit = req.Unit, UnitPrice = req.UnitPrice,
+            Description = req.Description, Unit = req.Unit, UnitPrice = req.UnitPrice, CostPrice = req.CostPrice,
             Category = req.Category, StockQuantity = req.StockQuantity
         };
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync(ct);
 
         var dto = new ProductDto(product.Id, product.Sku, product.Barcode, product.Name, product.Description,
-            product.Unit, product.UnitPrice, product.Category, product.StockQuantity, product.IsActive);
+            product.Unit, product.UnitPrice, product.Category, product.StockQuantity, product.IsActive, product.CostPrice);
         return CreatedAtAction(nameof(GetById), new { id = product.Id }, new ApiResponse<ProductDto>(true, "สร้างสินค้าสำเร็จ", dto));
     }
 
@@ -88,11 +88,11 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
         if (p is null) return NotFound(new ApiResponse<ProductDto>(false, "ไม่พบสินค้า", null));
 
         p.Sku = req.Sku; p.Barcode = req.Barcode; p.Name = req.Name; p.Description = req.Description;
-        p.Unit = req.Unit; p.UnitPrice = req.UnitPrice; p.Category = req.Category;
+        p.Unit = req.Unit; p.UnitPrice = req.UnitPrice; p.CostPrice = req.CostPrice; p.Category = req.Category;
         p.StockQuantity = req.StockQuantity; p.IsActive = req.IsActive; p.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(ct);
 
-        var dto = new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive);
+        var dto = new ProductDto(p.Id, p.Sku, p.Barcode, p.Name, p.Description, p.Unit, p.UnitPrice, p.Category, p.StockQuantity, p.IsActive, p.CostPrice);
         return Ok(new ApiResponse<ProductDto>(true, "อัปเดตสินค้าสำเร็จ", dto));
     }
 

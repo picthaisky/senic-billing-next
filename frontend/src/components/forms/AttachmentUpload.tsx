@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Paperclip, UploadCloud, File as FileIcon, Loader2 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 
@@ -16,6 +17,7 @@ interface AttachmentUploadProps {
 }
 
 export default function AttachmentUpload({ documentId, attachments, onAttachmentAdded }: AttachmentUploadProps) {
+  const { t, i18n } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,16 +31,14 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
-    // We only process the first file for simplicity in this example
+
     const file = e.target.files[0];
-    
-    // Basic validation
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      setError('ขนาดไฟล์ต้องไม่เกิน 10MB');
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError(t('attachmentUpload.sizeError'));
       return;
     }
-    
+
     setError('');
     setUploading(true);
 
@@ -51,15 +51,14 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       if (res.data.success) {
         onAttachmentAdded(res.data.data);
       }
     } catch {
-      setError('อัปโหลดไฟล์ไม่สำเร็จ');
+      setError(t('attachmentUpload.uploadError'));
     } finally {
       setUploading(false);
-      // Reset input
       e.target.value = '';
     }
   };
@@ -79,14 +78,16 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
     }
   };
 
+  const locale = i18n.language === 'en' ? 'en-US' : 'th-TH';
+
   return (
     <div className="card attachment-card-shell">
       <div className="attachment-card-head flex items-center justify-between">
         <h3 className="attachment-card-title font-bold flex items-center gap-2">
-          <Paperclip size={18} /> ไฟล์แนบ (เอกสารอ้างอิง)
+          <Paperclip size={18} /> {t('attachmentUpload.title')}
         </h3>
       </div>
-      
+
       {error && (
         <div className="attachment-error text-xs font-semibold text-red-500 bg-red-50 rounded-lg">
           {error}
@@ -95,12 +96,12 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
 
       {/* Upload Box */}
       <div className="attachment-dropzone border-2 border-dashed rounded-xl text-center transition-colors hover:bg-[var(--color-surface-hover)] relative">
-        <input 
-          type="file" 
+        <input
+          type="file"
           onChange={handleFileChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          aria-label="อัปโหลดไฟล์แนบ"
-          title="อัปโหลดไฟล์แนบ"
+          aria-label={t('attachmentUpload.ariaLabel')}
+          title={t('attachmentUpload.ariaLabel')}
           disabled={uploading}
         />
         <div className="flex flex-col items-center justify-center pointer-events-none">
@@ -110,10 +111,10 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
             <UploadCloud size={32} className="attachment-dropzone-icon text-[var(--color-text-muted)]" />
           )}
           <p className="attachment-dropzone-title font-semibold text-sm">
-            {uploading ? 'กำลังอัปโหลด...' : 'คลิกหรือลากไฟล์มาวางที่นี่'}
+            {uploading ? t('attachmentUpload.uploading') : t('attachmentUpload.dropTitle')}
           </p>
           <p className="attachment-dropzone-subtitle text-xs">
-            รองรับไฟล์รูปภาพและ PDF ขนาดไม่เกิน 10MB
+            {t('attachmentUpload.dropSubtitle')}
           </p>
         </div>
       </div>
@@ -128,12 +129,12 @@ export default function AttachmentUpload({ documentId, attachments, onAttachment
                   <FileIcon size={20} />
                 </div>
                 <div>
-                  <p className="attachment-item-name text-sm font-semibold hover:underline cursor-pointer" 
+                  <p className="attachment-item-name text-sm font-semibold hover:underline cursor-pointer"
                      onClick={() => handleDownload(att.id, att.fileName)}>
                     {att.fileName}
                   </p>
                   <p className="attachment-item-meta text-xs">
-                    {formatFileSize(att.fileSize)} • {new Date(att.uploadedAt).toLocaleDateString('th-TH')}
+                    {formatFileSize(att.fileSize)} • {new Date(att.uploadedAt).toLocaleDateString(locale)}
                   </p>
                 </div>
               </div>

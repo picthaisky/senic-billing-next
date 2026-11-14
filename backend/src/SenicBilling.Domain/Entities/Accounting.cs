@@ -48,3 +48,20 @@ public class JournalEntryLine
     public ChartOfAccount Account { get; set; } = null!;
 }
 
+/// <summary>การปิดงวดบัญชีรายเดือน (Accounting Period Lock) ป้องกันการแก้ไข/ลงบัญชีย้อนหลังในงวดที่ปิดแล้ว</summary>
+public class AccountingPeriodLock
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public bool IsLocked { get; set; } = true;
+    public DateTime LockedAt { get; set; } = DateTime.UtcNow;
+    public string? LockedBy { get; set; }
+    public string? Notes { get; set; }
+    public DateTime? UnlockedAt { get; set; }
+    public string? UnlockedBy { get; set; }
+
+    public Tenant Tenant { get; set; } = null!;
+}
+

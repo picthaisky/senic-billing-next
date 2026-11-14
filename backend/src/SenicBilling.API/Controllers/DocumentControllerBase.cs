@@ -133,6 +133,17 @@ public abstract class DocumentControllerBase(
             }
         }
 
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null &&
+            TargetDocumentType is not (DocumentType.Quotation or DocumentType.DeliveryNote) &&
+            await accountingPrecheck.IsPeriodLockedAsync(tenantId, request.DocumentDate, ct))
+        {
+            return BadRequest(new ApiResponse<DocumentResponse>(
+                false,
+                $"งวดบัญชี {request.DocumentDate.Month:D2}/{request.DocumentDate.Year} ถูกปิดงวดแล้ว ไม่สามารถสร้างเอกสารในงวดนี้ได้",
+                null));
+        }
+
         var docNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, TargetDocumentType, ct);
 
         var header = new DocumentHeader
@@ -303,6 +314,15 @@ public abstract class DocumentControllerBase(
         if (!isAdmin && doc.Status != DocumentStatus.Draft)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "แก้ไขได้เฉพาะเอกสารสถานะ 'ร่าง' เท่านั้น", null));
 
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null &&
+            TargetDocumentType is not (DocumentType.Quotation or DocumentType.DeliveryNote) &&
+            (await accountingPrecheck.IsPeriodLockedAsync(tenantId, doc.DocumentDate, ct) ||
+             await accountingPrecheck.IsPeriodLockedAsync(tenantId, request.DocumentDate, ct)))
+        {
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถแก้ไขเอกสารในงวดบัญชีที่ปิดงวดแล้วได้", null));
+        }
+
         // Restore previous stock before replacing lines
         if (IsStockAffecting(TargetDocumentType) && doc.Status != DocumentStatus.Cancelled)
         {
@@ -383,6 +403,17 @@ public abstract class DocumentControllerBase(
 
         if (doc.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "เอกสารนี้ถูกยกเลิกไปแล้ว", null));
+
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null &&
+            TargetDocumentType is not (DocumentType.Quotation or DocumentType.DeliveryNote) &&
+            await accountingPrecheck.IsPeriodLockedAsync(tenantId, doc.DocumentDate, ct))
+        {
+            return BadRequest(new ApiResponse<DocumentResponse>(
+                false,
+                $"งวดบัญชี {doc.DocumentDate.Month:D2}/{doc.DocumentDate.Year} ถูกปิดงวดแล้ว ไม่สามารถยกเลิกเอกสารในงวดนี้ได้",
+                null));
+        }
 
         if (IsStockAffecting(TargetDocumentType))
         {
@@ -702,7 +733,13 @@ public abstract class DocumentControllerBase(
         d.Lines.OrderBy(l => l.SortOrder).Select(l => new DocumentLineDto(
             l.Id, l.SortOrder, l.ProductId, l.Description,
             l.Quantity, l.Unit, l.UnitPrice, l.DiscountAmount, l.LineTotal
-        )).ToList()
+        )).ToList(),
+        d.CustomerApprovalStatus,
+        d.ApprovedByName,
+        d.ApprovedAt,
+        d.CustomerSignatureText,
+        d.CustomerApprovalComment,
+        d.LastReminderSentAt
     );
 
     protected Guid GetTenantId()

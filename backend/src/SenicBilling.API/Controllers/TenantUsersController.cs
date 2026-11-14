@@ -1,12 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SenicBilling.API.Extensions;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
 using SenicBilling.Infrastructure.Auth;
 using SenicBilling.Infrastructure.Data;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace SenicBilling.API.Controllers;
 
@@ -22,14 +21,14 @@ public class TenantUsersController : ControllerBase
         _dbContext = dbContext;
     }
 
-    private Guid GetTenantId()
-    {
-        var claim = User.FindFirst("tenantId")?.Value;
-        return claim is not null ? Guid.Parse(claim) : throw new UnauthorizedAccessException("Tenant claim not found");
-    }
+    private static bool IsReservedPlatformRole(string? role) =>
+        string.Equals(role?.Trim(), "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(role?.Trim(), "SystemAdmin", StringComparison.OrdinalIgnoreCase);
+
+    private Guid GetTenantId() => User.GetTenantId();
 
     [HttpGet]
-    [Authorize(Roles = "Admin,SystemAdmin")]
+    [Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
     public async Task<IActionResult> GetUsers(CancellationToken ct)
     {
         var tenantId = GetTenantId();
@@ -42,10 +41,15 @@ public class TenantUsersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,SystemAdmin")]
+    [Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
     public async Task<IActionResult> InviteUser([FromBody] RegisterRequest req, CancellationToken ct)
     {
         var tenantId = GetTenantId();
+
+        if (IsReservedPlatformRole(req.Role) && !User.IsPlatformAdmin())
+        {
+            return Forbid();
+        }
 
         var tenant = await _dbContext.Tenants
             .Include(t => t.CurrentPlan)
@@ -79,7 +83,9 @@ public class TenantUsersController : ControllerBase
             DisplayName = req.DisplayName,
             Email = req.Email,
             PasswordHash = HashPassword(req.Password),
-            Role = req.Role
+            Role = string.IsNullOrWhiteSpace(req.Role) ? "User" : req.Role.Trim(),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
         };
 
         _dbContext.AppUsers.Add(user);
@@ -90,22 +96,27 @@ public class TenantUsersController : ControllerBase
     }
 
     [HttpPut("{id}/role")]
-    [Authorize(Roles = "Admin,SystemAdmin")]
+    [Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleRequest req, CancellationToken ct)
     {
         var tenantId = GetTenantId();
         var user = await _dbContext.AppUsers.FirstOrDefaultAsync(u => u.Id == id && u.TenantId == tenantId, ct);
         
         if (user == null) return NotFound("User not found");
+
+        if (IsReservedPlatformRole(req.Role) && !User.IsPlatformAdmin())
+        {
+            return Forbid();
+        }
         
-        user.Role = req.Role;
+        user.Role = string.IsNullOrWhiteSpace(req.Role) ? user.Role : req.Role.Trim();
         await _dbContext.SaveChangesAsync(ct);
 
         return Ok(new ApiResponse<object>(true, "อัปเดตสิทธิ์สำเร็จ", null));
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin,SystemAdmin")]
+    [Authorize(Roles = "Admin,SystemAdmin,SuperAdmin")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken ct)
     {
         var tenantId = GetTenantId();
@@ -113,8 +124,8 @@ public class TenantUsersController : ControllerBase
         
         if (user == null) return NotFound("User not found");
 
-        var callerIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (Guid.TryParse(callerIdClaim, out var callerId) && callerId == user.Id)
+        var callerId = User.TryGetUserId();
+        if (callerId.HasValue && callerId.Value == user.Id)
             return BadRequest(new ApiResponse<object>(false, "ไม่สามารถระงับการใช้งานบัญชีของตนเองได้", null));
 
         // Soft delete
