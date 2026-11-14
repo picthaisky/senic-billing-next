@@ -62,5 +62,15 @@ test('Phase 17: Super Admin Portal supports TH/EN AdminLocaleContext and unlimit
   );
   assert.match(packagesPage, /min=\{-1\}/);
   assert.doesNotMatch(packagesPage, /min=\{1\}/);
+
+  const workflow = fs.readFileSync(
+    path.join(repoRoot, '.github', 'workflows', 'ci-cd.yml'),
+    'utf8'
+  );
+  assert.match(workflow, /runs-on:\s*ubuntu-24\.04/);
+  assert.match(workflow, /PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24\.04-x64/);
+
+  const viteCfg = fs.readFileSync(path.join(frontendRoot, 'vite.config.ts'), 'utf8');
+  assert.match(viteCfg, /INVALID_ANNOTATION/);
 });
 

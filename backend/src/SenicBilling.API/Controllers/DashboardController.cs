@@ -180,14 +180,13 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
                 d.DocumentType != DocumentType.Quotation &&
                 d.DocumentType != DocumentType.DeliveryNote &&
                 d.DocumentType != DocumentType.Receipt &&
-                d.DocumentType != DocumentType.CashBill &&
-                d.DocumentType != DocumentType.CreditNote)
+                d.DocumentType != DocumentType.CashBill)
             .Select(d => new
             {
                 d.CustomerId,
                 d.CustomerName,
                 d.DueDate,
-                d.GrandTotal
+                SignedTotal = d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal
             })
             .ToListAsync(ct);
 
@@ -195,11 +194,11 @@ public class DashboardController(SenicBillingDbContext dbContext) : ControllerBa
             .GroupBy(d => new { d.CustomerId, CustomerName = d.CustomerName ?? "ทั่วไป" })
             .Select(g =>
             {
-                var current = g.Where(d => d.DueDate == null || d.DueDate >= now).Sum(d => d.GrandTotal);
-                var over1to30 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays <= 30).Sum(d => d.GrandTotal);
-                var over31to60 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 30 && (now - d.DueDate.Value).TotalDays <= 60).Sum(d => d.GrandTotal);
-                var over61to90 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 60 && (now - d.DueDate.Value).TotalDays <= 90).Sum(d => d.GrandTotal);
-                var over90 = g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 90).Sum(d => d.GrandTotal);
+                var current = Math.Max(0m, g.Where(d => d.DueDate == null || d.DueDate >= now).Sum(d => d.SignedTotal));
+                var over1to30 = Math.Max(0m, g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays <= 30).Sum(d => d.SignedTotal));
+                var over31to60 = Math.Max(0m, g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 30 && (now - d.DueDate.Value).TotalDays <= 60).Sum(d => d.SignedTotal));
+                var over61to90 = Math.Max(0m, g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 60 && (now - d.DueDate.Value).TotalDays <= 90).Sum(d => d.SignedTotal));
+                var over90 = Math.Max(0m, g.Where(d => d.DueDate != null && d.DueDate < now && (now - d.DueDate.Value).TotalDays > 90).Sum(d => d.SignedTotal));
                 
                 return new AgingReportDto(
                     g.Key.CustomerId ?? Guid.Empty,

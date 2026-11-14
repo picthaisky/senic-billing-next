@@ -33,13 +33,16 @@ public class ReportsController : ControllerBase
         var startDate = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var endDate = startDate.AddMonths(1);
 
-        // Get Tax Invoices for the month
+        // Get Tax Invoices, Credit Notes, and Debit Notes for the month
         var invoices = await _dbContext.DocumentHeaders
             .Where(d => d.TenantId == tenantId 
-                     && d.DocumentType == SenicBilling.Domain.Enums.DocumentType.TaxInvoice
+                     && (d.DocumentType == SenicBilling.Domain.Enums.DocumentType.TaxInvoice
+                         || d.DocumentType == SenicBilling.Domain.Enums.DocumentType.CreditNote
+                         || d.DocumentType == SenicBilling.Domain.Enums.DocumentType.DebitNote)
                      && d.DocumentDate >= startDate 
                      && d.DocumentDate < endDate)
             .OrderBy(d => d.DocumentDate)
+            .ThenBy(d => d.DocumentNumber)
             .ToListAsync(ct);
 
         using var workbook = new XLWorkbook();
@@ -82,8 +85,18 @@ public class ReportsController : ControllerBase
         {
             var inv = invoices[i];
             
-            // Handle Canceled Status (normally we show 0 amount in report if canceled, depending on strict accounting rules, but here we just mark it)
             bool isCanceled = inv.Status == SenicBilling.Domain.Enums.DocumentStatus.Cancelled;
+            decimal sign = inv.DocumentType == SenicBilling.Domain.Enums.DocumentType.CreditNote ? -1m : 1m;
+            decimal signedBeforeVat = isCanceled ? 0m : sign * inv.TotalBeforeVat;
+            decimal signedVat = isCanceled ? 0m : sign * inv.VatAmount;
+            decimal signedGrand = isCanceled ? 0m : sign * inv.GrandTotal;
+            string remark = isCanceled
+                ? "ยกเลิก"
+                : inv.DocumentType == SenicBilling.Domain.Enums.DocumentType.CreditNote
+                    ? "ใบลดหนี้"
+                    : inv.DocumentType == SenicBilling.Domain.Enums.DocumentType.DebitNote
+                        ? "ใบเพิ่มหนี้"
+                        : "";
 
             worksheet.Cell(row, 1).Value = i + 1;
             worksheet.Cell(row, 2).Value = inv.DocumentDate.ToString("dd/MM/yyyy");
@@ -92,16 +105,16 @@ public class ReportsController : ControllerBase
             worksheet.Cell(row, 5).Value = inv.CustomerTaxId ?? "-";
             worksheet.Cell(row, 6).Value = string.IsNullOrWhiteSpace(inv.CustomerBranch) ? "สำนักงานใหญ่" : inv.CustomerBranch;
             
-            worksheet.Cell(row, 7).Value = isCanceled ? 0 : inv.TotalBeforeVat;
-            worksheet.Cell(row, 8).Value = isCanceled ? 0 : inv.VatAmount;
-            worksheet.Cell(row, 9).Value = isCanceled ? 0 : inv.GrandTotal;
-            worksheet.Cell(row, 10).Value = isCanceled ? "ยกเลิก" : "";
+            worksheet.Cell(row, 7).Value = signedBeforeVat;
+            worksheet.Cell(row, 8).Value = signedVat;
+            worksheet.Cell(row, 9).Value = signedGrand;
+            worksheet.Cell(row, 10).Value = remark;
 
             if (!isCanceled)
             {
-                sumTotalBeforeVat += inv.TotalBeforeVat;
-                sumVat += inv.VatAmount;
-                sumGrandTotal += inv.GrandTotal;
+                sumTotalBeforeVat += signedBeforeVat;
+                sumVat += signedVat;
+                sumGrandTotal += signedGrand;
             }
 
             row++;

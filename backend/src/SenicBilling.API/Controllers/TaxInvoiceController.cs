@@ -174,8 +174,26 @@ public class TaxInvoiceController(
         // Calculate totals
         CalculateTotals(header);
 
-        // Deduct stock for TaxInvoice
-        await DeductStockAsync(header.Lines, tenantId, ct, header.DocumentNumber);
+        // Deduct stock for TaxInvoice unless referencing an active DeliveryNote that already deducted stock
+        bool alreadyDeductedByDeliveryNote = false;
+        if (request.ReferenceDocumentId.HasValue)
+        {
+            alreadyDeductedByDeliveryNote = await dbContext.DocumentHeaders.AnyAsync(
+                d => d.Id == request.ReferenceDocumentId.Value &&
+                     d.TenantId == tenantId &&
+                     d.DocumentType == DocumentType.DeliveryNote &&
+                     d.Status != DocumentStatus.Cancelled,
+                ct);
+            if (alreadyDeductedByDeliveryNote)
+            {
+                header.ConvertedFromDocumentId ??= request.ReferenceDocumentId;
+            }
+        }
+
+        if (!alreadyDeductedByDeliveryNote)
+        {
+            await DeductStockAsync(header.Lines, tenantId, ct, header.DocumentNumber);
+        }
 
         dbContext.DocumentHeaders.Add(header);
 

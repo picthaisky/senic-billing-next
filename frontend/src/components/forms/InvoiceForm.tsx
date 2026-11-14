@@ -5,6 +5,7 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 import { apiClient } from '../../services/apiClient';
 import { getDocumentTypeMeta } from '../../utils/documentTypeMeta';
 import { getLocalIsoDate } from '../../utils/dateUtils';
+import { getApiErrorMessage } from '../../utils/errorUtils';
 
 import AttachmentUpload from './AttachmentUpload';
 import PaymentModal from '../payments/PaymentModal';
@@ -160,6 +161,8 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
     if (documentType === 'taxinvoice') {
       if (!customerTaxId.trim()) e.customerTaxId = t('invoiceForm.errTaxIdRequired');
       else if (!/^\d{13}$/.test(customerTaxId.trim())) e.customerTaxId = t('invoiceForm.errTaxIdDigits');
+    } else if ((documentType === 'creditnote' || documentType === 'debitnote') && customerTaxId.trim() && !/^\d{13}$/.test(customerTaxId.trim())) {
+      e.customerTaxId = t('invoiceForm.errTaxIdDigits');
     }
     const validLines = lines.filter(l => l.description.trim() !== '' && l.quantity > 0 && l.unitPrice > 0);
     if (validLines.length === 0) e.lines = t('invoiceForm.errLinesRequired');
@@ -367,7 +370,7 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
       return savedMeta.id ? savedMeta : null;
     } catch (error) {
       console.error('Failed to save document:', error);
-      alert(t('invoiceForm.saveError'));
+      alert(getApiErrorMessage(error, t('invoiceForm.saveError')));
       return null;
     } finally {
       setIsSaving(false);
@@ -474,10 +477,10 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
             </div>
             {errors.customerName && <p className="text-xs mt-1 text-[var(--color-danger)]">{errors.customerName}</p>}
           </div>
-          {documentType === 'taxinvoice' && (
+          {['taxinvoice', 'creditnote', 'debitnote'].includes(documentType) && (
             <div className="space-y-1.5">
               <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
-                {t('invoiceForm.taxIdLabel')} <span className="text-red-400">*</span>
+                {t('invoiceForm.taxIdLabel')} {documentType === 'taxinvoice' && <span className="text-red-400">*</span>}
               </label>
               <input
                 type="text"
@@ -514,6 +517,30 @@ export default function InvoiceForm({ documentType, title, documentId: propDocum
               className="input-field"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+              {t('invoiceForm.customerBranchLabel')}
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder={t('invoiceForm.customerBranchPlaceholder')}
+              value={customerBranch}
+              onChange={(e) => setCustomerBranch(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="invoice-field-label text-xs font-medium block text-[var(--color-text-muted)]">
+              {t('invoiceForm.customerAddressLabel')}
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder={t('invoiceForm.customerAddressPlaceholder')}
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
             />
           </div>
           <div className="md:col-span-2 space-y-1.5">

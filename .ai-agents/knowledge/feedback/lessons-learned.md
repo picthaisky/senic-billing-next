@@ -105,3 +105,21 @@ This log stores validated feedback, bug lessons, review findings, and agent work
 - Lesson: Background workers (`RecurringInvoiceWorker`, `OverdueMonitorWorker`) must enforce the same tenant suspension (`!tenant.IsActive || tenant.SubscriptionStatus == "Suspended"`) and monthly document quota (`MaxDocumentsPerMonth > 0`) rules as interactive API controllers; `TenantSubscriptionController.Checkout` must verify `plan.IsActive`, check `activeUsers <= plan.MaxUsers` before allowing plan switches, and require `Admin,SystemAdmin,SuperAdmin`; webhook endpoints (`OmiseWebhook`) must always use `TryGetProperty` rather than `GetProperty` to avoid `KeyNotFoundException` on incomplete/ping payloads; and `PackagesList.tsx` number inputs for `maxUsers` and `maxDocumentsPerMonth` must use `min={-1}` so Super Admins can save `-1` (unlimited) plans.
 - Follow-up: Keep `Phase17WorkerQuotaAndSubscriptionTests.cs`, `phase17-unit.test.mjs`, and `admin-unit.test.mjs` in the standard test suite.
 
+## 2026-11-14 - Phase 18 Document Conversion Quota, Credit/Debit Tax Parity, DeliveryNote Stock Dedup & CI Playwright Fix
+
+- Type: hardening-lesson
+- Source: test
+- Evidence: `SharedDocumentController.cs`, `DocumentControllerBase.cs`, `TaxInvoiceController.cs`, `TaxSummaryQuery.cs`, `ReportsController.cs`, `DashboardController.cs`, `DocumentsListPage.tsx`, `DocumentPrintView.tsx`, `InvoiceForm.tsx`, `.github/workflows/ci-cd.yml`, `frontend/vite.config.ts`, `Phase18DocumentTaxAndStockParityTests.cs`, `phase18-unit.test.mjs`
+- Confidence: high
+- Lesson: Enforce tenant suspension, `MaxDocumentsPerMonth` quota, `IsPeriodLockedAsync`, and `TenantUsageStat.DocumentsCreated` tracking on document conversions (`Convert`/`ConvertDocument`) and `CreateCreditDebitNote` just like direct document creation; skip duplicate stock deduction in `TaxInvoiceController.Create` when `ReferenceDocumentId` references a non-cancelled `DeliveryNote` of the same tenant; keep `CreditNote` price adjustments non-stock-affecting while subtracting `CreditNote` and adding `DebitNote` in `TaxSummaryQuery.ComputeAsync`, `ReportsController.ExportTaxReport`, and `DashboardController.GetAgingReport`; pin GitHub Actions Playwright jobs to `ubuntu-24.04` (with `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` fallback) so `ubuntu-latest` upgrades to `ubuntu26.04` never break Chromium installation; and filter third-party `@microsoft/signalr` `INVALID_ANNOTATION` warnings in `vite.config.ts`.
+- Follow-up: Run `Phase18DocumentTaxAndStockParityTests.cs` and `phase18-unit.test.mjs` alongside Playwright E2E suites before release.
+
+## 2026-11-14 - Phase 19 LINE Webhook/AI Parity, Payment Guardrails, Recurring Validation & Master Data Hardening
+
+- Type: hardening-lesson
+- Source: test
+- Evidence: `LineWebhookController.cs`, `AIAssistantController.cs`, `PaymentsController.cs`, `RecurringInvoiceController.cs`, `CustomersController.cs`, `ProductsController.cs`, `VendorsController.cs`, `InvoiceForm.tsx`, `Phase19WebhookPaymentAndMasterDataTests.cs`, `phase19-unit.test.mjs`
+- Confidence: high
+- Lesson: Ensure `LineWebhookController` nets `CreditNote` amounts in sales summaries, resolves `App:FrontendBaseUrl` before `Frontend:BaseUrl`, and blocks suspended tenants; filter `AIAssistantController` overdue documents identically to `DashboardController.GetAgingReport`; block PromptPay/Payment Link creation and webhook settlement on `Cancelled`/`Draft`/`Quotation`/`DeliveryNote`/`CreditNote` documents; validate recurring schedule frequencies (`Daily`, `Weekly`, `Monthly`, `Yearly`) and non-cancelled source documents; and validate 13-digit Tax IDs and non-negative prices across master data controllers.
+- Follow-up: Keep `Phase19WebhookPaymentAndMasterDataTests.cs` and `phase19-unit.test.mjs` in the automated verification gate.
+

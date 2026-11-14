@@ -58,6 +58,15 @@ public class PaymentsController : ControllerBase
         if (document.Status == DocumentStatus.Paid)
             return BadRequest("Document is already paid");
 
+        if (document.Status == DocumentStatus.Cancelled)
+            return BadRequest("Document is cancelled");
+
+        if (document.Status == DocumentStatus.Draft)
+            return BadRequest("Document is in draft status");
+
+        if (document.DocumentType is DocumentType.Quotation or DocumentType.DeliveryNote or DocumentType.CreditNote)
+            return BadRequest("Document type does not support online payment");
+
         try
         {
             // Amount is GrandTotal
@@ -110,6 +119,15 @@ public class PaymentsController : ControllerBase
 
         if (document.Status == DocumentStatus.Paid)
             return BadRequest("Document is already paid");
+
+        if (document.Status == DocumentStatus.Cancelled)
+            return BadRequest("Document is cancelled");
+
+        if (document.Status == DocumentStatus.Draft)
+            return BadRequest("Document is in draft status");
+
+        if (document.DocumentType is DocumentType.Quotation or DocumentType.DeliveryNote or DocumentType.CreditNote)
+            return BadRequest("Document type does not support online payment");
 
         try
         {
@@ -266,7 +284,7 @@ public class PaymentsController : ControllerBase
                 var document = await _dbContext.DocumentHeaders
                     .FirstOrDefaultAsync(d => d.Id == documentId);
 
-                if (document != null && document.Status != DocumentStatus.Paid)
+                if (document != null && document.Status != DocumentStatus.Paid && document.Status != DocumentStatus.Cancelled)
                 {
                     document.Status = DocumentStatus.Paid;
                     document.UpdatedAt = DateTime.UtcNow;
