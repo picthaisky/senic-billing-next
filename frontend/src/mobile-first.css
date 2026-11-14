@@ -78,6 +78,19 @@
     color: var(--color-text-secondary);
     font-size: 0.75rem;
     padding-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  .table-responsive td[colspan] {
+    display: block;
+    text-align: center;
+    padding: 1.5rem 0.5rem;
+    border-bottom: none;
+  }
+
+  .table-responsive td[colspan]::before,
+  .table-responsive td:not([data-label])::before {
+    display: none;
   }
 
   /* Dashboard recent documents: tuned mobile card rhythm */
@@ -112,7 +125,19 @@
   }
 
   .dashboard-recent-table td:last-child button {
-    min-width: 2.25rem;
-    min-height: 2.25rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+/* Touch devices: avoid sticky hover elevation and reveal touch actions */
+@media (hover: none) and (pointer: coarse) {
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .touch-reveal-action {
+    opacity: 1 !important;
   }
 }

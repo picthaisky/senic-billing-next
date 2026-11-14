@@ -438,7 +438,7 @@ export default function DocumentsListPage() {
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="data-table w-full text-sm text-left">
+          <table className="data-table table-responsive w-full text-sm text-left">
             <thead>
               <tr>
                 <th className="whitespace-nowrap">{t('documentsList.colDate')}</th>
@@ -469,19 +469,19 @@ export default function DocumentsListPage() {
               ) : (
                 documents.map((doc) => (
                   <tr key={doc.id} className="hover:bg-[var(--color-bg-secondary)]/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-[var(--color-text)]">
+                    <td data-label={t('documentsList.colDate')} className="px-6 py-4 whitespace-nowrap text-[var(--color-text)]">
                       {new Date(doc.documentDate).toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[var(--color-primary)]">
+                    <td data-label={t('documentsList.colDocNumber')} className="px-6 py-4 whitespace-nowrap font-medium text-[var(--color-primary)]">
                       {doc.documentNumber}
                     </td>
-                    <td className="px-6 py-4 text-[var(--color-text)]">
+                    <td data-label={t('documentsList.colCustomer')} className="px-6 py-4 text-[var(--color-text)]">
                       <div className="font-medium truncate max-w-[200px]">{doc.customerName || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right font-semibold tabular-nums text-[var(--color-text)]">
+                    <td data-label={t('documentsList.colTotal')} className="px-6 py-4 whitespace-nowrap text-right font-semibold tabular-nums text-[var(--color-text)]">
                       {formatNumber(doc.grandTotal)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td data-label={t('documentsList.colStatus')} className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center gap-1">
                         {getStatusBadge(doc.status)}
                         {doc.customerApprovalStatus === 'Approved' && (
@@ -497,7 +497,7 @@ export default function DocumentsListPage() {
                       </div>
                     </td>
                     {type === 'delivery' && (
-                      <td className="px-4 py-4 whitespace-nowrap text-center">
+                      <td data-label={t('documentsList.colDeliveryStatus')} className="px-4 py-4 whitespace-nowrap text-center">
                         {doc.status?.toLowerCase() === 'cancelled' ? (
                           <span className="text-xs text-[var(--color-text-muted)]">-</span>
                         ) : (
@@ -517,7 +517,7 @@ export default function DocumentsListPage() {
                         )}
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <td data-label={t('documentsList.colActions')} className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="flex justify-end gap-2">
                         {(isAdmin || doc.status === 'Draft') && (
                           <button

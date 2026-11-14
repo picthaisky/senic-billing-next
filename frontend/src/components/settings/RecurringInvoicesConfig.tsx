@@ -209,7 +209,7 @@ export default function RecurringInvoicesConfig() {
       ) : (
         <div className="mt-4 border border-[var(--color-border)] rounded-xl overflow-hidden bg-[var(--color-surface-solid)]">
           <div className="table-responsive">
-            <table className="data-table w-full">
+            <table className="data-table table-responsive w-full">
               <thead>
                 <tr>
                   <th>{t('recurring.colSourceDoc')}</th>
@@ -232,21 +232,21 @@ export default function RecurringInvoicesConfig() {
                 ) : (
                   invoices.map((inv) => (
                     <tr key={inv.id}>
-                      <td className="font-mono text-sm font-semibold text-[var(--color-primary)]">
+                      <td data-label={t('recurring.colSourceDoc')} className="font-mono text-sm font-semibold text-[var(--color-primary)]">
                         {inv.sourceDocumentNumber || inv.sourceDocumentId.slice(0, 8)}
                       </td>
-                      <td>{inv.customerName || '-'}</td>
-                      <td>{FREQUENCY_LABEL_KEYS[inv.frequency] ? t(FREQUENCY_LABEL_KEYS[inv.frequency]) : inv.frequency}</td>
-                      <td>{new Date(inv.nextRunDate).toLocaleDateString(locale)}</td>
-                      <td className="tabular-nums">
+                      <td data-label={t('recurring.colCustomer')}>{inv.customerName || '-'}</td>
+                      <td data-label={t('recurring.colFrequency')}>{FREQUENCY_LABEL_KEYS[inv.frequency] ? t(FREQUENCY_LABEL_KEYS[inv.frequency]) : inv.frequency}</td>
+                      <td data-label={t('recurring.colNextRun')}>{new Date(inv.nextRunDate).toLocaleDateString(locale)}</td>
+                      <td data-label={t('recurring.colOccurrences')} className="tabular-nums">
                         {inv.currentOccurrence} / {inv.maxOccurrences ?? '∞'}
                       </td>
-                      <td>
+                      <td data-label={t('recurring.colStatus')}>
                         <span className={`badge ${inv.isActive ? 'badge-success' : 'badge-neutral'}`}>
                           {inv.isActive ? t('recurring.statusActive') : t('recurring.statusInactive')}
                         </span>
                       </td>
-                      <td className="text-right">
+                      <td data-label={t('recurring.colActions')} className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"

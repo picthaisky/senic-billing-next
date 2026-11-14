@@ -231,12 +231,12 @@ export default function WarehousesPage() {
               ) : (
                 stocks.map((s) => (
                   <tr key={`${s.warehouseId}-${s.productId}`}>
-                    <td className="text-sm font-medium">{s.warehouseName} ({s.warehouseCode})</td>
-                    <td className="font-mono text-xs">{s.sku || '-'}</td>
-                    <td className="text-sm">{s.productName}</td>
-                    <td className="text-right font-mono font-bold text-sm">{s.quantity.toLocaleString(locale)} {s.unit}</td>
-                    <td className="text-right font-mono text-xs text-[var(--color-text-muted)]">{s.reorderLevel.toLocaleString(locale)}</td>
-                    <td className="text-center">
+                    <td data-label={t('warehouses.colWarehouse')} className="text-sm font-medium">{s.warehouseName} ({s.warehouseCode})</td>
+                    <td data-label={t('warehouses.colSku')} className="font-mono text-xs">{s.sku || '-'}</td>
+                    <td data-label={t('warehouses.colProduct')} className="text-sm">{s.productName}</td>
+                    <td data-label={t('warehouses.colRemaining')} className="text-right font-mono font-bold text-sm">{s.quantity.toLocaleString(locale)} {s.unit}</td>
+                    <td data-label={t('warehouses.colReorderLevel')} className="text-right font-mono text-xs text-[var(--color-text-muted)]">{s.reorderLevel.toLocaleString(locale)}</td>
+                    <td data-label={t('warehouses.colStatus')} className="text-center">
                       {s.isLowStock ? (
                         <span className="badge badge-danger inline-flex items-center gap-1 text-[10px]">
                           <AlertTriangle size={12} /> {t('warehouses.lowStockBadge')}
@@ -245,7 +245,7 @@ export default function WarehousesPage() {
                         <span className="badge badge-success text-[10px]">{t('warehouses.normalBadge')}</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label={t('warehouses.colActions')}>
                       <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
@@ -310,15 +310,15 @@ export default function WarehousesPage() {
               ) : (
                 movements.map((m) => (
                   <tr key={m.id}>
-                    <td className="text-xs">{new Date(m.createdAt).toLocaleString(locale)}</td>
-                    <td className="text-sm">{m.warehouseName}</td>
-                    <td className="text-sm font-medium">{m.productName}</td>
-                    <td><span className="badge badge-info text-[10px]">{m.movementType}</span></td>
-                    <td className={`text-right font-mono font-bold text-sm ${m.quantityDelta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <td data-label={t('warehouses.colDateTime')} className="text-xs">{new Date(m.createdAt).toLocaleString(locale)}</td>
+                    <td data-label={t('warehouses.colWhShort')} className="text-sm">{m.warehouseName}</td>
+                    <td data-label={t('warehouses.colProduct')} className="text-sm font-medium">{m.productName}</td>
+                    <td data-label={t('warehouses.colType')}><span className="badge badge-info text-[10px]">{m.movementType}</span></td>
+                    <td data-label={t('warehouses.colDelta')} className={`text-right font-mono font-bold text-sm ${m.quantityDelta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {m.quantityDelta >= 0 ? `+${m.quantityDelta}` : m.quantityDelta}
                     </td>
-                    <td className="text-right font-mono text-sm">{m.balanceAfter}</td>
-                    <td className="text-xs text-[var(--color-text-muted)]">{[m.referenceNumber, m.notes].filter(Boolean).join(' • ') || '-'}</td>
+                    <td data-label={t('warehouses.colBalanceAfter')} className="text-right font-mono text-sm">{m.balanceAfter}</td>
+                    <td data-label={t('warehouses.colRefNotes')} className="text-xs text-[var(--color-text-muted)]">{[m.referenceNumber, m.notes].filter(Boolean).join(' • ') || '-'}</td>
                   </tr>
                 ))
               )}

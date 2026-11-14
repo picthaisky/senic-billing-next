@@ -538,7 +538,7 @@ export default function AccountingPage() {
               {trialBalance.isBalanced ? t('accounting.tbBalanced') : t('accounting.tbUnbalanced')}
             </span>
           </div>
-          <table className="data-table">
+          <table className="data-table table-responsive">
             <thead>
               <tr>
                 <th>{t('accounting.colAccCode')}</th>
@@ -551,17 +551,17 @@ export default function AccountingPage() {
             <tbody>
               {trialBalance.rows.map((r) => (
                 <tr key={r.accountId}>
-                  <td className="font-mono text-sm">{r.accountCode}</td>
-                  <td className="text-sm">{r.accountName}</td>
-                  <td><span className="badge badge-info text-[10px]">{r.accountType}</span></td>
-                  <td className="text-right font-mono text-sm">{fmt(r.totalDebit, locale)}</td>
-                  <td className="text-right font-mono text-sm">{fmt(r.totalCredit, locale)}</td>
+                  <td data-label={t('accounting.colAccCode')} className="font-mono text-sm">{r.accountCode}</td>
+                  <td data-label={t('accounting.colAccName')} className="text-sm">{r.accountName}</td>
+                  <td data-label={t('accounting.colCategory')}><span className="badge badge-info text-[10px]">{r.accountType}</span></td>
+                  <td data-label={t('accounting.colDebit')} className="text-right font-mono text-sm">{fmt(r.totalDebit, locale)}</td>
+                  <td data-label={t('accounting.colCredit')} className="text-right font-mono text-sm">{fmt(r.totalCredit, locale)}</td>
                 </tr>
               ))}
               <tr className="font-bold bg-[var(--color-bg-secondary)]">
                 <td colSpan={3} className="text-right">{t('accounting.tbTotal')}</td>
-                <td className="text-right font-mono">{fmt(trialBalance.totalDebit, locale)}</td>
-                <td className="text-right font-mono">{fmt(trialBalance.totalCredit, locale)}</td>
+                <td data-label={t('accounting.colDebit')} className="text-right font-mono">{fmt(trialBalance.totalDebit, locale)}</td>
+                <td data-label={t('accounting.colCredit')} className="text-right font-mono">{fmt(trialBalance.totalCredit, locale)}</td>
               </tr>
             </tbody>
           </table>
@@ -606,7 +606,7 @@ export default function AccountingPage() {
             <span className="text-xs text-[var(--color-text-muted)]">{t('accounting.coaCount', { count: accounts.length })}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table table-responsive">
               <thead>
                 <tr>
                   <th>{t('accounting.colAccCode')}</th>
@@ -624,17 +624,17 @@ export default function AccountingPage() {
                 ) : (
                   accounts.map((acc) => (
                     <tr key={acc.id}>
-                      <td className="font-mono font-semibold text-sm text-[var(--color-primary)]">{acc.code}</td>
-                      <td className="text-sm">{acc.name}</td>
-                      <td>
+                      <td data-label={t('accounting.colAccCode')} className="font-mono font-semibold text-sm text-[var(--color-primary)]">{acc.code}</td>
+                      <td data-label={t('accounting.colAccName')} className="text-sm">{acc.name}</td>
+                      <td data-label={t('accounting.colCoaCategory')}>
                         <span className="badge badge-info text-[10px]">
                           {ACCOUNT_TYPE_LABEL_KEYS[acc.accountType] ? t(ACCOUNT_TYPE_LABEL_KEYS[acc.accountType]) : acc.accountType}
                         </span>
                       </td>
-                      <td className="text-center text-xs text-[var(--color-text-muted)]">
+                      <td data-label={t('accounting.colCoaType')} className="text-center text-xs text-[var(--color-text-muted)]">
                         {acc.isSystem ? t('accounting.coaSystem') : t('accounting.coaCustom')}
                       </td>
-                      <td className="text-center">
+                      <td data-label={t('accounting.colCoaStatus')} className="text-center">
                         <span className={`badge text-[10px] ${acc.isActive ? 'badge-success' : 'badge-warning'}`}>
                           {acc.isActive ? t('accounting.statusActive') : t('accounting.statusInactive')}
                         </span>
@@ -813,7 +813,7 @@ export default function AccountingPage() {
                     {t('accounting.cfNetFlowPrefix')} {cashFlow.netCashFlow >= 0 ? '+' : ''}{fmt(cashFlow.netCashFlow, locale)}
                   </span>
                 </div>
-                <table className="data-table">
+                <table className="data-table table-responsive">
                   <thead>
                     <tr>
                       <th>{t('accounting.cfColItem')}</th>
@@ -831,9 +831,9 @@ export default function AccountingPage() {
                     ) : (
                       cashFlow.breakdown.map((b, i) => (
                         <tr key={i}>
-                          <td className="text-sm">{b.label}</td>
-                          <td><span className="badge badge-info text-[10px]">{b.category}</span></td>
-                          <td className={`text-right font-mono text-sm font-semibold ${b.amount >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          <td data-label={t('accounting.cfColItem')} className="text-sm">{b.label}</td>
+                          <td data-label={t('accounting.cfColActivity')}><span className="badge badge-info text-[10px]">{b.category}</span></td>
+                          <td data-label={t('accounting.cfColAmount')} className={`text-right font-mono text-sm font-semibold ${b.amount >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                             {fmt(b.amount, locale)}
                           </td>
                         </tr>
@@ -898,7 +898,7 @@ export default function AccountingPage() {
                   {t('accounting.marginByProductTitle')}
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="data-table">
+                  <table className="data-table table-responsive">
                     <thead>
                       <tr>
                         <th>SKU</th>
@@ -920,15 +920,15 @@ export default function AccountingPage() {
                       ) : (
                         salesMargin.byProduct.map((p, idx) => (
                           <tr key={idx}>
-                            <td className="font-mono text-xs">{p.sku || '-'}</td>
-                            <td className="text-sm font-medium">{p.productName}</td>
-                            <td className="text-right font-mono text-xs">{p.quantitySold.toLocaleString(locale)}</td>
-                            <td className="text-right font-mono text-sm">{fmt(p.revenue, locale)}</td>
-                            <td className="text-right font-mono text-sm text-[var(--color-text-muted)]">{fmt(p.estimatedCost, locale)}</td>
-                            <td className={`text-right font-mono text-sm font-semibold ${p.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <td data-label="SKU" className="font-mono text-xs">{p.sku || '-'}</td>
+                            <td data-label={t('accounting.marginColProduct')} className="text-sm font-medium">{p.productName}</td>
+                            <td data-label={t('accounting.marginColQtySold')} className="text-right font-mono text-xs">{p.quantitySold.toLocaleString(locale)}</td>
+                            <td data-label={t('accounting.marginColRevenue')} className="text-right font-mono text-sm">{fmt(p.revenue, locale)}</td>
+                            <td data-label={t('accounting.marginColEstCost')} className="text-right font-mono text-sm text-[var(--color-text-muted)]">{fmt(p.estimatedCost, locale)}</td>
+                            <td data-label={t('accounting.marginColGrossProfit')} className={`text-right font-mono text-sm font-semibold ${p.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                               {fmt(p.grossProfit, locale)}
                             </td>
-                            <td className="text-right font-mono text-xs">{p.marginPercent.toFixed(1)}%</td>
+                            <td data-label={t('accounting.marginColPercent')} className="text-right font-mono text-xs">{p.marginPercent.toFixed(1)}%</td>
                           </tr>
                         ))
                       )}
@@ -942,7 +942,7 @@ export default function AccountingPage() {
                   {t('accounting.marginByStaffTitle')}
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="data-table">
+                  <table className="data-table table-responsive">
                     <thead>
                       <tr>
                         <th>{t('accounting.marginColStaff')}</th>
@@ -962,11 +962,11 @@ export default function AccountingPage() {
                       ) : (
                         salesMargin.byStaff.map((s, idx) => (
                           <tr key={idx}>
-                            <td className="text-sm font-medium">{s.staffName}</td>
-                            <td className="text-right font-mono text-sm">{s.documentCount}</td>
-                            <td className="text-right font-mono text-sm">{fmt(s.totalBeforeVat, locale)}</td>
-                            <td className="text-right font-mono text-sm font-semibold">{fmt(s.grandTotal, locale)}</td>
-                            <td className="text-right font-mono text-sm text-emerald-600">{fmt(s.paidTotal, locale)}</td>
+                            <td data-label={t('accounting.marginColStaff')} className="text-sm font-medium">{s.staffName}</td>
+                            <td data-label={t('accounting.marginColDocCount')} className="text-right font-mono text-sm">{s.documentCount}</td>
+                            <td data-label={t('accounting.marginColBeforeVat')} className="text-right font-mono text-sm">{fmt(s.totalBeforeVat, locale)}</td>
+                            <td data-label={t('accounting.marginColGrandTotal')} className="text-right font-mono text-sm font-semibold">{fmt(s.grandTotal, locale)}</td>
+                            <td data-label={t('accounting.marginColPaidTotal')} className="text-right font-mono text-sm text-emerald-600">{fmt(s.paidTotal, locale)}</td>
                           </tr>
                         ))
                       )}
@@ -1003,7 +1003,7 @@ export default function AccountingPage() {
           </div>
 
           <div className="card overflow-hidden">
-            <table className="data-table">
+            <table className="data-table table-responsive">
               <thead>
                 <tr>
                   <th>{t('accounting.periodsColLabel')}</th>
@@ -1017,9 +1017,9 @@ export default function AccountingPage() {
               <tbody>
                 {periods.map((p) => (
                   <tr key={`${p.year}-${p.month}`}>
-                    <td className="font-mono font-semibold text-sm">{p.periodLabel}</td>
-                    <td className="text-center font-mono text-sm">{p.journalCount}</td>
-                    <td className="text-center">
+                    <td data-label={t('accounting.periodsColLabel')} className="font-mono font-semibold text-sm">{p.periodLabel}</td>
+                    <td data-label={t('accounting.periodsColJournals')} className="text-center font-mono text-sm">{p.journalCount}</td>
+                    <td data-label={t('accounting.periodsColStatus')} className="text-center">
                       {p.isLocked ? (
                         <span className="badge badge-danger text-[10px] inline-flex items-center gap-1">
                           <Lock size={11} /> {t('accounting.periodLockedBadge')}
@@ -1030,11 +1030,11 @@ export default function AccountingPage() {
                         </span>
                       )}
                     </td>
-                    <td className="text-xs text-[var(--color-text-muted)]">
+                    <td data-label={t('accounting.periodsColActor')} className="text-xs text-[var(--color-text-muted)]">
                       {p.lockedBy ? `${p.lockedBy} (${p.lockedAt ? new Date(p.lockedAt).toLocaleDateString(locale) : ''})` : '-'}
                     </td>
-                    <td className="text-xs">{p.notes || '-'}</td>
-                    <td className="text-right">
+                    <td data-label={t('accounting.periodsColNotes')} className="text-xs">{p.notes || '-'}</td>
+                    <td data-label={t('accounting.periodsColActions')} className="text-right">
                       {isAdmin ? (
                         <button
                           type="button"

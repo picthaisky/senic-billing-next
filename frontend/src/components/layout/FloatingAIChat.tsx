@@ -55,17 +55,29 @@ export default function FloatingAIChat() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed left-4 bottom-[calc(68px+env(safe-area-inset-bottom,0px)+12px)] md:left-auto md:bottom-6 md:right-6 z-40">
       {/* Chat Window */}
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-[350px] sm:w-[400px] h-[500px] bg-[var(--color-surface-solid)] border border-[var(--color-border)] rounded-2xl shadow-[var(--shadow-xl)] flex flex-col overflow-hidden animate-fade-in-up origin-bottom-right">
+        <div
+          role="dialog"
+          aria-label={t('aiChat.title')}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setIsOpen(false);
+          }}
+          className="absolute bottom-16 left-0 md:left-auto md:right-0 w-[calc(100vw-2rem)] sm:w-[390px] max-w-[400px] h-[min(500px,calc(100dvh-10rem))] bg-[var(--color-surface-solid)] border border-[var(--color-border)] rounded-2xl shadow-[var(--shadow-xl)] flex flex-col overflow-hidden animate-fade-in-up origin-bottom-left md:origin-bottom-right"
+        >
           {/* Header */}
           <div className="bg-[var(--color-primary)] text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot size={20} />
               <h3 className="font-bold">{t('aiChat.title')}</h3>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              aria-label={t('aiChat.closeAria')}
+              className="touch-target flex items-center justify-center rounded-lg text-white/80 hover:text-white transition-colors"
+            >
               <X size={20} />
             </button>
           </div>
@@ -111,11 +123,13 @@ export default function FloatingAIChat() {
               className="flex-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-full px-4 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] transition-colors"
             />
             <button
+              type="button"
               onClick={handleSend}
               disabled={!input.trim() || isTyping}
-              className="w-10 h-10 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label={t('aiChat.sendAria')}
+              className="w-11 h-11 shrink-0 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="ml-1" />}
+              {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="ml-0.5" />}
             </button>
           </div>
         </div>
@@ -123,8 +137,11 @@ export default function FloatingAIChat() {
 
       {/* Floating Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 ${
+        aria-label={isOpen ? t('aiChat.closeAria') : t('aiChat.openAria')}
+        aria-expanded={isOpen}
+        className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 ${
           isOpen ? 'bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)]' : 'bg-[var(--color-primary)] text-white'
         }`}
       >

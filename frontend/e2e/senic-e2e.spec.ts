@@ -574,7 +574,6 @@ test('Login, Dashboard Top Spenders, Platform Announcement, Invoice Form, Audit 
 
   expect(pageErrors).toEqual([]);
 });
-
 test('Payment Callback route renders paid, pending refresh & missing-reference states E2E', async ({
   page,
 }) => {
@@ -612,7 +611,6 @@ test('Payment Callback route renders paid, pending refresh & missing-reference s
 
   expect(pageErrors).toEqual([]);
 });
-
 test('Login Forgot Password / Signup Tenant and Settings SaaS Checkout Modal work E2E', async ({
   page,
 }) => {
@@ -645,6 +643,69 @@ test('Login Forgot Password / Signup Tenant and Settings SaaS Checkout Modal wor
   await page.getByRole('button', { name: 'ดำเนินการชำระเงิน / เปิดใช้งาน' }).click();
   await expect(page.getByAltText('PromptPay QR')).toBeVisible();
   await expect(page.getByRole('button', { name: 'ตรวจสอบสถานะการชำระ' })).toBeVisible();
+
+  expect(pageErrors).toEqual([]);
+});
+test('Mobile viewport (390x844) renders responsive navigation, non-overlapping AI chat & FAB, responsive tables, and PWA offline assets', async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (err) => pageErrors.push(err.message));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setupApiMocks(page);
+
+  await page.goto('/login');
+  await page.getByPlaceholder('admin').fill('admin');
+  await page.locator('input[type="password"]').fill('admin123');
+  await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+
+  // 1. Check horizontal overflow across key mobile pages
+  for (const route of ['/dashboard', '/documents/taxinvoice', '/accounting', '/warehouses', '/settings']) {
+    await page.goto(route);
+    await page.waitForLoadState('networkidle');
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+  }
+
+  // 2. Verify BottomNav & scrollable More bottom sheet + Escape close
+  await page.goto('/dashboard');
+  const moreBtn = page.locator('.layout-bottom-nav button', { hasText: 'เพิ่มเติม' });
+  await expect(moreBtn).toBeVisible();
+  await moreBtn.click();
+  const moreSheet = page.locator('#mobile-more-sheet');
+  await expect(moreSheet).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(moreSheet).toHaveCount(0);
+
+  // 3. Verify FloatingAIChat trigger does not collide with FloatingActionButton on mobile
+  const aiBtn = page.getByRole('button', { name: 'เปิดผู้ช่วย AI ด้านบัญชีและบิลลิ่ง' });
+  const fabBtn = page.locator('.layout-fab-main');
+  await expect(aiBtn).toBeVisible();
+  await expect(fabBtn).toBeVisible();
+  const aiBox = await aiBtn.boundingBox();
+  const fabBox = await fabBtn.boundingBox();
+  expect(aiBox).not.toBeNull();
+  expect(fabBox).not.toBeNull();
+  if (aiBox && fabBox) {
+    const horizontalOverlap = aiBox.x < fabBox.x + fabBox.width && aiBox.x + aiBox.width > fabBox.x;
+    const verticalOverlap = aiBox.y < fabBox.y + fabBox.height && aiBox.y + aiBox.height > fabBox.y;
+    expect(horizontalOverlap && verticalOverlap).toBe(false);
+  }
+
+  // 4. Verify PWA manifest, icons, and offline fallback page load
+  const manifestRes = await page.request.get('/manifest.json');
+  expect(manifestRes.ok()).toBe(true);
+  const manifestJson = await manifestRes.json();
+  expect(manifestJson.display).toBe('standalone');
+
+  const offlineRes = await page.request.get('/offline.html');
+  expect(offlineRes.ok()).toBe(true);
+  expect(await offlineRes.text()).toContain('Senic Billing Next PWA');
 
   expect(pageErrors).toEqual([]);
 });

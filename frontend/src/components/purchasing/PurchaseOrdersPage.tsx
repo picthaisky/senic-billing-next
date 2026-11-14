@@ -408,16 +408,16 @@ export default function PurchaseOrdersPage() {
                     const st = STATUS_BADGE[po.status];
                     return (
                       <tr key={po.id}>
-                        <td className="font-mono font-semibold text-sm">{po.poNumber}</td>
-                        <td className="text-sm">{new Date(po.orderDate).toLocaleDateString(locale)}</td>
-                        <td>
+                        <td data-label={t('purchasing.colPoNumber')} className="font-mono font-semibold text-sm">{po.poNumber}</td>
+                        <td data-label={t('purchasing.colOrderDate')} className="text-sm">{new Date(po.orderDate).toLocaleDateString(locale)}</td>
+                        <td data-label={t('purchasing.colVendor')}>
                           <div className="font-medium text-sm">{po.vendorName}</div>
                           {po.vendorTaxId && <div className="text-xs font-mono text-[var(--color-text-muted)]">{po.vendorTaxId}</div>}
                         </td>
-                        <td className="text-sm">{po.warehouseName || t('purchasing.defaultWarehouseName')}</td>
-                        <td className="text-right font-mono font-semibold text-sm">{formatCurrency(po.grandTotal, locale)}</td>
-                        <td className="text-center"><span className={`badge ${st?.cls ?? 'badge-info'}`}>{st ? t(st.labelKey) : po.status}</span></td>
-                        <td>
+                        <td data-label={t('purchasing.colDestWarehouse')} className="text-sm">{po.warehouseName || t('purchasing.defaultWarehouseName')}</td>
+                        <td data-label={t('purchasing.colGrandTotal')} className="text-right font-mono font-semibold text-sm">{formatCurrency(po.grandTotal, locale)}</td>
+                        <td data-label={t('purchasing.colStatus')} className="text-center"><span className={`badge ${st?.cls ?? 'badge-info'}`}>{st ? t(st.labelKey) : po.status}</span></td>
+                        <td data-label={t('purchasing.colActions')}>
                           <div className="flex items-center justify-center gap-1">
                             {(po.status === 'Sent' || po.status === 'PartiallyReceived' || po.status === 'Draft') && (
                               <button
@@ -480,11 +480,11 @@ export default function PurchaseOrdersPage() {
                 ) : (
                   vendors.map((v) => (
                     <tr key={v.id}>
-                      <td className="font-medium text-sm">{v.name}</td>
-                      <td className="font-mono text-xs">{v.taxId ? `${v.taxId} (${v.branch || '00000'})` : '-'}</td>
-                      <td className="text-sm">{[v.contactPerson, v.phone].filter(Boolean).join(' • ') || '-'}</td>
-                      <td className="text-center text-sm">{v.paymentTermsDays}</td>
-                      <td className="text-center">
+                      <td data-label={t('purchasing.colVendorName')} className="font-medium text-sm">{v.name}</td>
+                      <td data-label={t('purchasing.colVendorTaxIdBranch')} className="font-mono text-xs">{v.taxId ? `${v.taxId} (${v.branch || '00000'})` : '-'}</td>
+                      <td data-label={t('purchasing.colContactPhone')} className="text-sm">{[v.contactPerson, v.phone].filter(Boolean).join(' • ') || '-'}</td>
+                      <td data-label={t('purchasing.colCreditDays')} className="text-center text-sm">{v.paymentTermsDays}</td>
+                      <td data-label={t('purchasing.colActions')} className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"

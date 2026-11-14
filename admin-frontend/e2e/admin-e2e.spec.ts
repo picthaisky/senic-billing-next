@@ -312,3 +312,49 @@ test('Super Admin Portal enforces token isolation and completes Dashboard, Tenan
 
   expect(pageErrors).toEqual([]);
 });
+test('Admin Portal mobile viewport (390x844) provides slide-over sidebar drawer, zero horizontal overflow, and PWA offline assets', async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (err) => pageErrors.push(err.message));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setupAdminMocks(page);
+
+  await page.goto('/');
+  await page.locator('input[type="text"]').fill('superadmin');
+  await page.locator('input[type="password"]').fill('admin123');
+  await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'ภาพรวมระบบ (Platform Dashboard)' })).toBeVisible();
+
+  // Check zero page-level horizontal overflow on dashboard
+  const dashOverflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(dashOverflow.scrollWidth).toBeLessThanOrEqual(dashOverflow.clientWidth + 1);
+
+  // Open mobile hamburger menu -> navigate to Tenants -> close drawer automatically
+  const openMenuBtn = page.getByRole('button', { name: 'เปิดเมนูนำทาง' });
+  await expect(openMenuBtn).toBeVisible();
+  await openMenuBtn.click();
+
+  const tenantsLink = page.getByRole('link', { name: 'ผู้ใช้บริการ (Tenants)' });
+  await expect(tenantsLink).toBeVisible();
+  await tenantsLink.click();
+  await expect(page.getByRole('heading', { name: 'ผู้ใช้บริการ (Tenants)' })).toBeVisible();
+
+  const tenantsOverflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(tenantsOverflow.scrollWidth).toBeLessThanOrEqual(tenantsOverflow.clientWidth + 1);
+
+  // Verify admin PWA manifest and offline page
+  const manifestRes = await page.request.get('/manifest.json');
+  expect(manifestRes.ok()).toBe(true);
+  const offlineRes = await page.request.get('/offline.html');
+  expect(offlineRes.ok()).toBe(true);
+
+  expect(pageErrors).toEqual([]);
+});

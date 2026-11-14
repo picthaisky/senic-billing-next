@@ -11,6 +11,10 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('senic-theme', theme);
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme === 'deep-ocean' ? '#0284c7' : '#ea580c');
+    }
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

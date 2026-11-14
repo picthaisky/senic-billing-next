@@ -1935,3 +1935,62 @@
   font-variant-numeric: tabular-nums;
 }
 }
+
+/* === Phase 22 Mobile, Touch & Bottom Sheet Ergonomics === */
+.layout-bottom-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: 85dvh;
+}
+
+.layout-bottom-sheet-handle-wrap,
+.layout-bottom-sheet-title-row,
+.layout-bottom-sheet-footer {
+  flex-shrink: 0;
+}
+
+.layout-bottom-sheet-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 768px) {
+  .layout-bottom-nav-item,
+  .layout-bottom-sheet-item,
+  .layout-bottom-sheet-close {
+    min-height: 44px;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+
+  .a4-preview-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.75rem;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .layout-notif-dismiss {
+    opacity: 1 !important;
+  }
+
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .card:hover {
+    transform: none;
+  }
+}
+
+@media print {
+  .a4-preview-scroll {
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+}
