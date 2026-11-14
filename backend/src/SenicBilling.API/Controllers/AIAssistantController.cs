@@ -60,6 +60,11 @@ public class AIAssistantController(
             .AsNoTracking()
             .Where(d => d.TenantId == tenantId
                 && d.DocumentType != DocumentType.Quotation
+                && d.DocumentType != DocumentType.DeliveryNote
+                && d.DocumentType != DocumentType.CreditNote
+                && d.DocumentType != DocumentType.Receipt
+                && d.DocumentType != DocumentType.CashBill
+                && d.Status != DocumentStatus.Draft
                 && d.Status != DocumentStatus.Paid
                 && d.Status != DocumentStatus.Cancelled
                 && (d.Status == DocumentStatus.Overdue || (d.DueDate.HasValue && d.DueDate.Value < now)))
@@ -116,6 +121,10 @@ public class AIAssistantController(
     [HttpPost("parse-expense")]
     public async Task<ActionResult<ApiResponse<ParsedExpenseDto>>> ParseExpense([FromBody] ParseExpenseRequest req, CancellationToken ct)
     {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out _))
+            return Unauthorized();
+
         if (string.IsNullOrWhiteSpace(req.Text))
             return BadRequest(new ApiResponse<ParsedExpenseDto>(false, "กรุณาวางข้อความจากใบเสร็จ", null));
         if (req.Text.Length > 10_000)

@@ -311,7 +311,7 @@ export default function DocumentsListPage() {
 
   const handleDownloadETaxXml = async (docId: string, docNumber: string) => {
     try {
-      const res = await apiClient.get(`/tax-invoices/${docId}/e-tax-xml`, {
+      const res = await apiClient.get(`/documents/${docId}/e-tax-xml`, {
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'application/xml' });
@@ -555,7 +555,7 @@ export default function DocumentsListPage() {
                             <FileDiff size={16} />
                           </button>
                         )}
-                        {type === 'taxinvoice' && doc.status?.toLowerCase() !== 'draft' && (
+                        {['taxinvoice', 'creditnote', 'debitnote'].includes(type || '') && !['draft', 'cancelled'].includes(doc.status?.toLowerCase()) && (
                           <button
                             onClick={() => handleDownloadETaxXml(doc.id, doc.documentNumber)}
                             className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"

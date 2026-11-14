@@ -28,6 +28,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      onwarn(warning, defaultHandler) {
+        if (warning.code === 'INVALID_ANNOTATION' && warning.id?.includes('@microsoft/signalr')) {
+          return;
+        }
+        defaultHandler(warning);
+      },
       output: {
         manualChunks(id) {
           if (id.includes('src/i18n/resources') || id.includes('src\\i18n\\resources')) {

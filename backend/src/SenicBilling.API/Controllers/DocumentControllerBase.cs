@@ -457,6 +457,46 @@ public abstract class DocumentControllerBase(
         if (source.DocumentType == request.TargetType)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถแปลงเป็นประเภทเดียวกัน", null));
 
+        var tenant = await dbContext.Tenants
+            .Include(t => t.CurrentPlan)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+        if (tenant != null)
+        {
+            if (!tenant.IsActive || tenant.SubscriptionStatus == "Suspended")
+                return BadRequest(new ApiResponse<DocumentResponse>(false, "บัญชีองค์กรถูกระงับการใช้งานชั่วคราว กรุณาติดต่อผู้ดูแลระบบ", null));
+
+            if (tenant.CurrentPlan != null && tenant.CurrentPlan.MaxDocumentsPerMonth > 0)
+            {
+                var nowUtc = DateTime.UtcNow;
+                var monthlyDocs = await dbContext.DocumentHeaders.CountAsync(
+                    d => d.TenantId == tenantId &&
+                         d.Status != DocumentStatus.Cancelled &&
+                         d.CreatedAt.Year == nowUtc.Year &&
+                         d.CreatedAt.Month == nowUtc.Month, ct);
+
+                if (monthlyDocs >= tenant.CurrentPlan.MaxDocumentsPerMonth)
+                {
+                    return BadRequest(new ApiResponse<DocumentResponse>(
+                        false,
+                        $"จำนวนเอกสารเดือนนี้ครบโควต้าของแพ็กเกจ {tenant.CurrentPlan.Name} ({tenant.CurrentPlan.MaxDocumentsPerMonth} ฉบับ/เดือน) กรุณาอัปเกรดแพ็กเกจ",
+                        null));
+                }
+            }
+        }
+
+        var targetDocDate = request.DocumentDate ?? DateTime.UtcNow;
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null &&
+            request.TargetType is not (DocumentType.Quotation or DocumentType.DeliveryNote) &&
+            await accountingPrecheck.IsPeriodLockedAsync(tenantId, targetDocDate, ct))
+        {
+            return BadRequest(new ApiResponse<DocumentResponse>(
+                false,
+                $"งวดบัญชี {targetDocDate.Month:D2}/{targetDocDate.Year} ถูกปิดงวดแล้ว ไม่สามารถออกเอกสารใหม่ในงวดนี้ได้",
+                null));
+        }
+
         var targetDocNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, request.TargetType, ct);
         var converted = CloneToNewDocument(source, request.TargetType, targetDocNumber, tenantId, request);
 
@@ -467,6 +507,24 @@ public abstract class DocumentControllerBase(
         }
 
         dbContext.DocumentHeaders.Add(converted);
+
+        var yearMonth = DateTime.UtcNow.ToString("yyyy-MM");
+        var usageStat = await dbContext.TenantUsageStats
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.YearMonth == yearMonth, ct);
+        if (usageStat == null)
+        {
+            dbContext.TenantUsageStats.Add(new TenantUsageStat
+            {
+                TenantId = tenantId,
+                YearMonth = yearMonth,
+                DocumentsCreated = 1
+            });
+        }
+        else
+        {
+            usageStat.DocumentsCreated += 1;
+        }
+
         await dbContext.SaveChangesAsync(ct);
 
         var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();
@@ -501,6 +559,43 @@ public abstract class DocumentControllerBase(
 
         if (sourceDoc.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถออกใบลดหนี้/เพิ่มหนี้จากเอกสารที่ยกเลิกแล้ว", null));
+
+        var tenant = await dbContext.Tenants
+            .Include(t => t.CurrentPlan)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+        if (tenant != null)
+        {
+            if (!tenant.IsActive || tenant.SubscriptionStatus == "Suspended")
+                return BadRequest(new ApiResponse<DocumentResponse>(false, "บัญชีองค์กรถูกระงับการใช้งานชั่วคราว กรุณาติดต่อผู้ดูแลระบบ", null));
+
+            if (tenant.CurrentPlan != null && tenant.CurrentPlan.MaxDocumentsPerMonth > 0)
+            {
+                var nowUtc = DateTime.UtcNow;
+                var monthlyDocs = await dbContext.DocumentHeaders.CountAsync(
+                    d => d.TenantId == tenantId &&
+                         d.Status != DocumentStatus.Cancelled &&
+                         d.CreatedAt.Year == nowUtc.Year &&
+                         d.CreatedAt.Month == nowUtc.Month, ct);
+
+                if (monthlyDocs >= tenant.CurrentPlan.MaxDocumentsPerMonth)
+                {
+                    return BadRequest(new ApiResponse<DocumentResponse>(
+                        false,
+                        $"จำนวนเอกสารเดือนนี้ครบโควต้าของแพ็กเกจ {tenant.CurrentPlan.Name} ({tenant.CurrentPlan.MaxDocumentsPerMonth} ฉบับ/เดือน) กรุณาอัปเกรดแพ็กเกจ",
+                        null));
+                }
+            }
+        }
+
+        var accountingPrecheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingPrecheck is not null && await accountingPrecheck.IsPeriodLockedAsync(tenantId, request.DocumentDate, ct))
+        {
+            return BadRequest(new ApiResponse<DocumentResponse>(
+                false,
+                $"งวดบัญชี {request.DocumentDate.Month:D2}/{request.DocumentDate.Year} ถูกปิดงวดแล้ว ไม่สามารถออกใบลดหนี้/เพิ่มหนี้ในงวดนี้ได้",
+                null));
+        }
 
         var docNumber = await numberGenerator.GenerateNextNumberAsync(tenantId, request.NoteType, ct);
 
@@ -546,6 +641,24 @@ public abstract class DocumentControllerBase(
 
         CalculateTotals(header);
         dbContext.DocumentHeaders.Add(header);
+
+        var yearMonth = DateTime.UtcNow.ToString("yyyy-MM");
+        var usageStat = await dbContext.TenantUsageStats
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.YearMonth == yearMonth, ct);
+        if (usageStat == null)
+        {
+            dbContext.TenantUsageStats.Add(new TenantUsageStat
+            {
+                TenantId = tenantId,
+                YearMonth = yearMonth,
+                DocumentsCreated = 1
+            });
+        }
+        else
+        {
+            usageStat.DocumentsCreated += 1;
+        }
+
         await dbContext.SaveChangesAsync(ct);
 
         var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();

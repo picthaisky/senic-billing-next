@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Domain.Entities;
+using SenicBilling.Domain.Enums;
 using SenicBilling.Infrastructure.Data;
 
 namespace SenicBilling.API.Controllers;
@@ -12,6 +13,13 @@ namespace SenicBilling.API.Controllers;
 [Authorize]
 public class RecurringInvoiceController(SenicBillingDbContext dbContext) : ControllerBase
 {
+    private static readonly string[] AllowedFrequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
+
+    private static string? NormalizeFrequency(string? frequency)
+    {
+        if (string.IsNullOrWhiteSpace(frequency)) return null;
+        return AllowedFrequencies.FirstOrDefault(f => string.Equals(f, frequency.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
     [HttpGet]
     public async Task<ActionResult<ApiResponse<List<RecurringInvoiceDto>>>> GetAll(CancellationToken ct)
     {
@@ -36,17 +44,27 @@ public class RecurringInvoiceController(SenicBillingDbContext dbContext) : Contr
     {
         var tenantId = GetTenantId();
 
+        var normalizedFrequency = NormalizeFrequency(req.Frequency);
+        if (normalizedFrequency is null)
+            return BadRequest(new ApiResponse<RecurringInvoiceDto>(false, "ความถี่ต้องเป็น Daily, Weekly, Monthly หรือ Yearly เท่านั้น", null));
+
+        if (req.MaxOccurrences is <= 0)
+            return BadRequest(new ApiResponse<RecurringInvoiceDto>(false, "จำนวนครั้งสูงสุดต้องมากกว่า 0", null));
+
         // Validate Source Document
         var source = await dbContext.DocumentHeaders.FirstOrDefaultAsync(d => d.Id == req.SourceDocumentId && d.TenantId == tenantId, ct);
         if (source == null)
             return NotFound(new ApiResponse<RecurringInvoiceDto>(false, "ไม่พบเอกสารต้นฉบับ", null));
+
+        if (source.Status == DocumentStatus.Cancelled)
+            return BadRequest(new ApiResponse<RecurringInvoiceDto>(false, "ไม่สามารถสร้างกำหนดการจากเอกสารที่ยกเลิกแล้ว", null));
 
         var recurring = new RecurringInvoice
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             SourceDocumentId = req.SourceDocumentId,
-            Frequency = req.Frequency,
+            Frequency = normalizedFrequency,
             NextRunDate = req.NextRunDate,
             MaxOccurrences = req.MaxOccurrences,
             IsActive = true
@@ -74,7 +92,14 @@ public class RecurringInvoiceController(SenicBillingDbContext dbContext) : Contr
         if (recurring == null)
             return NotFound(new ApiResponse<RecurringInvoiceDto>(false, "ไม่พบกำหนดการ", null));
 
-        recurring.Frequency = req.Frequency;
+        var normalizedFrequency = NormalizeFrequency(req.Frequency);
+        if (normalizedFrequency is null)
+            return BadRequest(new ApiResponse<RecurringInvoiceDto>(false, "ความถี่ต้องเป็น Daily, Weekly, Monthly หรือ Yearly เท่านั้น", null));
+
+        if (req.MaxOccurrences is <= 0)
+            return BadRequest(new ApiResponse<RecurringInvoiceDto>(false, "จำนวนครั้งสูงสุดต้องมากกว่า 0", null));
+
+        recurring.Frequency = normalizedFrequency;
         recurring.NextRunDate = req.NextRunDate;
         recurring.IsActive = req.IsActive;
         recurring.MaxOccurrences = req.MaxOccurrences;

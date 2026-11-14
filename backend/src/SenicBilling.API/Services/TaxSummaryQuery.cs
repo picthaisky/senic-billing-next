@@ -26,20 +26,29 @@ public static class TaxSummaryQuery
         var sales = await dbContext.DocumentHeaders.AsNoTracking()
             .Where(d =>
                 d.TenantId == tenantId &&
-                d.DocumentType == DocumentType.TaxInvoice &&
+                (d.DocumentType == DocumentType.TaxInvoice ||
+                 d.DocumentType == DocumentType.CreditNote ||
+                 d.DocumentType == DocumentType.DebitNote) &&
                 d.Status != DocumentStatus.Cancelled &&
                 d.Status != DocumentStatus.Draft &&
                 d.DocumentDate >= start && d.DocumentDate < end)
-            .Select(d => new { d.TotalBeforeVat, d.VatAmount })
+            .Select(d => new
+            {
+                Sign = d.DocumentType == DocumentType.CreditNote ? -1m : 1m,
+                d.TotalBeforeVat,
+                d.VatAmount
+            })
             .ToListAsync(ct);
 
         var whtDeductedByCustomers = await dbContext.DocumentHeaders.AsNoTracking()
             .Where(d =>
                 d.TenantId == tenantId &&
+                d.DocumentType != DocumentType.Quotation &&
+                d.DocumentType != DocumentType.DeliveryNote &&
                 d.Status != DocumentStatus.Cancelled &&
                 d.Status != DocumentStatus.Draft &&
                 d.DocumentDate >= start && d.DocumentDate < end)
-            .Select(d => d.WhtAmount)
+            .Select(d => d.DocumentType == DocumentType.CreditNote ? -d.WhtAmount : d.WhtAmount)
             .ToListAsync(ct);
 
         var purchases = await dbContext.ExpenseRecords.AsNoTracking()
@@ -51,8 +60,8 @@ public static class TaxSummaryQuery
             .Select(e => new { e.TotalBeforeVat, e.VatAmount, e.IsRefundableVat })
             .ToListAsync(ct);
 
-        var totalSales = sales.Sum(s => s.TotalBeforeVat);
-        var outputVat = sales.Sum(s => s.VatAmount);
+        var totalSales = sales.Sum(s => s.Sign * s.TotalBeforeVat);
+        var outputVat = sales.Sum(s => s.Sign * s.VatAmount);
         var totalPurchases = purchases.Sum(p => p.TotalBeforeVat);
         var inputVat = purchases.Where(p => p.IsRefundableVat).Sum(p => p.VatAmount);
         var netVat = outputVat - inputVat;

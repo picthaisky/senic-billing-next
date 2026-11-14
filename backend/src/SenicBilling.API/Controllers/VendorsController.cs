@@ -33,11 +33,16 @@ public class VendorsController(SenicBillingDbContext dbContext) : ControllerBase
         return Ok(new ApiResponse<List<VendorDto>>(true, "สำเร็จ", items));
     }
 
+    private static bool IsValidOptionalTaxId(string? taxId)
+        => string.IsNullOrWhiteSpace(taxId) || (taxId.Trim().Length == 13 && taxId.Trim().All(char.IsDigit));
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse<VendorDto>>> Create([FromBody] UpsertVendorRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequest(new ApiResponse<VendorDto>(false, "กรุณาระบุชื่อผู้ขาย", null));
+        if (!IsValidOptionalTaxId(request.TaxId))
+            return BadRequest(new ApiResponse<VendorDto>(false, "เลขประจำตัวผู้เสียภาษีของผู้ขายต้องเป็นตัวเลข 13 หลัก", null));
 
         var vendor = new Vendor
         {
@@ -65,6 +70,11 @@ public class VendorsController(SenicBillingDbContext dbContext) : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ApiResponse<VendorDto>>> Update(Guid id, [FromBody] UpsertVendorRequest request, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest(new ApiResponse<VendorDto>(false, "กรุณาระบุชื่อผู้ขาย", null));
+        if (!IsValidOptionalTaxId(request.TaxId))
+            return BadRequest(new ApiResponse<VendorDto>(false, "เลขประจำตัวผู้เสียภาษีของผู้ขายต้องเป็นตัวเลข 13 หลัก", null));
+
         var tenantId = GetTenantId();
         var vendor = await dbContext.Vendors.FirstOrDefaultAsync(v => v.Id == id && v.TenantId == tenantId, ct);
         if (vendor is null) return NotFound(new ApiResponse<VendorDto>(false, "ไม่พบผู้ขาย", null));

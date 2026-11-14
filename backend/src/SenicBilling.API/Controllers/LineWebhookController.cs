@@ -30,7 +30,7 @@ public class LineWebhookController(
     {
         var tenant = await dbContext.Tenants
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == tenantId && t.IsActive, ct);
+            .FirstOrDefaultAsync(t => t.Id == tenantId && t.IsActive && t.SubscriptionStatus != "Suspended", ct);
 
         if (tenant is null || string.IsNullOrWhiteSpace(tenant.LineChannelSecret))
         {
@@ -118,13 +118,20 @@ public class LineWebhookController(
                             d.DocumentType != DocumentType.Quotation &&
                             d.DocumentType != DocumentType.DeliveryNote &&
                             d.DocumentDate >= start && d.DocumentDate < end)
-                .Select(d => new { d.Status, d.GrandTotal })
+                .Select(d => new { d.DocumentType, d.Status, d.GrandTotal })
                 .ToListAsync(ct);
 
-            var totalSales = docs.Sum(d => d.GrandTotal);
-            var paidAmount = docs.Where(d => d.Status == DocumentStatus.Paid).Sum(d => d.GrandTotal);
-            var unpaidDocs = docs.Where(d => d.Status != DocumentStatus.Paid).ToList();
-            var unpaidAmount = unpaidDocs.Sum(d => d.GrandTotal);
+            var totalSales = docs.Sum(d => d.DocumentType == DocumentType.CreditNote ? -d.GrandTotal : d.GrandTotal);
+            var paidAmount = docs
+                .Where(d => d.Status == DocumentStatus.Paid && d.DocumentType != DocumentType.CreditNote)
+                .Sum(d => d.GrandTotal);
+            var unpaidDocs = docs
+                .Where(d => d.Status != DocumentStatus.Paid && d.DocumentType != DocumentType.CreditNote)
+                .ToList();
+            var creditNoteOffset = docs
+                .Where(d => d.DocumentType == DocumentType.CreditNote)
+                .Sum(d => d.GrandTotal);
+            var unpaidAmount = Math.Max(0m, unpaidDocs.Sum(d => d.GrandTotal) - creditNoteOffset);
 
             return $"สรุปยอดขาย {tenant.CompanyName} ({now:MM/yyyy})\n" +
                    $"• ยอดขายรวม: {totalSales:N2} บาท ({docs.Count} ใบ)\n" +
@@ -166,7 +173,7 @@ public class LineWebhookController(
                 return $"ไม่พบเอกสารเลขที่ {normalized} ในระบบ";
             }
 
-            var baseUrl = configuration["Frontend:BaseUrl"]?.TrimEnd('/');
+            var baseUrl = (configuration["App:FrontendBaseUrl"] ?? configuration["Frontend:BaseUrl"])?.TrimEnd('/');
             var link = string.IsNullOrWhiteSpace(baseUrl)
                 ? $"/print/{doc.Id}"
                 : $"{baseUrl}/print/{doc.Id}";

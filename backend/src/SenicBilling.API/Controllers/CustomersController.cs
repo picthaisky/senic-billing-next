@@ -45,13 +45,21 @@ public class CustomersController(SenicBillingDbContext dbContext) : ControllerBa
             new CustomerDto(c.Id, c.Name, c.TaxId, c.Branch, c.Address, c.Phone, c.Email, c.ContactPerson, c.Notes, c.IsActive)));
     }
 
+    private static bool IsValidOptionalTaxId(string? taxId)
+        => string.IsNullOrWhiteSpace(taxId) || (taxId.Trim().Length == 13 && taxId.Trim().All(char.IsDigit));
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse<CustomerDto>>> Create([FromBody] CreateCustomerRequest req, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new ApiResponse<CustomerDto>(false, "กรุณาระบุชื่อลูกค้า", null));
+        if (!IsValidOptionalTaxId(req.TaxId))
+            return BadRequest(new ApiResponse<CustomerDto>(false, "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก", null));
+
         var tenantId = GetTenantId();
         var customer = new Customer
         {
-            Id = Guid.NewGuid(), TenantId = tenantId, Name = req.Name, TaxId = req.TaxId,
+            Id = Guid.NewGuid(), TenantId = tenantId, Name = req.Name.Trim(), TaxId = req.TaxId?.Trim(),
             Branch = req.Branch, Address = req.Address, Phone = req.Phone, Email = req.Email,
             ContactPerson = req.ContactPerson, Notes = req.Notes
         };
@@ -66,11 +74,16 @@ public class CustomersController(SenicBillingDbContext dbContext) : ControllerBa
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ApiResponse<CustomerDto>>> Update(Guid id, [FromBody] UpdateCustomerRequest req, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new ApiResponse<CustomerDto>(false, "กรุณาระบุชื่อลูกค้า", null));
+        if (!IsValidOptionalTaxId(req.TaxId))
+            return BadRequest(new ApiResponse<CustomerDto>(false, "เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก", null));
+
         var tenantId = GetTenantId();
         var c = await dbContext.Customers.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
         if (c is null) return NotFound(new ApiResponse<CustomerDto>(false, "ไม่พบข้อมูลลูกค้า", null));
 
-        c.Name = req.Name; c.TaxId = req.TaxId; c.Branch = req.Branch; c.Address = req.Address;
+        c.Name = req.Name.Trim(); c.TaxId = req.TaxId?.Trim(); c.Branch = req.Branch; c.Address = req.Address;
         c.Phone = req.Phone; c.Email = req.Email; c.ContactPerson = req.ContactPerson;
         c.Notes = req.Notes; c.IsActive = req.IsActive; c.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(ct);

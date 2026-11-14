@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SenicBilling.API.Hubs;
 using SenicBilling.Application.DTOs;
 using SenicBilling.Application.Interfaces;
+using SenicBilling.Application.Services;
 using SenicBilling.Domain.Interfaces;
 using SenicBilling.Infrastructure.Data;
 using SenicBilling.Domain.Entities;
@@ -116,6 +117,31 @@ public class SharedDocumentController(
         return File(pdfBytes, "application/pdf", $"{doc.DocumentNumber}.pdf");
     }
 
+    [HttpGet("{id:guid}/e-tax-xml")]
+    public async Task<IActionResult> GenerateETaxXml(Guid id, CancellationToken ct)
+    {
+        var tenantIdString = User.FindFirst("tenantId")?.Value;
+        if (!Guid.TryParse(tenantIdString, out var tenantId))
+            return Unauthorized();
+
+        var doc = await dbContext.DocumentHeaders
+            .Include(d => d.Tenant)
+            .Include(d => d.Lines.OrderBy(l => l.SortOrder))
+            .FirstOrDefaultAsync(d => d.Id == id && d.TenantId == tenantId, ct);
+
+        if (doc is null)
+            return NotFound(new ApiResponse<object>(false, "ไม่พบเอกสาร", null));
+
+        if (doc.DocumentType is DocumentType.Quotation or DocumentType.DeliveryNote)
+            return BadRequest(new ApiResponse<object>(false, "เอกสารประเภทนี้ไม่รองรับการออก e-Tax XML", null));
+
+        if (doc.Status is DocumentStatus.Draft or DocumentStatus.Cancelled)
+            return BadRequest(new ApiResponse<object>(false, "สามารถออก e-Tax XML ได้เฉพาะเอกสารที่อนุมัติ/ออกแล้วเท่านั้น", null));
+
+        var xmlBytes = ETaxXmlGenerator.GenerateXml(doc, doc.Tenant);
+        return File(xmlBytes, "application/xml", $"{doc.DocumentNumber}_eTax.xml");
+    }
+
     [HttpPost("{id:guid}/convert")]
     public async Task<ActionResult<ApiResponse<DocumentResponse>>> Convert(
         Guid id, [FromBody] ConvertDocumentRequest request, CancellationToken ct)
@@ -134,11 +160,44 @@ public class SharedDocumentController(
         if (source.Status == DocumentStatus.Cancelled)
             return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถแปลงเอกสารที่ยกเลิกแล้วได้", null));
 
-        var accountingCheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
-        if (accountingCheck is not null && await accountingCheck.IsPeriodLockedAsync(tenantId, DateTime.UtcNow, ct))
+        if (source.DocumentType == request.TargetType)
+            return BadRequest(new ApiResponse<DocumentResponse>(false, "ไม่สามารถแปลงเป็นประเภทเดียวกัน", null));
+
+        var tenant = await dbContext.Tenants
+            .Include(t => t.CurrentPlan)
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+
+        if (tenant != null)
         {
-            var now = DateTime.UtcNow;
-            return BadRequest(new ApiResponse<DocumentResponse>(false, $"งวดบัญชี {now.Month:D2}/{now.Year} ถูกปิดงวดแล้ว ไม่สามารถออกเอกสารใหม่ได้", null));
+            if (!tenant.IsActive || tenant.SubscriptionStatus == "Suspended")
+                return BadRequest(new ApiResponse<DocumentResponse>(false, "บัญชีองค์กรถูกระงับการใช้งานชั่วคราว กรุณาติดต่อผู้ดูแลระบบ", null));
+
+            if (tenant.CurrentPlan != null && tenant.CurrentPlan.MaxDocumentsPerMonth > 0)
+            {
+                var nowUtc = DateTime.UtcNow;
+                var monthlyDocs = await dbContext.DocumentHeaders.CountAsync(
+                    d => d.TenantId == tenantId &&
+                         d.Status != DocumentStatus.Cancelled &&
+                         d.CreatedAt.Year == nowUtc.Year &&
+                         d.CreatedAt.Month == nowUtc.Month, ct);
+
+                if (monthlyDocs >= tenant.CurrentPlan.MaxDocumentsPerMonth)
+                {
+                    return BadRequest(new ApiResponse<DocumentResponse>(
+                        false,
+                        $"จำนวนเอกสารเดือนนี้ครบโควต้าของแพ็กเกจ {tenant.CurrentPlan.Name} ({tenant.CurrentPlan.MaxDocumentsPerMonth} ฉบับ/เดือน) กรุณาอัปเกรดแพ็กเกจ",
+                        null));
+                }
+            }
+        }
+
+        var targetDocDate = request.DocumentDate ?? DateTime.UtcNow;
+        var accountingCheck = HttpContext?.RequestServices?.GetService<IAccountingService>();
+        if (accountingCheck is not null &&
+            request.TargetType is not (DocumentType.Quotation or DocumentType.DeliveryNote) &&
+            await accountingCheck.IsPeriodLockedAsync(tenantId, targetDocDate, ct))
+        {
+            return BadRequest(new ApiResponse<DocumentResponse>(false, $"งวดบัญชี {targetDocDate.Month:D2}/{targetDocDate.Year} ถูกปิดงวดแล้ว ไม่สามารถออกเอกสารใหม่ได้", null));
         }
 
         var newDocNumber = await numberGenerator.GenerateNextNumberAsync(
@@ -150,7 +209,7 @@ public class SharedDocumentController(
             TenantId = tenantId,
             DocumentType = request.TargetType,
             DocumentNumber = newDocNumber,
-            DocumentDate = DateTime.UtcNow,
+            DocumentDate = targetDocDate,
             DueDate = request.DueDate ?? source.DueDate,
             CustomerId = source.CustomerId,
             CustomerName = source.CustomerName,
@@ -237,6 +296,24 @@ public class SharedDocumentController(
         }
 
         dbContext.DocumentHeaders.Add(target);
+
+        var yearMonth = DateTime.UtcNow.ToString("yyyy-MM");
+        var usageStat = await dbContext.TenantUsageStats
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.YearMonth == yearMonth, ct);
+        if (usageStat == null)
+        {
+            dbContext.TenantUsageStats.Add(new TenantUsageStat
+            {
+                TenantId = tenantId,
+                YearMonth = yearMonth,
+                DocumentsCreated = 1
+            });
+        }
+        else
+        {
+            usageStat.DocumentsCreated += 1;
+        }
+
         await dbContext.SaveChangesAsync(ct);
 
         var accounting = HttpContext?.RequestServices?.GetService<IAccountingService>();

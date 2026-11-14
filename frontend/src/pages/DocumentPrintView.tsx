@@ -154,7 +154,7 @@ export default function DocumentPrintView() {
   const handleDownloadETaxXml = async () => {
     if (!id || !rawDoc) return;
     try {
-      const res = await apiClient.get(`/tax-invoices/${id}/e-tax-xml`, { responseType: 'blob' });
+      const res = await apiClient.get(`/documents/${id}/e-tax-xml`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/xml' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -293,7 +293,7 @@ export default function DocumentPrintView() {
             </button>
           )}
 
-          {isAuthenticated && rawDoc?.documentType === 'TaxInvoice' && rawDoc?.status !== 'Draft' && (
+          {isAuthenticated && ['TaxInvoice', 'CreditNote', 'DebitNote'].includes(rawDoc?.documentType || '') && !['Draft', 'Cancelled'].includes(rawDoc?.status || '') && (
             <button
               onClick={handleDownloadETaxXml}
               className="btn btn-secondary flex items-center gap-1.5"

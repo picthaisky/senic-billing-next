@@ -65,10 +65,15 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
     [HttpPost]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Create([FromBody] CreateProductRequest req, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new ApiResponse<ProductDto>(false, "กรุณาระบุชื่อสินค้า/บริการ", null));
+        if (req.UnitPrice < 0 || req.CostPrice < 0)
+            return BadRequest(new ApiResponse<ProductDto>(false, "ราคาขายและราคาทุนต้องไม่ติดลบ", null));
+
         var tenantId = GetTenantId();
         var product = new Product
         {
-            Id = Guid.NewGuid(), TenantId = tenantId, Sku = req.Sku, Barcode = req.Barcode, Name = req.Name,
+            Id = Guid.NewGuid(), TenantId = tenantId, Sku = req.Sku, Barcode = req.Barcode, Name = req.Name.Trim(),
             Description = req.Description, Unit = req.Unit, UnitPrice = req.UnitPrice, CostPrice = req.CostPrice,
             Category = req.Category, StockQuantity = req.StockQuantity
         };
@@ -83,11 +88,16 @@ public class ProductsController(SenicBillingDbContext dbContext) : ControllerBas
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Update(Guid id, [FromBody] UpdateProductRequest req, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new ApiResponse<ProductDto>(false, "กรุณาระบุชื่อสินค้า/บริการ", null));
+        if (req.UnitPrice < 0 || req.CostPrice < 0)
+            return BadRequest(new ApiResponse<ProductDto>(false, "ราคาขายและราคาทุนต้องไม่ติดลบ", null));
+
         var tenantId = GetTenantId();
         var p = await dbContext.Products.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
         if (p is null) return NotFound(new ApiResponse<ProductDto>(false, "ไม่พบสินค้า", null));
 
-        p.Sku = req.Sku; p.Barcode = req.Barcode; p.Name = req.Name; p.Description = req.Description;
+        p.Sku = req.Sku; p.Barcode = req.Barcode; p.Name = req.Name.Trim(); p.Description = req.Description;
         p.Unit = req.Unit; p.UnitPrice = req.UnitPrice; p.CostPrice = req.CostPrice; p.Category = req.Category;
         p.StockQuantity = req.StockQuantity; p.IsActive = req.IsActive; p.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(ct);

@@ -63,7 +63,7 @@ senic-billing-next/
 - Expenses, Purchasing, Inventory & Accounting: `ExpensesPage.tsx`, `PurchaseOrdersPage.tsx`, `WarehousesPage.tsx`, `AccountingPage.tsx`, `BankReconciliationPage.tsx`
 - Master Data: `CustomersPage.tsx`, `CustomerSelectModal.tsx`, `ProductsPage.tsx`
 - Settings & RBAC: `SettingsPage.tsx`, `RecurringInvoicesConfig.tsx`, `TenantBackupCard.tsx`, `UsersManagementPage.tsx`, `AuditLogsPage.tsx`, `ProfilePage.tsx`
-- E2E & Unit tests: `frontend/playwright.config.ts`, `frontend/e2e/senic-e2e.spec.ts`, `frontend/scripts/phase11-unit.test.mjs`, `frontend/scripts/phase12-unit.test.mjs`, `frontend/scripts/phase13-unit.test.mjs`, `frontend/scripts/phase14-unit.test.mjs`, `frontend/scripts/phase15-unit.test.mjs`, `frontend/scripts/phase16-unit.test.mjs`, `frontend/scripts/phase17-unit.test.mjs`
+- E2E & Unit tests: `frontend/playwright.config.ts`, `frontend/e2e/senic-e2e.spec.ts`, `frontend/scripts/phase11-unit.test.mjs`, `frontend/scripts/phase12-unit.test.mjs`, `frontend/scripts/phase13-unit.test.mjs`, `frontend/scripts/phase14-unit.test.mjs`, `frontend/scripts/phase15-unit.test.mjs`, `frontend/scripts/phase16-unit.test.mjs`, `frontend/scripts/phase17-unit.test.mjs`, `frontend/scripts/phase18-unit.test.mjs`, `frontend/scripts/phase19-unit.test.mjs`
 
 ## Admin Frontend Map (`admin-frontend/` — Super Admin Portal)
 
@@ -73,7 +73,7 @@ senic-billing-next/
 
 ## Verified Commands
 
-- Backend build & tests: `cd backend; dotnet build SenicBilling.slnx; dotnet test SenicBilling.slnx` (`BillingDomainAndSecurityTests`, `Phase9ExpenseAndLineTests`, `Phase10PurchaseWarehouseAccountingTests`, `Phase11EnterpriseTests`, `Phase12EnterpriseOperationsTests`, `Phase13SecuritySearchAndOperationsTests`, `Phase14ProductionHardeningTests`, `Phase15ProductionAndPaymentTests`, `Phase16SecurityRbacAndQuotaTests`, `Phase17WorkerQuotaAndSubscriptionTests`)
+- Backend build & tests: `cd backend; dotnet build SenicBilling.slnx; dotnet test SenicBilling.slnx` (`BillingDomainAndSecurityTests`, `Phase9ExpenseAndLineTests`, `Phase10PurchaseWarehouseAccountingTests`, `Phase11EnterpriseTests`, `Phase12EnterpriseOperationsTests`, `Phase13SecuritySearchAndOperationsTests`, `Phase14ProductionHardeningTests`, `Phase15ProductionAndPaymentTests`, `Phase16SecurityRbacAndQuotaTests`, `Phase17WorkerQuotaAndSubscriptionTests`, `Phase18DocumentTaxAndStockParityTests`, `Phase19WebhookPaymentAndMasterDataTests`)
 - Frontend build: `cd frontend; npm run build`
 - Frontend lint, unit & Playwright E2E tests: `cd frontend; npm run lint; npm test; npm run test:e2e`
 - Admin Frontend lint, build, unit & Playwright E2E tests: `cd admin-frontend; npm run lint; npm test; npm run build; npm run test:e2e`

@@ -1,7 +1,7 @@
 # แผนการพัฒนาส่วนที่เหลือฉบับสมบูรณ์ (Senic Billing Next — Master Remaining Features Plan)
 
-> **อัปเดตล่าสุด:** 13 พฤศจิกายน 2026  
-> **สถานะปัจจุบัน:** ✅ **ดำเนินการพัฒนาครบถ้วน 100% ทั้ง 4 Sprints เรียบร้อยแล้ว** (ผ่านการ Build และ Automated Unit Tests ครบทุกส่วน: `backend`, `frontend`, `admin-frontend`, และ `SenicBilling.Tests`)
+> **อัปเดตล่าสุด:** 14 พฤศจิกายน 2026  
+> **สถานะปัจจุบัน:** ✅ **ดำเนินการพัฒนาครบถ้วน 100% ทั้ง Sprints 1–4 และต่อยอดครบถึง Phase 19 เรียบร้อยแล้ว** (ผ่านการ Build, Linter, Automated Unit Tests และ Playwright E2E ครบทุกส่วน: `backend` `65/65`, `frontend` `31/31` + `2/2 E2E`, `admin-frontend` `4/4` + `1/1 E2E`)
 
 ---
 
@@ -106,9 +106,27 @@
 
 ---
 
-## ✅ ผลการตรวจสอบความสมบูรณ์ (Verification Results)
+## 🚀 สรุปแผนการพัฒนาต่อยอด Phase 9 – Phase 19 (100% Completed)
+
+| Phase | รายละเอียดแผนการพัฒนา | สถานะ |
+| :--- | :--- | :--- |
+| **Phase 9** | `แผนการพัฒนา Phase 9 (Expense, Input VAT, WHT & LINE Messaging API).md` — ใบสำคัญจ่าย/ภาษีซื้อ (`ExpenseRecord`), รายงานภาษีซื้อ & ภ.พ.30, หนังสือรับรอง 50 ทวิ PDF, AI สแกนใบเสร็จ และ LINE Messaging API Webhook | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 10** | `แผนการพัฒนา Phase 10 (PO, Multi-Warehouse & Auto-Accounting).md` — ทะเบียนผู้ขาย (`Vendor`), ใบสั่งซื้อ (`PurchaseOrder`), คลังสินค้าหลายสาขา (`Warehouse`, `StockMovement`), และการลงบัญชีคู่อัตโนมัติ (`JournalEntry`, งบทดลอง, งบกำไรขาดทุน) | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 11** | `แผนการพัฒนา Phase 11 (Bank Reconciliation, Advanced Financial Statements & Enterprise Governance).md` — กระทบยอดธนาคารอัตโนมัติ (`BankReconciliation`), งบดุล/งบกระแสเงินสด/วิเคราะห์กำไรขั้นต้น, ปิดงวดบัญชี (`AccountingPeriodLock`), ระบบอนุมัติเอกสาร และสำรองข้อมูล JSON ZIP | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 12** | `แผนการพัฒนา Phase 12 (Production Hardening, E2E Quality Gate & Super Admin Governance).md` — Docker Healthchecks, CI/CD Quality Gate, `React.lazy` Code Splitting, หน้าสำรวจประวัติการใช้งาน (`AuditLogsPage`), และ Super Admin Platform Announcements & Manual Invoice Verification | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 13** | `แผนการพัฒนา Phase 13 (Full Bilingual i18n, Live Notifications & Global Search).md` — ระบบ 2 ภาษา (`TH`/`EN`) ใน Layout Shell, Live Notifications ผ่าน API + SignalR, และ Global Command Palette Search (`Ctrl+K`) | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 14** | `แผนการพัฒนา Phase 14 (Deep Inner-Page Bilingual i18n, Production Config Hardening & Playwright E2E).md` — ระบบ 2 ภาษาเชิงลึกในหน้าทำงานหลัก, ยกเลิก Hardcoded `localhost` Fallbacks ใน Production, และชุดทดสอบ Playwright E2E | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 15** | `แผนการพัฒนา Phase 15 (Payment Callback UX, 100% Component i18n Coverage & Production Storage Parity).md` — หน้า `/payment/callback`, `useTranslation()` ครบ 100% ทุกคอมโพเนนต์, ตรวจ Magic Bytes ไฟล์อัปโหลด, และ MinIO Logo Fallback ใน PDF | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 16** | `แผนการพัฒนา Phase 16 (Deep Bilingual Completion, Vite Chunk Optimization & RBAC Quota Hardening).md` — กวาดข้อความภาษาไทยที่เหลือใน 7 หน้าหลักเข้า `resources.ts`, แยก `manualChunks` ใน Vite, และล็อกสิทธิ์ RBAC + โควต้า `MaxUsers` ตอนปลดระงับผู้ใช้ | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 17** | `แผนการพัฒนา Phase 17 (Background Worker Quota Guards, Subscription Security & Super Admin Bilingual UX).md` — บังคับใช้สถานะองค์กรและโควต้าเอกสารรายเดือนใน Background Workers, ล็อกสิทธิ์ `TenantSubscriptionController`/`TenantsController`/`SaPlansController`, และรองรับ 2 ภาษา (`TH`/`EN`) + โควต้าไม่จำกัด (`-1`) ใน `admin-frontend` | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 18** | `แผนการพัฒนา Phase 18 (Document Conversion Quota, Credit-Debit Tax Parity & e-Tax XML Completeness).md` — ตรวจงวดบัญชีและโควต้าใน `POST /api/documents/{id}/convert`, รองรับดาวน์โหลด ETDA e-Tax XML สำหรับใบลดหนี้ (`381`)/ใบเพิ่มหนี้ (`383`), ป้องกันตัดสต็อกซ้ำเมื่อแปลง `DeliveryNote` -> `TaxInvoice`, และคำนวณ `CreditNote` (-)/`DebitNote` (+) ตรงกันทุกจุด | ✅ **เสร็จสมบูรณ์ 100%** |
+| **Phase 19** | `แผนการพัฒนา Phase 19 (LINE Webhook, Payment Guardrails, Recurring & Master Data Hardening).md` — LINE Webhook & AI Assistant CreditNote/Overdue Parity, Payment Guardrails (`PaymentsController` บล็อก `Cancelled`/`Draft`/`Quotation`/`DeliveryNote`/`CreditNote` และกัน Webhook ทับเอกสารยกเลิก), `RecurringInvoiceController` Validation, และ Master Data Validation (`Customers`/`Products`/`Vendors` + ช่องกรอกรหัสสาขา/ที่อยู่ลูกค้าใน `InvoiceForm.tsx`) | ✅ **เสร็จสมบูรณ์ 100%** |
+
+---
+
+## ✅ ผลการตรวจสอบความสมบูรณ์ (Verification Results — Sprints 1–4 & Phases 9–19)
 
 - [x] `cd backend && dotnet build SenicBilling.slnx` — **ผ่านสมบูรณ์ (`0 Error`, `0 Warning`)**
-- [x] `cd backend && dotnet test SenicBilling.slnx` — **ผ่านสมบูรณ์ (`Passed: 6/6, Failed: 0`)**
-- [x] `cd frontend && npm run build` — **ผ่านสมบูรณ์ (`built in ~900ms`)**
-- [x] `cd admin-frontend && npm run build` — **ผ่านสมบูรณ์ (`built in ~400ms`)**
+- [x] `cd backend && dotnet test SenicBilling.slnx` — **ผ่านสมบูรณ์ (`Passed: 65/65, Failed: 0`)**
+- [x] `cd frontend && npm run lint && npm test && npm run build && npm run test:e2e` — **ผ่านสมบูรณ์ (`31/31 Unit Tests`, `2/2 Playwright E2E`, `0 Warnings`)**
+- [x] `cd admin-frontend && npm run lint && npm test && npm run build && npm run test:e2e` — **ผ่านสมบูรณ์ (`4/4 Unit Tests`, `1/1 Playwright E2E`, `0 Warnings`)**
